@@ -58,6 +58,7 @@ from wooju_agents.llm import (
 )
 from wooju_agents.text import ACCEPTED_SUFFIXES, resolve_language
 
+from . import icloud
 from . import settings as app_settings
 from .config import resolve_brain_path, watch_enabled
 from .watcher import watch_and_refresh
@@ -140,6 +141,8 @@ class Engine:
         # Meaning-search indexing progress, shown in Settings.
         self.search_state: dict[str, Any] = {"state": "off", "done": 0, "total": 0}
         self._embedding: asyncio.Task[None] | None = None
+        self.icloud_watch = icloud.Watcher()
+        self.capture_log: list[dict[str, Any]] = []  # recent captures, newest first
         self.provider_override: Provider | None = None  # tests
         self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
 
@@ -219,6 +222,7 @@ class Engine:
                 self.pull_state["state"] = "done"
                 await self.retry_waiting()
                 await self.refresh_vectors()
+                await self.poll_icloud()
             except LLMError as exc:
                 self.pull_state.update(state="failed", message=exc.localized(self.language()))
 
@@ -281,6 +285,51 @@ class Engine:
             await asyncio.to_thread(self.index.scan, brain)
         return {"kind": "memo", "file": rel}
 
+    def _log_capture(self, via: str, kind: str, name: str, message: str | None = None) -> None:
+        entry = {
+            "via": via,
+            "kind": kind,
+            "name": name,
+            "message": message,
+            "at": datetime.now(UTC).isoformat(),
+        }
+        self.capture_log = [entry, *self.capture_log][:20]
+
+    async def poll_icloud(self) -> int:
+        """Take finished files from iCloud Drive/Wooju Inbox. Returns how many."""
+        if self.brain is None or not app_settings.load().capture.icloud:
+            return 0
+        folder = icloud.capture_folder()
+        files = await asyncio.to_thread(self.icloud_watch.ready, folder)
+        taken = 0
+        for path in files:
+            try:
+                text = await asyncio.to_thread(icloud.short_text, path)
+                if text is not None:
+                    result = await self.receive_text(text, via="icloud")
+                    self._log_capture("icloud", result["kind"], path.name)
+                elif path.suffix.lower() in ACCEPTED_SUFFIXES:
+                    data = await asyncio.to_thread(path.read_bytes)
+                    rel = await self.receive(path.name, data)
+                    await self.enqueue(rel)
+                    self._log_capture("icloud", "file", path.name)
+                else:
+                    await asyncio.to_thread(icloud.set_aside, path)
+                    self._log_capture(
+                        "icloud",
+                        "refused",
+                        path.name,
+                        render("upload.unsupported", self.language(), name=path.name),
+                    )
+                    continue
+            except UserFacingError as exc:
+                await asyncio.to_thread(icloud.set_aside, path)
+                self._log_capture("icloud", "refused", path.name, exc.localized(self.language()))
+                continue
+            path.unlink(missing_ok=True)
+            taken += 1
+        return taken
+
     async def _open_link_file(self, job: Job) -> bool:
         """Replace a .webloc/.url in the inbox with the page it points to."""
         brain = self._require_brain()
@@ -326,6 +375,7 @@ class Engine:
             try:
                 await self.retry_waiting()
                 await self.refresh_vectors()
+                await self.poll_icloud()
             except Exception:  # noqa: BLE001
                 logger.exception("Background check failed")
 

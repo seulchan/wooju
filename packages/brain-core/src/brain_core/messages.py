@@ -56,6 +56,11 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "링크 파일이 너무 커요 (15MB까지).",
         "The linked file is too big (15 MB at most).",
     ),
+    "icloud.unavailable": (
+        "이 Mac에서 iCloud Drive가 꺼져 있어요. "
+        "시스템 설정 > Apple 계정 > iCloud에서 iCloud Drive를 켜 주세요.",
+        "iCloud Drive is off on this Mac. Turn it on in System Settings > Apple Account > iCloud.",
+    ),
     # maintainer
     "review.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
     "review.unreadable": (

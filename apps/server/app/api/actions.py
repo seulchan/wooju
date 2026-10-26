@@ -298,6 +298,46 @@ async def capture_text(body: CaptureText, engine: EngineDep) -> dict[str, Any]:
         raise _fail_from(engine, exc) from exc
 
 
+# ------------------------------------------------------------ phone capture
+
+
+def _capture_status(engine: Engine) -> dict[str, Any]:
+    from .. import icloud
+
+    cap = app_settings.load().capture
+    return {
+        "icloud": {
+            "available": icloud.available(),
+            "enabled": cap.icloud,
+            "folder": str(icloud.capture_folder()),
+        },
+        "recent": engine.capture_log[:10],
+    }
+
+
+@actions_router.get("/capture/status", tags=["inbox"])
+def capture_status(engine: EngineDep) -> dict[str, Any]:
+    return _capture_status(engine)
+
+
+class Toggle(BaseModel):
+    enabled: bool
+
+
+@actions_router.post("/capture/icloud", tags=["inbox"])
+def set_icloud(body: Toggle, engine: EngineDep) -> dict[str, Any]:
+    from .. import icloud
+
+    if body.enabled:
+        if not icloud.available():
+            raise _fail(engine, "icloud.unavailable")
+        icloud.ensure_folder()
+    current = app_settings.load()
+    current.capture.icloud = body.enabled
+    app_settings.save(current)
+    return _capture_status(engine)
+
+
 @actions_router.post("/inbox/process", tags=["inbox"])
 async def process_inbox(engine: EngineDep) -> dict[str, Any]:
     try:
