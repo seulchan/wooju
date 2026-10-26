@@ -41,3 +41,44 @@ validator bug.
 
 - Local model quality (Qwen 3.5 4B/9B): run `evals/local_model_quality.py`
   against this dev Brain on an Apple Silicon Mac with Ollama.
+
+## Local model quality (measured 2026-10-26)
+
+Run on the user's Apple Silicon Mac with Ollama against the 29-note dev Brain.
+Output was constrained by JSON schema, temperature 0, thinking off. Inputs had
+frontmatter removed, so the model saw only the note body.
+
+| Model | Classify (all) | Classify sources | Classify others | Wrongly sent to memory | Source FM valid | source_type match | Summary ≤ 80 chars | Summary in Korean | Median tok/s | Time per note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| qwen3.5:4b | 69.0% | 61.5% | 75.0% | 7 | 100% | 84.6% | 62.1% | 100% | 15.2 | ~14 s |
+| qwen3.5:9b | 75.9% | 92.3% | 62.5% | 3 | 100% | 92.3% | 100% | 100% | 8.4 | ~35 s |
+
+What this means:
+
+- **Neither model is safe for unreviewed filing.** Even 9B misfiles one note in
+  four. Approval cards stay mandatory, and personal memory must never be chosen
+  by the model alone.
+- **4B mistakes external sources for personal memory** (7 notes sent to
+  `memory/`). This is the most harmful error class. Ingest must decide
+  "external source vs about the user" deterministically from where the item
+  came from (dropped file or URL → source), and only ask the model to refine
+  within that branch.
+- **Most 9B errors land on the ambiguous cases above** (#2 tracker overview →
+  memory, #3 insights → concepts/mental-models, area ↔ memory/state). Tightening
+  those rules should help both models.
+- **Schema-constrained output works.** Source frontmatter was 100% valid for both
+  models. `source_type` misses were the government press release (#4, no
+  fitting type) and one article labelled `experience`.
+- **Korean spacing artifact.** Both models write "2026 년 7 월" instead of
+  "2026년 7월" (4B in 26/29 summaries, 9B in 18/29). Fix deterministically after
+  generation instead of prompting.
+- **4B ignores length limits** (62% within 80 characters vs 100% for 9B).
+- **Speed is acceptable for background ingest.** About 14 s per note on 4B and
+  35 s on 9B for three tasks; first model load about 4–5 s.
+- **Eval fix:** the first run scored `published` at 0% because the date is only in
+  frontmatter, which the model never saw. It is now scored only when the body
+  states the date.
+
+Decision: keep the hardware mapping (8 GB → 4B, 16 GB+ → 9B). Phase 2 ingest
+uses origin-based routing, rule fixes for cases #2–#4, and the spacing
+normalizer, then re-runs this eval.

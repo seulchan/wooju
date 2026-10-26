@@ -29,6 +29,9 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - Baseline hardware: Apple Silicon (M1). 8 GB → `qwen3.5:4b`; 16 GB+ →
   `qwen3.5:9b`. Gemma 4 E4B was evaluated and not chosen (Korean, long
   context, and text tasks favour Qwen). Re-check with real notes in phase 1.
+- Measured in phase 1 (see `docs/PHASE-1-FINDINGS.md`): 9B files 76% of notes
+  correctly, 4B 69%. Model output is never filed without approval, and the
+  source-vs-memory decision is made from the item's origin, not by the model.
 - Search starts as keyword search and always works without Ollama. Semantic
   search (`qwen3-embedding:0.6b` via Ollama) is added in phase 4.
 

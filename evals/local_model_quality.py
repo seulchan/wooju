@@ -81,6 +81,8 @@ SUMMARY_SYSTEM = (
 )
 
 LANGUAGE_NAMES = {"ko": "Korean", "en": "English", "ja": "Japanese"}
+# "2026 년 7 월" instead of "2026년 7월": a spacing artifact seen in Korean output.
+_DIGIT_SPACE = re.compile(r"\d [년월일차개명분초시]")
 _HANGUL = re.compile(r"[가-힣]")
 _SUMMARY_HEADINGS = ("한 줄 요약", "One-line Summary")
 
@@ -238,8 +240,13 @@ def run_model(client: Ollama, model: str, notes: list[Note], language: str) -> d
                 "error": error,
                 "source_type_match": (value or {}).get("source_type")
                 == note.frontmatter.get("source_type"),
-                "published_match": str((value or {}).get("published"))
-                == str(note.frontmatter.get("published")),
+                # Only scored when the body itself contains the date; otherwise the
+                # model cannot know it and "omitted" is the right answer.
+                "published_match": (
+                    str((value or {}).get("published")) == str(note.frontmatter.get("published"))
+                    if str(note.frontmatter.get("published")) in note.body
+                    else None
+                ),
                 "raw": raw,
                 **timing(resp),
             }
@@ -277,7 +284,22 @@ def run_model(client: Ollama, model: str, notes: list[Note], language: str) -> d
         "classify_accuracy": rate([r["classify"]["correct"] for r in rows]),
         "source_fm_valid": rate([r["source_fm"]["valid"] for r in sources]),
         "source_type_match": rate([r["source_fm"]["source_type_match"] for r in sources]),
-        "published_match": rate([r["source_fm"]["published_match"] for r in sources]),
+        "published_match": rate(
+            [
+                r["source_fm"]["published_match"]
+                for r in sources
+                if r["source_fm"]["published_match"] is not None
+            ]
+        ),
+        "classify_sources": rate(
+            [r["classify"]["correct"] for r in rows if r["expected"] == "sources"]
+        ),
+        "classify_others": rate(
+            [r["classify"]["correct"] for r in rows if r["expected"] != "sources"]
+        ),
+        "summary_digit_space": rate(
+            [bool(_DIGIT_SPACE.search(r["summary"]["text"])) for r in rows]
+        ),
         "summary_language_ok": rate([r["summary"]["language_ok"] for r in rows]),
         "summary_within_80": rate([r["summary"]["within_80"] for r in rows]),
         "median_tokens_per_second": round(statistics.median(speeds), 1) if speeds else 0.0,
