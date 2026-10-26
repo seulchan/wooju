@@ -19,3 +19,6 @@ packages = ["src/brain_core"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[project.scripts]
+wooju-validate = "brain_core.validate:main"

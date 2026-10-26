@@ -59,6 +59,8 @@ Do not bulk rename mature pages without updating inbound links and generated ind
 
 ## Validation
 
+Run the validator with `wooju-validate <brain-folder>` (add `--json` for a machine-readable report). Errors break a required rule and must be fixed before a change is accepted; warnings flag missing recommended conventions and never block a change.
+
 Validators should check, where applicable:
 
 - valid frontmatter;

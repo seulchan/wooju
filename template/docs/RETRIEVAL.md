@@ -99,6 +99,8 @@ If pages disagree, are stale, or do not support the requested relationship, say 
 
 Use explicit dates or review metadata for content whose usefulness decays quickly, including software APIs and libraries, laws and regulations, prices and market information, schedules and availability, product specifications, medical or professional guidelines, current project state, and personal routines, preferences, and constraints that may change.
 
+The standard review field is `review_after: YYYY-MM-DD` in frontmatter. Set it when a note depends on information that will go stale, such as an investment thesis to re-check at the next earnings release. Wooju surfaces notes whose review date has passed; it does not change them automatically.
+
 When newer evidence changes an older claim or personal state:
 
 - update the canonical current page;
