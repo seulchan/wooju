@@ -130,8 +130,10 @@ def build_note(
     draft: SourceDraft, *, canonical_ref: str, accessed: date, language: str, original_link: str
 ) -> str:
     fix = normalize_korean if language == "ko" else (lambda s: s)
+    # "2026 년 10 월" is a model artifact, never how a Korean title is written.
+    title = normalize_korean(draft.title.strip())
     frontmatter = {
-        "title": draft.title.strip(),
+        "title": title,
         "source_type": draft.source_type,
         "authors": [a.strip() for a in draft.authors if a.strip()],
         "published": _clean_published(draft.published),
@@ -145,7 +147,7 @@ def build_note(
     )
     lines = ["---", yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False).strip(), "---"]
     lines += [
-        f"# {draft.title.strip()}",
+        f"# {title}",
         "",
         f"## {h_summary}",
         "",
@@ -192,6 +194,7 @@ def ingest_file(
     except ValidationError as exc:
         raise IngestError(str(exc), "ingest.bad_shape") from exc
 
+    draft.title = normalize_korean(draft.title.strip())
     stem = (
         slugify(draft.title)
         or slugify(path.stem)

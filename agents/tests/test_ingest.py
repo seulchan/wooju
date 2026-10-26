@@ -164,3 +164,15 @@ def test_fetched_link_keeps_its_address(tmp_path):
     proposal = ingest_file(tmp_path, "inbox/news.html", FakeProvider(DRAFT), language="en")
     note = next(c for c in proposal.changes if c.path.startswith("sources/")).content
     assert "canonical_ref: https://news.example.com/value-up" in note
+
+
+def test_title_number_spacing_is_fixed(tmp_path):
+    from datetime import date
+
+    from wooju_agents.ingest import SourceDraft, build_note
+
+    draft = SourceDraft.model_validate({**DRAFT, "title": "경제상황 평가(2026 년 10 월)"})
+    note = build_note(
+        draft, canonical_ref="x", accessed=date(2026, 10, 27), language="en", original_link="y"
+    )
+    assert "title: 경제상황 평가(2026년 10월)" in note and "# 경제상황 평가(2026년 10월)" in note
