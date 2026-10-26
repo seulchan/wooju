@@ -329,3 +329,10 @@ export interface SearchStatus {
 export function fetchSearchStatus(signal?: AbortSignal): Promise<SearchStatus> {
   return apiGet('/api/search/status', signal)
 }
+
+/** A pasted link (fetched and organized) or a memo (kept as written). */
+export function captureText(
+  text: string,
+): Promise<{ kind: 'link' | 'memo'; file: string; url?: string; job?: Job }> {
+  return postJson('/api/capture', { text })
+}

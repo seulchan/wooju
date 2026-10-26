@@ -1511,3 +1511,16 @@ code {
   border-color: transparent;
   color: var(--muted);
 }
+
+.capture-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  margin-top: 0.75rem;
+}
+@media (max-width: 640px) {
+  .capture-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

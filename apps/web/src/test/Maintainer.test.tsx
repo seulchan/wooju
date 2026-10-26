@@ -57,3 +57,33 @@ describe('monthsFromToday', () => {
     expect(monthsFromToday(12, new Date(2026, 9, 27))).toBe('2027-10-27')
   })
 })
+
+describe('Capture box', () => {
+  it('saves a memo', async () => {
+    const { DropZone } = await import('../components/DropZone')
+    const fetchMock = mockFetch([
+      { match: /^\/api\/jobs/, body: { items: [] } },
+      { match: /^\/api\/capture$/, body: { kind: 'memo', file: 'inbox/memos/x.md' } },
+    ])
+    render(<DropZone />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Link or memo' }), 'HBM 비중 확인')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Memo saved. Ask can find it.')).toBeInTheDocument()
+    const bodies = (fetchMock.mock.calls as unknown as Call[])
+      .filter(([u, init]) => String(u) === '/api/capture' && init?.method === 'POST')
+      .map(([, init]) => JSON.parse(String(init?.body)))
+    expect(bodies).toEqual([{ text: 'HBM 비중 확인' }])
+  })
+
+  it('shows why a link failed', async () => {
+    const { DropZone } = await import('../components/DropZone')
+    mockFetch([
+      { match: /^\/api\/jobs/, body: { items: [] } },
+      { match: /^\/api\/capture$/, status: 400, body: { detail: "Couldn't fetch the page." } },
+    ])
+    render(<DropZone />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Link or memo' }), 'https://example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't fetch the page.")
+  })
+})

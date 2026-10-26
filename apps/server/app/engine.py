@@ -37,6 +37,14 @@ from brain_core.messages import UserFacingError, render
 from brain_core.retrieve import Retriever, RetrieverCache
 from brain_core.vectors import VectorCache
 from wooju_agents.ask import Answer, ask
+from wooju_agents.capture import (
+    LINK_SUFFIXES,
+    CaptureError,
+    classify_text,
+    read_link_file,
+    save_link,
+    save_memo,
+)
 from wooju_agents.challenge import challenge_insight, challenge_query
 from wooju_agents.embed import EMBED_MODEL, Embedder
 from wooju_agents.ingest import IngestError, inbox_files, ingest_file
@@ -48,7 +56,7 @@ from wooju_agents.llm import (
     Provider,
     recommended_ollama_model,
 )
-from wooju_agents.text import SUPPORTED_SUFFIXES, resolve_language
+from wooju_agents.text import ACCEPTED_SUFFIXES, resolve_language
 
 from . import settings as app_settings
 from .config import resolve_brain_path, watch_enabled
@@ -229,7 +237,7 @@ class Engine:
         inbox.mkdir(exist_ok=True)
         base = _safe_upload_name(name)
         stem, suffix = Path(base).stem, Path(base).suffix
-        if suffix.lower() not in SUPPORTED_SUFFIXES:
+        if suffix.lower() not in ACCEPTED_SUFFIXES:
             raise SetupError("upload.unsupported", name=base)
         target, n = inbox / base, 2
         while target.exists():
@@ -250,6 +258,48 @@ class Engine:
                 history.commit_paths, brain, [rel], f"Received {Path(rel).name}"
             )
         return rel
+
+    async def receive_text(self, text: str, *, via: str) -> dict[str, Any]:
+        """A link or memo from the app, iCloud, or Telegram.
+
+        A link is fetched into the inbox and queued like a dropped file; a memo
+        is saved as written. Raises CaptureError (shown to the user).
+        """
+        brain = self._require_brain()
+        kind, value = classify_text(text)
+        if kind == "link":
+            rel = await asyncio.to_thread(save_link, brain, value)
+            async with self.lock:
+                await asyncio.to_thread(
+                    history.commit_paths, brain, [rel, "inbox/.links.json"], f"Received {value}"
+                )
+            job = await self.enqueue(rel)
+            return {"kind": "link", "file": rel, "url": value, "job": job.to_dict()}
+        async with self.lock:
+            rel = await asyncio.to_thread(save_memo, brain, value, via=via)
+            await asyncio.to_thread(history.commit_paths, brain, [rel], f"Memo: {Path(rel).stem}")
+            await asyncio.to_thread(self.index.scan, brain)
+        return {"kind": "memo", "file": rel}
+
+    async def _open_link_file(self, job: Job) -> bool:
+        """Replace a .webloc/.url in the inbox with the page it points to."""
+        brain = self._require_brain()
+        try:
+            url = await asyncio.to_thread(read_link_file, brain / job.file)
+            rel = await asyncio.to_thread(save_link, brain, url)
+        except CaptureError as exc:
+            job.state, job.message = "failed", exc.localized(self.language())
+            return False
+        async with self.lock:
+            (brain / job.file).unlink(missing_ok=True)
+            await asyncio.to_thread(
+                history.commit_paths,
+                brain,
+                [job.file, rel, "inbox/.links.json"],
+                f"Received {url}",
+            )
+        job.file = rel
+        return True
 
     def ai_ready(self) -> bool:
         try:
@@ -316,6 +366,8 @@ class Engine:
         job.state = "working"
         if not (brain / job.file).exists():
             job.state, job.message = "failed", render("job.gone", self.language())
+            return
+        if Path(job.file).suffix.lower() in LINK_SUFFIXES and not await self._open_link_file(job):
             return
         try:
             provider = self.provider()

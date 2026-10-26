@@ -147,6 +147,9 @@ def classify(
 
     if origin in _INSIGHT_ORIGINS or ftype in _INSIGHT_TYPES:
         category: Category = "insight"
+    elif rel_path.parts[:2] == ("inbox", "memos"):
+        # The user's own captured memos: personal, kept as written.
+        category = "memory"
     else:
         top = rel_path.parts[0] if rel_path.parts else ""
         category = _DIR_CATEGORY.get(top, "other")

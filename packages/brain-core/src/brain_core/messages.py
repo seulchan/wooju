@@ -38,6 +38,24 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "AI의 답이 형식에 맞지 않아요. 다시 물어봐 주세요.",
         "The AI's answer didn't have the right shape. Please ask again.",
     ),
+    # capture
+    "capture.empty": ("보낼 내용이 없어요.", "There's nothing to save."),
+    "capture.bad_link": (
+        "이 링크는 열 수 없어요. 인터넷 주소(http, https)만 받을 수 있어요.",
+        "This link can't be opened. Only web addresses (http, https) can be saved.",
+    ),
+    "capture.unreachable": (
+        "링크 페이지를 가져오지 못했어요. 주소와 인터넷 연결을 확인해 주세요.",
+        "Couldn't fetch the page. Check the address and your internet connection.",
+    ),
+    "capture.unsupported_link": (
+        "이 링크는 웹 페이지나 PDF가 아니라서 저장하지 못했어요.",
+        "This link isn't a web page or PDF, so it couldn't be saved.",
+    ),
+    "capture.too_big": (
+        "링크 파일이 너무 커요 (15MB까지).",
+        "The linked file is too big (15 MB at most).",
+    ),
     # maintainer
     "review.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
     "review.unreadable": (

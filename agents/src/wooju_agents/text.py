@@ -16,6 +16,9 @@ TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".text"}
 HTML_SUFFIXES = {".html", ".htm"}
 PDF_SUFFIXES = {".pdf"}
 SUPPORTED_SUFFIXES = TEXT_SUFFIXES | HTML_SUFFIXES | PDF_SUFFIXES
+# Link files are accepted as input and turned into the fetched page first.
+LINK_FILE_SUFFIXES = {".webloc", ".url"}
+ACCEPTED_SUFFIXES = SUPPORTED_SUFFIXES | LINK_FILE_SUFFIXES
 
 # Local models write "2026 년 7 월"; Korean attaches number units directly.
 _DIGIT_UNIT = re.compile(

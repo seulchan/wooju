@@ -387,3 +387,67 @@ def test_pick_folder(client, monkeypatch):
         lambda args, **kw: sp.CompletedProcess(args, 1, stdout="", stderr="User canceled."),
     )
     assert client.post("/api/setup/pick-folder").json() == {"path": None}
+
+
+# ------------------------------------------------------------------ capture
+
+PAGE = (
+    "<html><head><title>Value-up</title></head><body><p>"
+    + "Korea Value-up Index to begin publication next week. 100 stocks. " * 5
+    + "</p></body></html>"
+).encode()
+
+
+def _fake_fetch(monkeypatch):
+    from wooju_agents import capture
+
+    def fake(url, client=None):
+        return PAGE, ".html", "https://news.example.com/value-up"
+
+    monkeypatch.setattr(capture, "fetch", fake)
+
+
+def test_paste_a_link_and_it_becomes_a_source(client, tmp_path, monkeypatch):
+    brain = setup_brain(client, tmp_path)
+    _fake_fetch(monkeypatch)
+    r = client.post("/api/capture", json={"text": "읽어볼 것 https://example.com/short"})
+    assert r.status_code == 200, r.text
+    assert r.json()["kind"] == "link"
+    jobs = wait_jobs(client)
+    assert jobs[0]["state"] == "done", jobs
+    note = (brain / "sources/korea-value-up-index-launch.md").read_text(encoding="utf-8")
+    assert "canonical_ref: https://news.example.com/value-up" in note
+
+
+def test_paste_a_memo_and_it_is_kept_as_written(client, tmp_path):
+    brain = setup_brain(client, tmp_path)
+    r = client.post("/api/capture", json={"text": "삼성전자 HBM 비중이 30%를 넘으면 다시 볼 것"})
+    assert r.status_code == 200 and r.json()["kind"] == "memo"
+    rel = r.json()["file"]
+    assert rel.startswith("inbox/memos/")
+    assert "HBM 비중" in (brain / rel).read_text(encoding="utf-8")
+    assert client.get("/api/jobs").json()["items"] == []  # not sent to the AI
+    hits = client.get("/api/search", params={"q": "HBM"}).json()["hits"]
+    assert hits and hits[0]["category"] == "memory"
+
+
+def test_drop_a_link_file(client, tmp_path, monkeypatch):
+    import plistlib
+
+    brain = setup_brain(client, tmp_path)
+    _fake_fetch(monkeypatch)
+    data = plistlib.dumps({"URL": "https://example.com/x"})
+    r = client.post(
+        "/api/inbox", files=[("files", ("article.webloc", data, "application/octet-stream"))]
+    )
+    assert len(r.json()["added"]) == 1
+    jobs = wait_jobs(client)
+    assert jobs[0]["state"] == "done", jobs
+    assert not list((brain / "inbox").glob("*.webloc"))
+    assert (brain / "sources/korea-value-up-index-launch.md").is_file()
+
+
+def test_bad_link(client, tmp_path):
+    setup_brain(client, tmp_path)
+    r = client.post("/api/capture", json={"text": "http://127.0.0.1:8000/api/setup"})
+    assert r.status_code == 400 and "링크" in r.json()["detail"]

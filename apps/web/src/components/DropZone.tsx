@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 
-import { ApiError, fetchJobs, uploadFiles } from '../api'
+import { ApiError, captureText, fetchJobs, uploadFiles } from '../api'
 import { requestRefresh } from '../lib/freshness'
 import { useT } from '../lib/i18n'
 import type { Job } from '../types'
@@ -12,6 +12,27 @@ export function DropZone() {
   const [over, setOver] = useState(false)
   const [notes, setNotes] = useState<string[]>([])
   const input = useRef<HTMLInputElement>(null)
+  const [text, setText] = useState('')
+  const [saved, setSaved] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function sendText() {
+    if (!text.trim() || busy) return
+    setBusy(true)
+    setNotes([])
+    setSaved(null)
+    try {
+      const result = await captureText(text)
+      setSaved(result.kind === 'memo' ? t('memoSaved') : t('linkSaved'))
+      setText('')
+      requestRefresh()
+    } catch (err) {
+      setNotes([err instanceof ApiError ? err.message : String(err)])
+    } finally {
+      setBusy(false)
+    }
+    await refresh()
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -83,7 +104,7 @@ export function DropZone() {
           type="file"
           multiple
           hidden
-          accept=".pdf,.txt,.md,.markdown,.html,.htm"
+          accept=".pdf,.txt,.md,.markdown,.html,.htm,.webloc,.url"
           data-testid="file-input"
           onChange={(e) => {
             void send(Array.from(e.target.files ?? []))
@@ -91,6 +112,31 @@ export function DropZone() {
           }}
         />
       </div>
+      <form
+        className="capture-form"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void sendText()
+        }}
+      >
+        <textarea
+          className="ask-input"
+          aria-label={t('captureLabel')}
+          placeholder={t('capturePlaceholder')}
+          rows={2}
+          value={text}
+          disabled={busy}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button className="btn" type="submit" disabled={busy || !text.trim()}>
+          {busy ? t('working') : t('captureSave')}
+        </button>
+      </form>
+      {saved ? (
+        <p className="form-ok" role="status">
+          {saved}
+        </p>
+      ) : null}
       {notes.map((n) => (
         <p key={n} className="form-error" role="alert">
           {n}

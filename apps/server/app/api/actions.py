@@ -283,6 +283,21 @@ async def add_files(files: list[UploadFile], engine: EngineDep) -> dict[str, Any
     return {"added": added, "refused": refused}
 
 
+class CaptureText(BaseModel):
+    text: str
+
+
+@actions_router.post("/capture", tags=["inbox"])
+async def capture_text(body: CaptureText, engine: EngineDep) -> dict[str, Any]:
+    """Save a pasted link (fetched and organized) or a memo (kept as written)."""
+    from wooju_agents.capture import CaptureError
+
+    try:
+        return await engine.receive_text(body.text, via="app")
+    except (CaptureError, SetupError) as exc:
+        raise _fail_from(engine, exc) from exc
+
+
 @actions_router.post("/inbox/process", tags=["inbox"])
 async def process_inbox(engine: EngineDep) -> dict[str, Any]:
     try:

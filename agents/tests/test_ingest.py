@@ -145,3 +145,22 @@ def test_draft_schema_is_json_schema():
     schema = SourceDraft.model_json_schema()
     assert "source_type" in schema["required"]
     assert isinstance(Path, type)
+
+
+def test_fetched_link_keeps_its_address(tmp_path):
+    from brain_core.history import ensure_repo
+    from wooju_agents.capture import remember_link
+
+    ensure_repo(tmp_path)
+    (tmp_path / "inbox").mkdir()
+    page = tmp_path / "inbox" / "news.html"
+    page.write_text(
+        "<html><body><p>"
+        + "Index news with a footer link https://ads.example.com. " * 5
+        + "</p></body></html>",
+        encoding="utf-8",
+    )
+    remember_link(tmp_path, "inbox/news.html", "https://news.example.com/value-up")
+    proposal = ingest_file(tmp_path, "inbox/news.html", FakeProvider(DRAFT), language="en")
+    note = next(c for c in proposal.changes if c.path.startswith("sources/")).content
+    assert "canonical_ref: https://news.example.com/value-up" in note

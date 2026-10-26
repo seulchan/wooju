@@ -29,8 +29,9 @@ from brain_core.changes import FileChange, Proposal, approval_for
 from brain_core.messages import UserFacingError
 from brain_core.schema import SourceFrontmatter, SourceType
 
+from .capture import link_for
 from .llm import Provider
-from .text import SUPPORTED_SUFFIXES, UnsupportedFile, extract_text, first_url, normalize_korean
+from .text import ACCEPTED_SUFFIXES, UnsupportedFile, extract_text, first_url, normalize_korean
 
 AGENT = "ingest"
 
@@ -85,10 +86,14 @@ def inbox_files(brain: Path) -> list[str]:
     inbox = brain / "inbox"
     if not inbox.is_dir():
         return []
+    memos = inbox / "memos"
     files = [
         p
         for p in inbox.rglob("*")
-        if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in SUPPORTED_SUFFIXES
+        if p.is_file()
+        and not p.name.startswith(".")
+        and p.suffix.lower() in ACCEPTED_SUFFIXES
+        and memos not in p.parents  # the user's own memos stay as written
     ]
     files.sort(key=lambda p: p.stat().st_mtime)
     return [p.relative_to(brain).as_posix() for p in files]
@@ -194,7 +199,8 @@ def ingest_file(
     )
     note_path = _unique(brain, "sources", stem, ".md")
     library_path = _unique(brain, "library", PurePosixPath(note_path).stem, path.suffix.lower())
-    canonical_ref = first_url(text) or library_path
+    # A fetched link keeps its real address; otherwise the first URL in the text.
+    canonical_ref = link_for(brain, rel) or first_url(text) or library_path
     note = build_note(
         draft,
         canonical_ref=canonical_ref,
