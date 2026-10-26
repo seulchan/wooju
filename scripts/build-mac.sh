@@ -39,7 +39,11 @@ uv run --with "pyinstaller>=6.10" pyinstaller --noconfirm --clean --onefile \
   --collect-submodules app \
   --collect-submodules uvicorn \
   --collect-submodules keyring \
-  --collect-submodules mcp \
+  --collect-submodules mcp.server \
+  --collect-submodules mcp.shared \
+  --hidden-import mcp.types \
+  --exclude-module mcp.cli \
+  --exclude-module mcp.server.fastmcp \
   --collect-data jsonschema_specifications \
   "$ROOT/apps/server/app/launcher.py"
 mkdir -p apps/desktop/src-tauri/binaries
