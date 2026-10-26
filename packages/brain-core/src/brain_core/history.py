@@ -16,11 +16,19 @@ from dulwich.diff_tree import tree_changes
 from dulwich.objects import Commit
 from dulwich.repo import Repo
 
+from .messages import UserFacingError
+
 AUTHOR = b"Wooju <wooju@localhost>"
 
 
-class HistoryError(Exception):
+class HistoryError(UserFacingError):
     """A history operation cannot be completed safely."""
+
+    def __init__(self, key: str, **params: object) -> None:
+        super().__init__(key, key, **params)
+
+    def __str__(self) -> str:
+        return self.localized("en")
 
 
 @dataclass(frozen=True)
@@ -130,18 +138,16 @@ def undo(brain: Path, commit_id: str) -> str:
         try:
             commit = repo[commit_id.encode("ascii")]
         except KeyError as exc:
-            raise HistoryError("That change is not in this Brain's history.") from exc
+            raise HistoryError("history.not_found") from exc
         if not isinstance(commit, Commit) or not commit.parents:
-            raise HistoryError("The first commit of a Brain cannot be undone.")
+            raise HistoryError("history.first")
         changes = _changed_paths(repo, commit)
         for path, _old, new in changes:
             target = brain / path
             current = target.read_bytes() if target.exists() else None
             expected = repo[new].data if new else None
             if current != expected:
-                raise HistoryError(
-                    f"'{path}' changed again after this change, so it was not undone."
-                )
+                raise HistoryError("history.changed_again", path=path)
         for path, old, _new in changes:
             target = brain / path
             if old is None:

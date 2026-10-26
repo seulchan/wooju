@@ -7,6 +7,7 @@ import { navigate, Link } from '../lib/router'
 import { useAsync } from '../lib/useAsync'
 import type { Category, SearchHit, SearchResponse } from '../types'
 import { EmptyState, ErrorState, MetaBadge, Spinner, StatusBadge } from '../components/ui'
+import { tr, pick } from '../lib/i18n'
 
 const EMPTY: SearchResponse = { query: '', total: 0, hits: [] }
 
@@ -40,35 +41,40 @@ export function SearchPage({ q }: { q: string }) {
 
   return (
     <>
-      <h1 className="page-title">Search</h1>
+      <h1 className="page-title">{tr('Search')}</h1>
       <form className="search search-page" role="search" onSubmit={onSubmit}>
         <input
           type="search"
           name="q"
           className="search-input"
-          placeholder="Search titles, aliases, and note text…"
+          placeholder={tr('Search titles, aliases, and note text…')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus
           aria-label="Search query"
         />
         <button className="btn search-btn" type="submit">
-          Search
+          {tr('Search')}
         </button>
       </form>
 
       {!q.trim() ? (
-        <EmptyState title="Search the Brain">Full-text search across every indexed note.</EmptyState>
+        <EmptyState title={tr('Search the Brain')}>{tr('Full-text search across every indexed note.')}</EmptyState>
       ) : results.kind === 'loading' ? (
-        <Spinner label="Searching…" />
+        <Spinner label={tr('Searching…')} />
       ) : results.kind === 'error' ? (
         <ErrorState message={results.message} onRetry={results.retry} />
       ) : results.data.total === 0 ? (
-        <EmptyState title="No results">
-          No notes matched “{q}”. Try different or fewer terms.
+        <EmptyState title={tr('No results')}>
+          {pick(`No notes matched “${q}”. Try different or fewer terms.`, `“${q}”와 맞는 노트가 없어요. 다른 낱말로 찾아 보세요.`)}
         </EmptyState>
       ) : (
-        <p className="subtitle">{results.data.total} match{results.data.total === 1 ? '' : 'es'} for “{q}”</p>
+        <p className="subtitle">
+          {pick(
+            `${results.data.total} match${results.data.total === 1 ? '' : 'es'} for “${q}”`,
+            `“${q}” 검색 결과 ${results.data.total}개`,
+          )}
+        </p>
       )}
 
       {results.kind === 'ready' &&
@@ -78,7 +84,7 @@ export function SearchPage({ q }: { q: string }) {
           return (
             <section key={bucket.title} className="section">
               <h2 className="section-title">
-                {bucket.title} <span className="count">({hits.length})</span>
+                {tr(bucket.title)} <span className="count">({hits.length})</span>
               </h2>
               <div className="card-list">
                 {hits.map((hit) => (

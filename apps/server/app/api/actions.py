@@ -1,11 +1,12 @@
-"""Routes that change things: first-run setup, adding files, approvals, undo.
+"""Routes that change things: setup and settings, adding files, approvals, undo.
 
 Every write goes through :class:`app.engine.Engine`. Messages in ``detail`` are
-written for the person using the app, not for developers.
+written for the person using the app, in the app's language (``ko``/``en``).
 """
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import webbrowser
@@ -17,8 +18,11 @@ from pydantic import BaseModel
 
 from brain_core import history
 from brain_core.changes import Proposal, ProposalError
+from brain_core.messages import UserFacingError, render
 from wooju_agents.llm import (
     ANTHROPIC_DEFAULT_MODEL,
+    OLLAMA_MODEL_LARGE,
+    OLLAMA_MODEL_SMALL,
     OPENAI_DEFAULT_MODEL,
     LLMError,
     OllamaProvider,
@@ -38,8 +42,12 @@ def get_engine(request: Request) -> Engine:
 EngineDep = Annotated[Engine, Depends(get_engine)]
 
 
-def _fail(message: str, status: int = 400) -> HTTPException:
-    return HTTPException(status_code=status, detail=message)
+def _fail(engine: Engine, key: str, status: int = 400, **params: Any) -> HTTPException:
+    return HTTPException(status_code=status, detail=render(key, engine.language(), **params))
+
+
+def _fail_from(engine: Engine, exc: UserFacingError, status: int = 400) -> HTTPException:
+    return HTTPException(status_code=status, detail=exc.localized(engine.language()))
 
 
 # --------------------------------------------------------------------- setup
@@ -63,18 +71,19 @@ class SetupStatus(BaseModel):
     ai: AiStatus
 
 
-def _ai_status() -> AiStatus:
+def _ai_status(engine: Engine) -> AiStatus:
+    lang = engine.language()
     ai = app_settings.load().ai
     if ai.provider == "ollama":
         model = ai.model or recommended_ollama_model()
         status = OllamaProvider(model, host=ai.ollama_host).status()
         if not status["running"]:
-            message = "Ollama가 설치되지 않았거나 꺼져 있어요."
+            message = render("ai.ollama_missing", lang)
         elif not status["model_ready"]:
-            message = f"AI 모델({model})을 받아야 해요."
+            message = render("ai.model_needed", lang, model=model)
         else:
             message = None
-        return AiStatus(
+        result = AiStatus(
             provider="ollama",
             model=model,
             ready=status["running"] and status["model_ready"],
@@ -82,38 +91,76 @@ def _ai_status() -> AiStatus:
             model_downloaded=status["model_ready"],
             message=message,
         )
-    default = OPENAI_DEFAULT_MODEL if ai.provider == "openai" else ANTHROPIC_DEFAULT_MODEL
-    has_key = app_settings.get_api_key(ai.provider) is not None
-    return AiStatus(
-        provider=ai.provider,
-        model=ai.model or default,
-        ready=has_key,
-        has_key=has_key,
-        message=None if has_key else "API 키를 입력해 주세요.",
-    )
+    else:
+        default = OPENAI_DEFAULT_MODEL if ai.provider == "openai" else ANTHROPIC_DEFAULT_MODEL
+        has_key = app_settings.get_api_key(ai.provider) is not None
+        result = AiStatus(
+            provider=ai.provider,
+            model=ai.model or default,
+            ready=has_key,
+            has_key=has_key,
+            message=None if has_key else render("ai.key_needed", lang),
+        )
+    pull = engine.pull_state
+    if pull["model"] == result.model:
+        result.pulling = pull["state"] == "pulling"
+        if pull["state"] == "failed" and not result.ready:
+            result.message = pull["message"]
+    return result
 
 
 @actions_router.get("/setup", tags=["setup"], response_model=SetupStatus)
 def setup_status(engine: EngineDep) -> SetupStatus:
-    ai = _ai_status()
-    pull = engine.pull_state
-    if pull["model"] == ai.model:
-        ai.pulling = pull["state"] == "pulling"
-        if pull["state"] == "failed" and not ai.ready:
-            ai.message = pull["message"]
     return SetupStatus(
         brain_path=str(engine.brain) if engine.brain else None,
         brain_ready=engine.brain is not None,
         language=engine.language(),
-        ai=ai,
+        ai=_ai_status(engine),
     )
 
 
+class PullRequest(BaseModel):
+    model: str | None = None  # None → the model currently chosen in settings
+
+
 @actions_router.post("/setup/ai/pull", tags=["setup"])
-async def pull_model(engine: EngineDep) -> dict[str, Any]:
-    """Download the recommended local model through Ollama (no terminal needed)."""
-    await engine.pull_model()
+async def pull_model(engine: EngineDep, body: PullRequest | None = None) -> dict[str, Any]:
+    """Download a local model through Ollama (no terminal needed)."""
+    await engine.pull_model(body.model if body else None)
     return dict(engine.pull_state)
+
+
+_MODEL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,100}$")
+
+
+@actions_router.get("/setup/ai/models", tags=["setup"])
+def ai_models(engine: EngineDep) -> dict[str, Any]:
+    """Local models installed in Ollama, plus the ones Wooju recommends."""
+    ai = app_settings.load().ai
+    recommended = recommended_ollama_model()
+    installed = OllamaProvider(recommended, host=ai.ollama_host).installed()
+    names = {m["name"] for m in installed or []}
+    suggested = [
+        {
+            "name": name,
+            "recommended": name == recommended,
+            "installed": name in names,
+            "note": "8 GB" if name == OLLAMA_MODEL_SMALL else "16 GB+",
+        }
+        for name in (OLLAMA_MODEL_SMALL, OLLAMA_MODEL_LARGE)
+    ]
+    current = (ai.model or recommended) if ai.provider == "ollama" else None
+    return {
+        "running": installed is not None,
+        "provider": ai.provider,
+        "current": current,
+        "recommended": recommended,
+        "installed": [
+            {**m, "recommended": m["name"] == recommended}
+            for m in sorted(installed or [], key=lambda m: m["name"])
+        ],
+        "suggested": suggested,
+    }
 
 
 class ChooseBrain(BaseModel):
@@ -123,12 +170,32 @@ class ChooseBrain(BaseModel):
 @actions_router.post("/setup/brain", tags=["setup"])
 async def choose_brain(body: ChooseBrain, engine: EngineDep) -> dict[str, Any]:
     if not body.path.strip():
-        raise _fail("폴더를 골라 주세요.")
+        raise _fail(engine, "setup.choose_folder")
     try:
         created = await engine.choose_brain(Path(body.path.strip()))
     except SetupError as exc:
-        raise _fail(str(exc)) from exc
+        raise _fail_from(engine, exc) from exc
     return {"brain_path": str(engine.brain), "created": created}
+
+
+@actions_router.post("/setup/pick-folder", tags=["setup"])
+def pick_folder(engine: EngineDep) -> dict[str, str | None]:
+    """Show the Mac's own folder chooser and return the chosen path (None if cancelled)."""
+    if sys.platform != "darwin":
+        return {"path": None}
+    prompt = "Wooju 폴더 고르기" if engine.language() == "ko" else "Choose a folder for Wooju"
+    script = (
+        f'POSIX path of (choose folder with prompt "{prompt}" '
+        "default location (path to documents folder))"
+    )
+    try:
+        out = subprocess.run(
+            ["osascript", "-e", script], capture_output=True, text=True, timeout=600
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {"path": None}
+    path = out.stdout.strip()
+    return {"path": path.rstrip("/") or None if out.returncode == 0 else None}
 
 
 class ChooseAi(BaseModel):
@@ -139,18 +206,19 @@ class ChooseAi(BaseModel):
 
 @actions_router.post("/setup/ai", tags=["setup"], response_model=AiStatus)
 async def choose_ai(body: ChooseAi, engine: EngineDep) -> AiStatus:
+    model = (body.model or "").strip() or None
+    if model and not _MODEL_NAME.match(model):
+        raise _fail(engine, "setup.bad_model")
     if body.provider != "ollama" and body.api_key:
         try:
             app_settings.set_api_key(body.provider, body.api_key.strip())
         except app_settings.KeyStoreError as exc:
-            raise _fail(
-                "키를 안전하게 저장하지 못했어요. Mac의 키체인 접근을 허용해 주세요."
-            ) from exc
+            raise _fail(engine, "ai.keychain") from exc
     current = app_settings.load()
     current.ai.provider = body.provider
-    current.ai.model = body.model
+    current.ai.model = model
     app_settings.save(current)
-    status = _ai_status()
+    status = _ai_status(engine)
     if body.provider != "ollama" and status.ready:
         try:  # connection test with a tiny request
             engine.provider().generate_json(
@@ -159,7 +227,9 @@ async def choose_ai(body: ChooseAi, engine: EngineDep) -> AiStatus:
                 {"type": "object", "properties": {"ok": {"type": "boolean"}}},
             )
         except LLMError as exc:
-            status.ready, status.message = False, exc.user_message
+            status.ready, status.message = False, exc.localized(engine.language())
+    if status.ready:
+        await engine.retry_waiting()
     return status
 
 
@@ -167,6 +237,7 @@ async def choose_ai(body: ChooseAi, engine: EngineDep) -> AiStatus:
 # compromised page cannot use this to launch arbitrary URLs or programs.
 OPENABLE_URLS = {
     "https://ollama.com/download",
+    "https://ollama.com/search",
     "https://console.anthropic.com/settings/keys",
     "https://platform.openai.com/api-keys",
 }
@@ -177,10 +248,10 @@ class OpenUrl(BaseModel):
 
 
 @actions_router.post("/open", tags=["setup"])
-def open_url(body: OpenUrl) -> dict[str, bool]:
+def open_url(body: OpenUrl, engine: EngineDep) -> dict[str, bool]:
     """Open an allowed page in the default browser (the desktop window cannot)."""
     if body.url not in OPENABLE_URLS:
-        raise _fail("이 주소는 열 수 없어요.", 403)
+        raise _fail(engine, "open.refused", 403)
     if sys.platform == "darwin":
         subprocess.run(["open", body.url], check=False, timeout=10)
     else:
@@ -198,12 +269,12 @@ async def add_files(files: list[UploadFile], engine: EngineDep) -> dict[str, Any
         try:
             rel = await engine.receive(upload.filename or "file", await upload.read())
         except SetupError as exc:
-            refused.append({"file": upload.filename, "message": str(exc)})
+            refused.append({"file": upload.filename, "message": exc.localized(engine.language())})
             continue
         job = await engine.enqueue(rel)
         added.append(job.to_dict())
     if not added and refused and engine.brain is None:
-        raise _fail(refused[0]["message"])
+        raise HTTPException(status_code=400, detail=refused[0]["message"])
     return {"added": added, "refused": refused}
 
 
@@ -212,7 +283,7 @@ async def process_inbox(engine: EngineDep) -> dict[str, Any]:
     try:
         jobs = await engine.enqueue_inbox()
     except SetupError as exc:
-        raise _fail(str(exc)) from exc
+        raise _fail_from(engine, exc) from exc
     return {"queued": [j.to_dict() for j in jobs]}
 
 
@@ -266,7 +337,7 @@ def list_proposals(
 def _load(engine: Engine, proposal_id: str) -> Proposal:
     proposal = engine.store.get(proposal_id)
     if proposal is None:
-        raise _fail("이 제안을 찾을 수 없어요.", 404)
+        raise _fail(engine, "proposal.not_found", 404)
     return proposal
 
 
@@ -274,10 +345,13 @@ def _load(engine: Engine, proposal_id: str) -> Proposal:
     "/proposals/{proposal_id}/approve", tags=["proposals"], response_model=ProposalView
 )
 async def approve(proposal_id: str, engine: EngineDep) -> ProposalView:
+    proposal = _load(engine, proposal_id)
     try:
-        result = await engine.apply(_load(engine, proposal_id))
-    except (ProposalError, SetupError) as exc:
-        raise _fail(str(exc), 409) from exc
+        result = await engine.apply(proposal)
+    except ProposalError as exc:
+        raise _fail(engine, "proposal.decided", 409) from exc
+    except SetupError as exc:
+        raise _fail_from(engine, exc) from exc
     return _view(result)
 
 
@@ -288,7 +362,7 @@ async def reject(proposal_id: str, engine: EngineDep) -> ProposalView:
     try:
         result = await engine.reject(_load(engine, proposal_id))
     except ProposalError as exc:
-        raise _fail(str(exc), 409) from exc
+        raise _fail(engine, "proposal.decided", 409) from exc
     return _view(result)
 
 
@@ -311,18 +385,36 @@ async def approve_batch(body: BatchApprove, engine: EngineDep) -> dict[str, Any]
 
 # ------------------------------------------------------------------- history
 
+_RECEIVED_MANY = re.compile(r"^Received (\d+) file\(s\)$")
+
+
+def display_title(title: str, lang: str) -> str:
+    """History titles are stored in English in git; show them in the app's language."""
+    if lang != "ko":
+        return title
+    if title == "Start this Brain":
+        return "Brain 시작"
+    if title.startswith("Undo: "):
+        return f"되돌림: {display_title(title.removeprefix('Undo: '), lang)}"
+    if m := _RECEIVED_MANY.match(title):
+        return f"파일 {m.group(1)}개 받음"
+    if title.startswith("Received "):
+        return f"받은 파일: {title.removeprefix('Received ')}"
+    return title
+
 
 @actions_router.get("/history", tags=["history"])
 def get_history(engine: EngineDep, limit: int = 50) -> dict[str, Any]:
     if engine.brain is None:
         return {"items": []}
+    lang = engine.language()
     entries = history.log(engine.brain, limit=max(1, min(limit, 200)))
     undone = {e.undoes for e in entries if e.undoes}
     return {
         "items": [
             {
                 "id": e.id,
-                "title": e.title,
+                "title": display_title(e.title, lang),
                 "committed_at": e.committed_at,
                 "paths": list(e.paths),
                 "undoes": e.undoes,
@@ -336,11 +428,11 @@ def get_history(engine: EngineDep, limit: int = 50) -> dict[str, Any]:
 @actions_router.post("/history/{commit_id}/undo", tags=["history"])
 async def undo(commit_id: str, engine: EngineDep) -> dict[str, Any]:
     if not commit_id.isalnum():
-        raise _fail("이 변경을 찾을 수 없어요.", 404)
+        raise _fail(engine, "history.not_found", 404)
     try:
         sha = await engine.undo(commit_id)
     except history.HistoryError as exc:
-        raise _fail(str(exc), 409) from exc
+        raise _fail_from(engine, exc, 409) from exc
     except SetupError as exc:
-        raise _fail(str(exc)) from exc
+        raise _fail_from(engine, exc) from exc
     return {"commit": sha}

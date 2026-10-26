@@ -13,6 +13,7 @@ import { RecordDetailPage } from './pages/RecordDetailPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ReviewPage } from './pages/ReviewPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 export default function App() {
   const route = useRoute()
@@ -46,6 +47,9 @@ export default function App() {
       break
     case 'history':
       page = <HistoryPage />
+      break
+    case 'settings':
+      page = <SettingsPage />
       break
     case 'knowledgeDetail':
     case 'insightDetail':

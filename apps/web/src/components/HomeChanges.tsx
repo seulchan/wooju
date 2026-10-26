@@ -10,6 +10,7 @@ import {
 } from '../lib/changePresentation'
 import type { LoadState } from '../lib/useAsync'
 import { ErrorState, Spinner } from './ui'
+import { tr, pick } from '../lib/i18n'
 
 const MAX_CHANGE_ITEMS = 5
 
@@ -28,10 +29,10 @@ export function HomeChanges({ period, changes, firstVisit, onPeriodChange }: Hom
     <section className="section" aria-labelledby="changed-heading">
       <div className="section-head">
         <h2 id="changed-heading" className="section-title">
-          What changed?
+          {tr('What changed?')}
         </h2>
         <div className="filters period-selector" role="group" aria-label="Period">
-          <span className="filter-label">Period</span>
+          <span className="filter-label">{tr('Period')}</span>
           {PERIODS.map((option) => (
             <button
               key={option.id}
@@ -40,7 +41,7 @@ export function HomeChanges({ period, changes, firstVisit, onPeriodChange }: Hom
               aria-pressed={period === option.id}
               onClick={() => onPeriodChange(option.id)}
             >
-              {option.label}
+              {tr(option.label)}
             </button>
           ))}
         </div>
@@ -51,13 +52,14 @@ export function HomeChanges({ period, changes, firstVisit, onPeriodChange }: Hom
       ) : changes.kind === 'error' ? (
         <ErrorState message={changes.message} onRetry={changes.retry} />
       ) : visibleChanges.length === 0 ? (
-        <p className="subtitle">No changes in this period.</p>
+        <p className="subtitle">{tr('No changes in this period.')}</p>
       ) : (
         <>
           {firstVisit ? (
             <p className="first-visit">
-              This is your first visit — showing the Brain&apos;s current changes. Your next
-              visit will compare against this session.
+              {tr(
+                "This is your first visit — showing the Brain's current changes. Your next visit will compare against this session.",
+              )}
             </p>
           ) : null}
           <ChangeSummary items={changes.data.items} />
@@ -76,7 +78,7 @@ function ChangeSummary({ items }: { items: ChangeItem[] }) {
       {summary.map(({ category, count }) => (
         <li key={category}>
           <span className="change-count change-add">+{count}</span>
-          <span className="change-cat">{CATEGORY_LABEL[category] ?? category}</span>
+          <span className="change-cat">{tr(CATEGORY_LABEL[category] ?? category)}</span>
         </li>
       ))}
     </ul>
@@ -97,7 +99,9 @@ function ChangeList({ items }: { items: ChangeItem[] }) {
           </Link>
         </div>
       ))}
-      {more > 0 ? <p className="change-more">+{more} more changes this period</p> : null}
+      {more > 0 ? (
+        <p className="change-more">{pick(`+${more} more changes this period`, `이 기간에 ${more}개 더 바뀌었어요`)}</p>
+      ) : null}
     </div>
   )
 }

@@ -59,6 +59,40 @@ const STRINGS = {
   historyEmpty: { ko: '아직 변경 기록이 없어요.', en: 'No changes yet.' },
   undo: { ko: '되돌리기', en: 'Undo' },
   undone: { ko: '되돌림', en: 'Undone' },
+  chooseFolder: { ko: '폴더 고르기…', en: 'Choose folder…' },
+  settings: { ko: '설정', en: 'Settings' },
+  settingsTitle: { ko: '설정', en: 'Settings' },
+  aiProvider: { ko: 'AI', en: 'AI' },
+  providerOllama: { ko: '이 Mac (Ollama)', en: 'This Mac (Ollama)' },
+  providerNote: {
+    ko: 'Ollama는 자료가 Mac 밖으로 나가지 않아요. Claude와 OpenAI는 각자의 API 키로 쓰고, 자료가 해당 회사로 전송돼요.',
+    en: 'With Ollama nothing leaves this Mac. Claude and OpenAI use your own API key and send your material to that company.',
+  },
+  installedModels: { ko: '설치된 모델', en: 'Installed models' },
+  noModels: { ko: '아직 받은 모델이 없어요.', en: 'No models downloaded yet.' },
+  ollamaOff: { ko: 'Ollama가 꺼져 있어요. Ollama 앱을 열면 모델 목록이 보여요.', en: 'Ollama is not running. Open the Ollama app to see your models.' },
+  recommended: { ko: '추천', en: 'Recommended' },
+  inUse: { ko: '사용 중', en: 'In use' },
+  use: { ko: '이 모델 쓰기', en: 'Use this model' },
+  moreModels: { ko: '다른 모델 받기', en: 'Download another model' },
+  modelName: { ko: '모델 이름 (예: qwen3.5:9b)', en: 'Model name (e.g. qwen3.5:9b)' },
+  download: { ko: '받기', en: 'Download' },
+  downloading: { ko: '받는 중…', en: 'Downloading…' },
+  browseModels: { ko: 'Ollama 모델 둘러보기', en: 'Browse Ollama models' },
+  modelHint: {
+    ko: 'Mac 메모리에 맞는 모델을 추천해요. 큰 모델은 더 정확하지만 느리고 메모리를 많이 써요.',
+    en: 'The recommendation fits this Mac’s memory. Larger models are more accurate but slower and use more memory.',
+  },
+  cloudModel: { ko: '모델', en: 'Model' },
+  getKey: { ko: '키 발급 페이지 열기', en: 'Open the key page' },
+  saved: { ko: '저장했어요', en: 'Saved' },
+  brainFolder: { ko: 'Brain 폴더', en: 'Brain folder' },
+  changeFolder: { ko: '다른 폴더 열기…', en: 'Open another folder…' },
+  language: { ko: '언어', en: 'Language' },
+  languageNote: {
+    ko: 'Mac 언어를 따라요. 바꾸려면 Mac의 시스템 설정 > 일반 > 언어 및 지역에서 바꾼 뒤 Wooju를 다시 열어 주세요.',
+    en: 'Follows your Mac’s language. To change it, change System Settings > General > Language & Region, then reopen Wooju.',
+  },
   footer: {
     ko: '모든 변경은 기록되고 되돌릴 수 있어요',
     en: 'Every change is recorded and can be undone',
@@ -69,8 +103,176 @@ export type StringKey = keyof typeof STRINGS
 
 const LangContext = createContext<Lang>('en')
 
+/**
+ * Screens written before i18n keep their English text in the source and wrap
+ * it in `tr()`; KO maps that English to Korean. `pick()` is for sentences
+ * that carry values. Both read the language set by the nearest LangProvider
+ * (the language is fixed for the whole session).
+ */
+let current: Lang = 'en'
+
+export function tr(text: string): string {
+  return current === 'ko' ? (KO[text] ?? text) : text
+}
+
+/** Reset between tests; the app sets the language through LangProvider. */
+export function setCurrentLang(lang: Lang): void {
+  current = lang
+}
+
+export function pick(en: string, ko: string): string {
+  return current === 'ko' ? ko : en
+}
+
 export function LangProvider({ lang, children }: { lang: string; children: ReactNode }) {
-  return <LangContext.Provider value={lang === 'ko' ? 'ko' : 'en'}>{children}</LangContext.Provider>
+  const value: Lang = lang === 'ko' ? 'ko' : 'en'
+  current = value
+  return <LangContext.Provider value={value}>{children}</LangContext.Provider>
+}
+
+const KO: Record<string, string> = {
+  // navigation and shell
+  Home: '홈',
+  Knowledge: '알게 된 것',
+  Insights: '발견한 연결',
+  Insight: '발견한 연결',
+  Sources: '자료',
+  Source: '자료',
+  Memory: '나에 대해',
+  Projects: '프로젝트',
+  Areas: '영역',
+  Settings: '설정',
+  Search: '찾기',
+  'Search the Brain…': 'Brain에서 찾기…',
+  'Search the Brain': 'Brain에서 찾기',
+  Offline: '연결 끊김',
+  'Brain ready': '준비됨',
+  'Not configured': '설정 필요',
+  'Checking backend': '확인 중',
+  "Can't reach Wooju's server. Reopen the app if this continues.":
+    'Wooju 서버에 연결할 수 없어요. 계속되면 앱을 다시 열어 주세요.',
+  // home
+  'Loading Brain summary…': 'Brain을 불러오는 중…',
+  'Your Brain is empty': '아직 Brain이 비어 있어요',
+  'Drop a file above to add your first note.': '위에 파일을 넣으면 첫 노트가 만들어져요.',
+  'What do I know?': '무엇을 알고 있나',
+  'Main areas': '주요 영역',
+  'What is connected?': '무엇이 연결되어 있나',
+  'What needs attention?': '무엇을 확인해야 하나',
+  'Loading map…': '지도를 불러오는 중…',
+  'Mapping connections…': '연결을 그리는 중…',
+  'What changed?': '무엇이 바뀌었나',
+  Period: '기간',
+  'No changes in this period.': '이 기간에는 바뀐 것이 없어요.',
+  "This is your first visit — showing the Brain's current changes. Your next visit will compare against this session.":
+    '처음 방문이라 지금까지의 변경을 보여 줘요. 다음부터는 이번 방문 이후의 변경을 보여 줘요.',
+  'Since last visit': '지난 방문 이후',
+  '7 days': '7일',
+  '30 days': '30일',
+  'All time': '전체',
+  'No connections yet': '아직 연결이 없어요',
+  'Relationships between knowledge and insights will appear here.':
+    '지식과 발견한 연결 사이의 관계가 여기에 나타나요.',
+  'Open record →': '노트 열기 →',
+  // attention
+  'Finding items to review…': '확인할 것을 찾는 중…',
+  'Nothing needs attention right now': '지금은 확인할 것이 없어요',
+  'No provisional or candidate insights, open questions, contested claims, or unresolved references were found in the Brain.':
+    '검토 중인 연결, 열린 질문, 엇갈리는 주장, 깨진 참조가 없어요.',
+  'Provisional insight': '잠정 연결',
+  'Provisional insights': '잠정 연결',
+  'Candidate insight': '후보 연결',
+  'Candidate insights': '후보 연결',
+  'Open question': '열린 질문',
+  'Open questions': '열린 질문',
+  'Contested claim': '엇갈리는 주장',
+  'Contested claims': '엇갈리는 주장',
+  'Unresolved derivation': '찾을 수 없는 근거',
+  'Unresolved derivations': '찾을 수 없는 근거',
+  'Unresolved link': '깨진 링크',
+  'Unresolved links': '깨진 링크',
+  'Unresolved reference': '찾을 수 없는 참조',
+  Provisional: '잠정',
+  Candidate: '후보',
+  Established: '확립',
+  Contested: '엇갈림',
+  Rejected: '기각',
+  Superseded: '대체됨',
+  // lists
+  'Loading knowledge…': '불러오는 중…',
+  'Durable wiki notes — concepts, overviews, models, and how-tos.':
+    '오래 두고 쓸 지식이에요. 개념, 개요, 사고방식, 방법을 모아 둬요.',
+  All: '전체',
+  'No knowledge notes': '아직 정리된 지식이 없어요',
+  'No notes for this filter': '이 조건에 맞는 노트가 없어요',
+  'Loading insights…': '불러오는 중…',
+  Status: '상태',
+  Kind: '종류',
+  Type: '유형',
+  Category: '분류',
+  'No insights': '아직 발견한 연결이 없어요',
+  'No insights for these filters': '이 조건에 맞는 연결이 없어요',
+  'Loading sources…': '불러오는 중…',
+  'No sources': '아직 자료가 없어요',
+  'Search titles, aliases, and note text…': '제목과 본문에서 찾기…',
+  'Full-text search across every indexed note.': '모든 노트의 본문에서 찾아요.',
+  'Searching…': '찾는 중…',
+  'No results': '결과가 없어요',
+  'Memory / Projects / Areas': '나에 대해 / 프로젝트 / 영역',
+  // record detail
+  'Supporting evidence': '근거',
+  Challenge: '반론 검토',
+  Boundaries: '범위와 한계',
+  'Loading record…': '불러오는 중…',
+  'Record not found': '노트를 찾을 수 없어요',
+  'This note has no body content.': '본문이 없는 노트예요.',
+  Details: '정보',
+  Path: '위치',
+  Modified: '수정',
+  Aliases: '다른 이름',
+  Tags: '태그',
+  'Original artifact': '원본',
+  Author: '저자',
+  Date: '날짜',
+  File: '파일',
+  Derivation: '근거가 된 노트',
+  Links: '링크',
+  // shared states
+  'Loading…': '불러오는 중…',
+  'Something went wrong': '문제가 생겼어요',
+  'Something went wrong.': '문제가 생겼어요.',
+  'Try again': '다시 시도',
+  'Page not found': '페이지를 찾을 수 없어요',
+  // note types (titleCase output)
+  Article: '기사',
+  Docs: '문서',
+  Paper: '논문',
+  Book: '책',
+  Spec: '명세',
+  Repo: '저장소',
+  Video: '영상',
+  Podcast: '팟캐스트',
+  Course: '강의',
+  Conversation: '대화',
+  Experience: '경험',
+  Other: '기타',
+  Concept: '개념',
+  Concepts: '개념',
+  Overview: '개요',
+  Overviews: '개요',
+  Question: '질문',
+  Questions: '질문',
+  'How To': '방법',
+  'How Tos': '방법',
+  'Mental Model': '사고방식',
+  'Mental Models': '사고방식',
+  Pattern: '패턴',
+  Connection: '연결',
+  Tension: '긴장',
+  Implication: '시사점',
+  Hypothesis: '가설',
+  Project: '프로젝트',
+  Area: '영역',
 }
 
 export function useT(): (key: StringKey) => string {

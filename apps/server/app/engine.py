@@ -30,6 +30,7 @@ from brain_core.changes import (
     reject_proposal,
 )
 from brain_core.index import BrainIndex
+from brain_core.messages import UserFacingError, render
 from wooju_agents.ingest import IngestError, inbox_files, ingest_file
 from wooju_agents.llm import (
     AnthropicProvider,
@@ -51,8 +52,11 @@ JobState = Literal["queued", "working", "waiting", "done", "failed"]
 RETRY_SECONDS = 10.0
 
 
-class SetupError(Exception):
-    """Shown to the user as-is."""
+class SetupError(UserFacingError):
+    """A setup or file problem; ``key`` names the user message."""
+
+    def __init__(self, key: str, **params: Any) -> None:
+        super().__init__(key, key, **params)
 
 
 @dataclass
@@ -85,14 +89,14 @@ def create_or_open_brain(path: Path) -> bool:
     """Open an existing Brain or create one from the template. Returns True if created."""
     path = path.expanduser()
     if path.exists() and not path.is_dir():
-        raise SetupError("파일이 아니라 폴더를 골라 주세요.")
+        raise SetupError("setup.not_folder")
     if path.is_dir() and looks_like_brain(path):
         return False
     if path.is_dir() and any(p for p in path.iterdir() if not p.name.startswith(".")):
-        raise SetupError("이 폴더에는 이미 다른 파일이 있어요. 빈 폴더나 새 폴더를 골라 주세요.")
+        raise SetupError("setup.folder_busy")
     template = template_dir()
     if not template.is_dir():
-        raise SetupError("앱 설치가 손상됐어요. 앱을 다시 설치해 주세요.")
+        raise SetupError("setup.broken_install")
     shutil.copytree(template, path, dirs_exist_ok=True, symlinks=True)
     history.ensure_repo(path)
     return True
@@ -173,24 +177,27 @@ class Engine:
             return OllamaProvider(ai.model or recommended_ollama_model(), host=ai.ollama_host)
         key = app_settings.get_api_key(ai.provider)
         if not key:
-            raise LLMError("missing key", "API 키를 먼저 입력해 주세요.", retryable=True)
+            raise LLMError("missing key", "llm.key_first", retryable=True)
         if ai.provider == "openai":
             return OpenAIProvider(key, model=ai.model) if ai.model else OpenAIProvider(key)
         return AnthropicProvider(key, model=ai.model) if ai.model else AnthropicProvider(key)
 
-    async def pull_model(self) -> None:
-        """Download the recommended Ollama model in the background."""
-        provider = self.provider()
-        if not isinstance(provider, OllamaProvider) or self.pull_state["state"] == "pulling":
+    async def pull_model(self, model: str | None = None) -> None:
+        """Download a local model through Ollama in the background (default: the chosen one)."""
+        ai = app_settings.load().ai
+        name = model or ai.model or recommended_ollama_model()
+        if self.pull_state["state"] == "pulling":
             return
-        self.pull_state = {"model": provider.model, "state": "pulling", "message": None}
+        provider = OllamaProvider(name, host=ai.ollama_host)
+        self.pull_state = {"model": name, "state": "pulling", "message": None}
 
         async def run() -> None:
             try:
                 await asyncio.to_thread(provider.pull)
                 self.pull_state["state"] = "done"
+                await self.retry_waiting()
             except LLMError as exc:
-                self.pull_state.update(state="failed", message=exc.user_message)
+                self.pull_state.update(state="failed", message=exc.localized(self.language()))
 
         asyncio.create_task(run())
 
@@ -198,7 +205,7 @@ class Engine:
 
     def _require_brain(self) -> Path:
         if self.brain is None:
-            raise SetupError("먼저 저장할 폴더를 골라 주세요.")
+            raise SetupError("setup.brain_first")
         return self.brain
 
     def save_upload(self, name: str, data: bytes) -> str:
@@ -208,10 +215,7 @@ class Engine:
         base = _safe_upload_name(name)
         stem, suffix = Path(base).stem, Path(base).suffix
         if suffix.lower() not in SUPPORTED_SUFFIXES:
-            raise SetupError(
-                f"'{base}'은(는) 아직 읽을 수 없는 형식이에요. "
-                "PDF, 텍스트, HTML 파일을 넣어 주세요."
-            )
+            raise SetupError("upload.unsupported", name=base)
         target, n = inbox / base, 2
         while target.exists():
             target, n = inbox / f"{stem}-{n}{suffix}", n + 1
@@ -287,7 +291,7 @@ class Engine:
                 await self._run(job)
             except Exception as exc:  # noqa: BLE001 — one bad file must not stop the queue
                 logger.exception("Ingest failed for %s", job.file)
-                job.state, job.message = "failed", f"정리하지 못했어요: {exc}"
+                job.state, job.message = "failed", render("job.failed", self.language(), error=exc)
             finally:
                 self.queue.task_done()
 
@@ -295,7 +299,7 @@ class Engine:
         brain = self._require_brain()
         job.state = "working"
         if not (brain / job.file).exists():
-            job.state, job.message = "failed", "파일이 더 이상 받은 편지함에 없어요."
+            job.state, job.message = "failed", render("job.gone", self.language())
             return
         try:
             provider = self.provider()
@@ -304,19 +308,19 @@ class Engine:
             )
         except LLMError as exc:
             if exc.retryable:
-                job.state, job.message = "waiting", "AI가 준비되면 자동으로 정리해요."
+                job.state, job.message = "waiting", render("job.waiting", self.language())
             else:
-                job.state, job.message = "failed", exc.user_message
+                job.state, job.message = "failed", exc.localized(self.language())
             return
         except IngestError as exc:
-            job.state, job.message = "failed", exc.user_message
+            job.state, job.message = "failed", exc.localized(self.language())
             return
         self.store.save(proposal)
         job.proposal_id = proposal.id
         if proposal.approval == "auto":
             proposal = await self.apply(proposal)
             if proposal.status != "applied":
-                job.state, job.message = "failed", "정리 결과가 규칙에 맞지 않아 저장하지 않았어요."
+                job.state, job.message = "failed", render("job.invalid", self.language())
                 return
         job.state = "done"
 

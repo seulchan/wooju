@@ -7,6 +7,7 @@ import { useAsync } from '../lib/useAsync'
 import { Markdown } from '../components/Markdown'
 import { RecordSidebar } from '../components/RecordSidebar'
 import { EmptyState, ErrorState, MetaBadge, Spinner, StatusBadge } from '../components/ui'
+import { tr, pick } from '../lib/i18n'
 
 const SECTION_ROUTE: Partial<Record<Category, string>> = {
   knowledge: '/knowledge',
@@ -33,12 +34,12 @@ export function RecordDetailPage({ id }: { id: string }) {
     [id],
   )
 
-  if (state.kind === 'loading') return <Spinner label="Loading record…" />
+  if (state.kind === 'loading') return <Spinner label={tr('Loading record…')} />
   if (state.kind === 'error') return <ErrorState message={state.message} onRetry={state.retry} />
   if (state.data === null) {
     return (
-      <EmptyState title="Record not found">
-        No record matches “{id}”. It may have been moved or removed.
+      <EmptyState title={tr('Record not found')}>
+        {pick(`No record matches “${id}”. It may have been moved or removed.`, `“${id}” 노트가 없어요. 옮겨졌거나 지워졌을 수 있어요.`)}
       </EmptyState>
     )
   }
@@ -55,7 +56,9 @@ function RecordView({ record }: { record: BrainRecord }) {
   return (
     <article className="detail">
       <p className="back">
-        <Link to={back}>← Back to {titleCase(record.category) ?? 'list'}</Link>
+        <Link to={back}>
+          {pick(`← Back to ${titleCase(record.category) ?? 'list'}`, `← ${titleCase(record.category) ?? '목록'}(으)로`)}
+        </Link>
       </p>
       <h1 className="page-title">{record.title}</h1>
       <div className="badges">
@@ -73,8 +76,8 @@ function RecordView({ record }: { record: BrainRecord }) {
                 const content = sections[key]
                 if (!content) return null
                 return (
-                  <section key={key} className={`callout ${CALLOUT[key].tone}`} aria-label={CALLOUT[key].label}>
-                    <h3 className="callout-label">{CALLOUT[key].label}</h3>
+                  <section key={key} className={`callout ${CALLOUT[key].tone}`} aria-label={tr(CALLOUT[key].label)}>
+                    <h3 className="callout-label">{tr(CALLOUT[key].label)}</h3>
                     <Markdown content={content} links={record.links} />
                   </section>
                 )
@@ -85,7 +88,7 @@ function RecordView({ record }: { record: BrainRecord }) {
           {mainBody.trim() ? (
             <Markdown content={mainBody} links={record.links} />
           ) : (
-            <p className="subtitle">This note has no body content.</p>
+            <p className="subtitle">{tr('This note has no body content.')}</p>
           )}
         </div>
 

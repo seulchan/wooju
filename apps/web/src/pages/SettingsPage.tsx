@@ -1,0 +1,300 @@
+import { useState, type FormEvent } from 'react'
+
+import {
+  ApiError,
+  chooseAi,
+  chooseBrain,
+  fetchModels,
+  fetchSetup,
+  openExternal,
+  pickFolder,
+  pullModel,
+  type ModelsResponse,
+} from '../api'
+import { Badge, ErrorState, Spinner } from '../components/ui'
+import { requestRefresh } from '../lib/freshness'
+import { useLang, useT } from '../lib/i18n'
+import { useAsync } from '../lib/useAsync'
+import type { AiStatus, SetupStatus } from '../types'
+
+const KEY_PAGES = {
+  anthropic: 'https://console.anthropic.com/settings/keys',
+  openai: 'https://platform.openai.com/api-keys',
+} as const
+
+function gb(bytes: number): string {
+  return bytes ? `${(bytes / 1e9).toFixed(1)} GB` : ''
+}
+
+/** AI provider and model, the Brain folder, and language. */
+export function SettingsPage() {
+  const t = useT()
+  const [nonce, setNonce] = useState(0)
+  const state = useAsync(
+    async (signal) => {
+      const [setup, models] = await Promise.all([fetchSetup(signal), fetchModels(signal)])
+      return { setup, models }
+    },
+    [nonce],
+  )
+  const reload = () => {
+    setNonce((n) => n + 1)
+    requestRefresh()
+  }
+
+  if (state.kind === 'loading') return <Spinner />
+  if (state.kind === 'error') return <ErrorState message={state.message} onRetry={state.retry} />
+  const { setup, models } = state.data
+
+  return (
+    <div className="settings">
+      <h1 className="page-title">{t('settingsTitle')}</h1>
+      <AiSettings setup={setup} models={models} onChange={reload} />
+      <FolderSettings setup={setup} onChange={() => window.location.reload()} />
+      <section className="section">
+        <h2 className="section-title">{t('language')}</h2>
+        <p className="hint">{t('languageNote')}</p>
+      </section>
+    </div>
+  )
+}
+
+function AiSettings({
+  setup,
+  models,
+  onChange,
+}: {
+  setup: SetupStatus
+  models: ModelsResponse
+  onChange: () => void
+}) {
+  const t = useT()
+  const [provider, setProvider] = useState<AiStatus['provider']>(setup.ai.provider)
+  const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+
+  async function run(fn: () => Promise<unknown>) {
+    setError(null)
+    setNote(null)
+    try {
+      const result = await fn()
+      if (result && typeof result === 'object' && 'ready' in result) {
+        const status = result as AiStatus
+        if (!status.ready && status.message) setError(status.message)
+        else setNote(t('saved'))
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong.')
+    }
+    onChange()
+  }
+
+  return (
+    <section className="section" aria-label={t('aiProvider')}>
+      <h2 className="section-title">{t('aiProvider')}</h2>
+      <div className="segmented" role="radiogroup" aria-label={t('aiProvider')}>
+        {(['ollama', 'anthropic', 'openai'] as const).map((p) => (
+          <button
+            key={p}
+            role="radio"
+            aria-checked={provider === p}
+            className={`chip ${provider === p ? 'chip-active' : ''}`}
+            onClick={() => {
+              setProvider(p)
+              if (p === 'ollama') void run(() => chooseAi('ollama', undefined, models.current))
+            }}
+          >
+            {p === 'ollama' ? t('providerOllama') : p === 'anthropic' ? 'Claude' : 'OpenAI'}
+          </button>
+        ))}
+      </div>
+      <p className="hint">{t('providerNote')}</p>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {note ? <p className="form-ok">{note}</p> : null}
+      {provider === 'ollama' ? (
+        <OllamaModels setup={setup} models={models} run={run} />
+      ) : (
+        <CloudKey provider={provider} current={setup.ai.provider === provider ? setup.ai : null} run={run} />
+      )}
+    </section>
+  )
+}
+
+function OllamaModels({
+  setup,
+  models,
+  run,
+}: {
+  setup: SetupStatus
+  models: ModelsResponse
+  run: (fn: () => Promise<unknown>) => Promise<void>
+}) {
+  const t = useT()
+  const [custom, setCustom] = useState('')
+  const inUse = setup.ai.provider === 'ollama' ? setup.ai.model : null
+  const pulling = setup.ai.pulling ? setup.ai.model : null
+
+  if (!models.running) {
+    return (
+      <div className="settings-block">
+        <p>{t('ollamaOff')}</p>
+        <button className="btn" onClick={() => void openExternal('https://ollama.com/download')}>
+          {t('openOllama')}
+        </button>
+      </div>
+    )
+  }
+
+  const notInstalled = models.suggested.filter((s) => !s.installed)
+  return (
+    <div className="settings-block">
+      <h3 className="subsection-title">{t('installedModels')}</h3>
+      {models.installed.length ? (
+        <ul className="model-list">
+          {models.installed.map((m) => (
+            <li key={m.name} className="model-item">
+              <span className="model-name">{m.name}</span>
+              <span className="hint">{gb(m.size)}</span>
+              {m.recommended ? <Badge tone="tone-ok">{t('recommended')}</Badge> : null}
+              {m.name === inUse ? (
+                <Badge tone="tone-neutral">{t('inUse')}</Badge>
+              ) : (
+                <button className="btn" onClick={() => void run(() => chooseAi('ollama', undefined, m.name))}>
+                  {t('use')}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="hint">{t('noModels')}</p>
+      )}
+      <p className="hint">{t('modelHint')}</p>
+
+      <h3 className="subsection-title">{t('moreModels')}</h3>
+      {notInstalled.length ? (
+        <ul className="model-list">
+          {notInstalled.map((s) => (
+            <li key={s.name} className="model-item">
+              <span className="model-name">{s.name}</span>
+              <span className="hint">{s.note}</span>
+              {s.recommended ? <Badge tone="tone-ok">{t('recommended')}</Badge> : null}
+              <button className="btn" disabled={pulling === s.name} onClick={() => void run(() => pullModel(s.name))}>
+                {pulling === s.name ? t('downloading') : t('download')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <form
+        className="key-form"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault()
+          void run(() => pullModel(custom.trim()))
+          setCustom('')
+        }}
+      >
+        <input
+          className="text-input"
+          aria-label={t('modelName')}
+          placeholder={t('modelName')}
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+        />
+        <button className="btn" type="submit" disabled={!custom.trim()}>
+          {t('download')}
+        </button>
+        <button type="button" className="btn-link" onClick={() => void openExternal('https://ollama.com/search')}>
+          {t('browseModels')}
+        </button>
+      </form>
+      {pulling ? <p className="hint">{`${pulling} — ${t('downloading')}`}</p> : null}
+    </div>
+  )
+}
+
+function CloudKey({
+  provider,
+  current,
+  run,
+}: {
+  provider: 'anthropic' | 'openai'
+  current: AiStatus | null
+  run: (fn: () => Promise<unknown>) => Promise<void>
+}) {
+  const t = useT()
+  const [key, setKey] = useState('')
+  const [model, setModel] = useState(current?.model ?? '')
+  return (
+    <form
+      className="settings-block key-form"
+      onSubmit={(e: FormEvent) => {
+        e.preventDefault()
+        void run(() => chooseAi(provider, key.trim() || undefined, model.trim() || null))
+        setKey('')
+      }}
+    >
+      <input
+        className="text-input"
+        type="password"
+        aria-label={t('keyLabel')}
+        placeholder={current?.has_key ? '••••••••' : t('keyLabel')}
+        value={key}
+        onChange={(e) => setKey(e.target.value)}
+      />
+      <input
+        className="text-input"
+        aria-label={t('cloudModel')}
+        placeholder={t('cloudModel')}
+        value={model}
+        onChange={(e) => setModel(e.target.value)}
+      />
+      <button className="btn btn-primary" type="submit" disabled={!key.trim() && !current?.has_key}>
+        {t('keySave')}
+      </button>
+      <button type="button" className="btn-link" onClick={() => void openExternal(KEY_PAGES[provider])}>
+        {t('getKey')}
+      </button>
+      <p className="hint">{t('keyNote')}</p>
+    </form>
+  )
+}
+
+function FolderSettings({ setup, onChange }: { setup: SetupStatus; onChange: () => void }) {
+  const t = useT()
+  const lang = useLang()
+  const [error, setError] = useState<string | null>(null)
+
+  async function change() {
+    setError(null)
+    const path = await pickFolder()
+    if (!path) return
+    try {
+      await chooseBrain(path)
+      onChange()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong.')
+    }
+  }
+
+  return (
+    <section className="section" aria-label={t('brainFolder')}>
+      <h2 className="section-title">{t('brainFolder')}</h2>
+      <p>
+        <code lang={lang}>{setup.brain_path}</code>
+      </p>
+      <button className="btn" onClick={() => void change()}>
+        {t('changeFolder')}
+      </button>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  )
+}

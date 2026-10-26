@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, Spinner } from '../components/ui'
 import { AttentionSection } from '../components/AttentionSection'
 import { HomeChanges } from '../components/HomeChanges'
 import { DropZone } from '../components/DropZone'
+import { tr } from '../lib/i18n'
 
 const BrainMap = lazy(() =>
   import('../components/BrainMap').then(({ BrainMap: BrainMapComponent }) => ({
@@ -52,7 +53,7 @@ export function HomePage() {
     })()
   }, [overview.kind, changes.kind, uiState.kind])
 
-  if (overview.kind === 'loading') return <Spinner label="Loading Brain summary…" />
+  if (overview.kind === 'loading') return <Spinner label={tr('Loading Brain summary…')} />
   if (overview.kind === 'error') return <ErrorState message={overview.message} onRetry={overview.retry} />
 
   const { knowledge, insight, source, total, main_areas: mainAreas } = overview.data
@@ -60,8 +61,8 @@ export function HomePage() {
     return (
       <>
         <DropZone />
-        <EmptyState title="Your Brain is empty">
-          Drop a file above to add your first note.
+        <EmptyState title={tr('Your Brain is empty')}>
+          {tr('Drop a file above to add your first note.')}
         </EmptyState>
       </>
     )
@@ -83,19 +84,19 @@ export function HomePage() {
 
       <section className="section section-first" aria-labelledby="know-heading">
         <h2 id="know-heading" className="section-title">
-          What do I know?
+          {tr('What do I know?')}
         </h2>
         <div className="tiles" aria-label="Brain summary">
           {tiles.map((t) => (
             <Link key={t.label} to={t.to} className="tile">
               <span className="tile-count">{t.count}</span>
-              <span className="tile-label">{t.label}</span>
+              <span className="tile-label">{tr(t.label)}</span>
             </Link>
           ))}
         </div>
         {mainAreas.length > 0 ? (
           <p className="main-areas">
-            <span className="main-areas__label">Main areas</span>
+            <span className="main-areas__label">{tr('Main areas')}</span>
             {mainAreas.map((a) => (
               <span key={a.label} className="main-areas__area">
                 {a.label}
@@ -113,11 +114,11 @@ export function HomePage() {
 
       <section aria-labelledby="connected-heading" className="section">
         <h2 id="connected-heading" className="section-title">
-          What is connected?
+          {tr('What is connected?')}
         </h2>
         {/* The map reuses the "What changed?" period window so recent-change
             highlighting tracks the same selection the user made above. */}
-        <Suspense fallback={<Spinner label="Loading map…" />}>
+        <Suspense fallback={<Spinner label={tr('Loading map…')} />}>
           <BrainMap since={changesSince(period, lastSeenAt)} />
         </Suspense>
       </section>
@@ -127,7 +128,7 @@ export function HomePage() {
           claims, unresolved refs), not only recent changes. */}
       <section aria-labelledby="attention-heading" className="section">
         <h2 id="attention-heading" className="section-title">
-          What needs attention?
+          {tr('What needs attention?')}
         </h2>
         <AttentionSection />
       </section>

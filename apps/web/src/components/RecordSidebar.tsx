@@ -4,6 +4,7 @@ import type { BrainLink, BrainRecord, ResolvedRef } from '../types'
 import { encodeId } from '../lib/paths'
 import { formatDate, pluralize, titleCase } from '../lib/format'
 import { Link } from '../lib/router'
+import { tr } from '../lib/i18n'
 
 /** Right-hand panels for a record detail view. */
 export function RecordSidebar({ record }: { record: BrainRecord }) {
@@ -23,7 +24,7 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   if (children === null || children === undefined || children === '') return null
   return (
     <div className="metarow">
-      <dt>{label}</dt>
+      <dt>{tr(label)}</dt>
       <dd>{children}</dd>
     </div>
   )
@@ -35,7 +36,7 @@ function Metadata({ record }: { record: BrainRecord }) {
     : null
   return (
     <section className="panel meta" aria-label="Record metadata">
-      <h2 className="panel-title">Details</h2>
+      <h2 className="panel-title">{tr('Details')}</h2>
       <dl className="meta-list">
         <MetaRow label="Path">
           <code>{record.path}</code>
@@ -72,7 +73,7 @@ function Artifact({ meta }: { meta: Record<string, unknown> }) {
   if (!url && !author && !venue && !date && !type && !doi && !file) return null
   return (
     <section className="panel meta" aria-label="Original artifact">
-      <h2 className="panel-title">Original artifact</h2>
+      <h2 className="panel-title">{tr('Original artifact')}</h2>
       <dl className="meta-list">
         {url ? (
           <MetaRow label="URL">
@@ -97,7 +98,7 @@ function Derivation({ derived }: { derived: ResolvedRef[] }) {
   if (derived.length === 0) return null
   return (
     <section className="panel meta" aria-label="Derivation">
-      <h2 className="panel-title">Derivation</h2>
+      <h2 className="panel-title">{tr('Derivation')}</h2>
       <p className="meta-note">
         {pluralize(derived.length, 'record')} this insight derives from. Derivation provenance — not proof.
       </p>
@@ -109,7 +110,7 @@ function Derivation({ derived }: { derived: ResolvedRef[] }) {
                 {ref.title ?? ref.ref}
               </Link>
             ) : (
-              <span className="unresolved" title="Unresolved reference">
+              <span className="unresolved" title={tr('Unresolved reference')}>
                 {ref.ref}
               </span>
             )}
@@ -132,7 +133,7 @@ function OutgoingLinks({ links }: { links: BrainLink[] }) {
   if (unique.length === 0) return null
   return (
     <section className="panel meta" aria-label="Outgoing links">
-      <h2 className="panel-title">Links</h2>
+      <h2 className="panel-title">{tr('Links')}</h2>
       <ul className="ref-list">
         {unique.map((link, index) => {
           const label = link.label ?? link.target
@@ -142,7 +143,7 @@ function OutgoingLinks({ links }: { links: BrainLink[] }) {
               {link.resolved_id ? (
                 <Link to={`/record/${encodeId(link.resolved_id)}`}>{display}</Link>
               ) : (
-                <span className="unresolved" title="Unresolved link">
+                <span className="unresolved" title={tr('Unresolved link')}>
                   {display}
                 </span>
               )}

@@ -41,6 +41,7 @@ import { Link, navigate } from '../lib/router'
 import { statusMeta, titleCase } from '../lib/format'
 import { EmptyState, ErrorState, MetaBadge, Spinner, StatusBadge } from './ui'
 import type { GraphEdge, GraphNode } from '../types'
+import { tr } from '../lib/i18n'
 
 /** Compact overview cap. Readability > completeness; the API bounds the rest. */
 const NODE_LIMIT = 40
@@ -159,7 +160,7 @@ export function BrainMap({ since }: { since: string | null }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
-  if (state.kind === 'loading') return <Spinner label="Mapping connections…" />
+  if (state.kind === 'loading') return <Spinner label={tr('Mapping connections…')} />
   if (state.kind === 'error') {
     return <ErrorState message={state.message} onRetry={state.retry} />
   }
@@ -168,8 +169,8 @@ export function BrainMap({ since }: { since: string | null }) {
 
   if (gNodes.length === 0) {
     return (
-      <EmptyState title="No connections yet">
-        Relationships between knowledge and insights will appear here.
+      <EmptyState title={tr('No connections yet')}>
+        {tr('Relationships between knowledge and insights will appear here.')}
       </EmptyState>
     )
   }
@@ -386,7 +387,7 @@ function DetailChip({ node, onClear }: { node: GraphNode; onClear: () => void })
         <MetaBadge label="Type" value={titleCase(node.subtype)} />
       </div>
       <Link className="btn map-chip__open" to={`/record/${encodeId(node.id)}`}>
-        Open record →
+        {tr('Open record →')}
       </Link>
     </div>
   )
@@ -423,13 +424,13 @@ function MapLegend({ showRecent }: { showRecent: boolean }) {
         <svg className="map-legend__swatch" viewBox="0 0 12 12" aria-hidden="true">
           <circle cx="6" cy="6" r="5" />
         </svg>
-        Knowledge
+        {tr('Knowledge')}
       </span>
       <span className="map-legend__item">
         <svg className="map-legend__swatch" viewBox="0 0 12 12" aria-hidden="true">
           <polygon points="6,1 11,6 6,11 1,6" />
         </svg>
-        Insight
+        {tr('Insight')}
       </span>
       <span className="map-legend__item">
         <span className="map-legend__line map-legend__line--solid" />

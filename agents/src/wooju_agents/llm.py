@@ -15,6 +15,8 @@ from typing import Any, Protocol
 
 import httpx
 
+from brain_core.messages import UserFacingError
+
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
 # Hardware mapping from docs/DECISIONS.md (Apple Silicon baseline).
 OLLAMA_MODEL_SMALL = "qwen3.5:4b"  # 8 GB
@@ -24,14 +26,16 @@ OPENAI_DEFAULT_MODEL = "gpt-5-mini"
 ANTHROPIC_DEFAULT_MODEL = "claude-haiku-5-5"
 
 
-class LLMError(Exception):
-    """The provider could not produce a usable answer. ``user_message`` is shown in the app."""
+class LLMError(UserFacingError):
+    """The provider could not produce a usable answer.
 
-    def __init__(self, message: str, user_message: str, retryable: bool = False) -> None:
-        super().__init__(message)
-        self.user_message = user_message
-        # True when the AI is simply not available yet (not running, model not
-        # downloaded, no key). Work can wait and continue once it is.
+    ``key`` names the message shown to the user (see brain_core.messages).
+    ``retryable`` is True when the AI is simply not available yet (not running,
+    model not downloaded, no key): work can wait and continue once it is.
+    """
+
+    def __init__(self, detail: str, key: str, retryable: bool = False, **params: Any) -> None:
+        super().__init__(detail, key, **params)
         self.retryable = retryable
 
 
@@ -67,12 +71,10 @@ def _loads(raw: str, provider: str) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         raise LLMError(
             f"{provider} returned invalid JSON: {raw[:200]}",
-            "AI 응답을 읽지 못했어요. 다시 시도해 주세요.",
+            "llm.unreadable",
         ) from exc
     if not isinstance(value, dict):
-        raise LLMError(
-            f"{provider} returned non-object JSON", "AI 응답을 읽지 못했어요. 다시 시도해 주세요."
-        )
+        raise LLMError(f"{provider} returned non-object JSON", "llm.unreadable")
     return value
 
 
@@ -96,6 +98,19 @@ class OllamaProvider:
         names = [m.get("name", "") for m in resp.json().get("models", [])]
         return {"running": True, "models": names, "model_ready": self.model in names}
 
+    def installed(self) -> list[dict[str, Any]] | None:
+        """Models downloaded in Ollama (name, size in bytes), or None if Ollama is off."""
+        try:
+            resp = self.client.get(f"{self.host}/api/tags", timeout=3)
+            resp.raise_for_status()
+        except httpx.HTTPError:
+            return None
+        return [
+            {"name": m.get("name", ""), "size": m.get("size", 0)}
+            for m in resp.json().get("models", [])
+            if m.get("name")
+        ]
+
     def pull(self) -> None:
         """Download the model through Ollama (may take minutes)."""
         try:
@@ -104,9 +119,7 @@ class OllamaProvider:
             )
             resp.raise_for_status()
         except httpx.HTTPError as exc:
-            raise LLMError(
-                str(exc), "모델을 받지 못했어요. 인터넷 연결과 Ollama 실행 여부를 확인해 주세요."
-            ) from exc
+            raise LLMError(str(exc), "llm.pull_failed") from exc
 
     def generate_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult:
         payload = {
@@ -125,17 +138,15 @@ class OllamaProvider:
                 resp = self.client.post(f"{self.host}/api/chat", json=payload)
             resp.raise_for_status()
         except httpx.ConnectError as exc:
-            raise LLMError(
-                str(exc), "Ollama가 실행 중이 아니에요. Ollama 앱을 열어 주세요.", retryable=True
-            ) from exc
+            raise LLMError(str(exc), "llm.ollama_off", retryable=True) from exc
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 raise LLMError(
-                    str(exc), f"AI 모델({self.model})을 아직 받지 않았어요.", retryable=True
+                    str(exc), "llm.model_missing", retryable=True, model=self.model
                 ) from exc
-            raise LLMError(str(exc), "AI가 응답하지 않았어요. 잠시 후 다시 시도해 주세요.") from exc
+            raise LLMError(str(exc), "llm.no_response") from exc
         except httpx.HTTPError as exc:
-            raise LLMError(str(exc), "AI가 응답하지 않았어요. 잠시 후 다시 시도해 주세요.") from exc
+            raise LLMError(str(exc), "llm.no_response") from exc
         raw = (resp.json().get("message") or {}).get("content", "")
         return LLMResult(
             _loads(raw, self.name), raw, time.monotonic() - start, self.name, self.model
@@ -176,14 +187,10 @@ class OpenAIProvider:
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 401:
-                raise LLMError(
-                    str(exc), "OpenAI API 키가 맞지 않아요. 설정에서 다시 입력해 주세요."
-                ) from exc
-            raise LLMError(
-                str(exc), "OpenAI가 응답하지 않았어요. 잠시 후 다시 시도해 주세요."
-            ) from exc
+                raise LLMError(str(exc), "llm.openai_key") from exc
+            raise LLMError(str(exc), "llm.openai_down") from exc
         except httpx.HTTPError as exc:
-            raise LLMError(str(exc), "인터넷 연결을 확인해 주세요.") from exc
+            raise LLMError(str(exc), "llm.offline") from exc
         raw = resp.json()["choices"][0]["message"].get("content") or ""
         return LLMResult(
             _loads(raw, self.name), raw, time.monotonic() - start, self.name, self.model
@@ -227,14 +234,10 @@ class AnthropicProvider:
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 401:
-                raise LLMError(
-                    str(exc), "Claude API 키가 맞지 않아요. 설정에서 다시 입력해 주세요."
-                ) from exc
-            raise LLMError(
-                str(exc), "Claude가 응답하지 않았어요. 잠시 후 다시 시도해 주세요."
-            ) from exc
+                raise LLMError(str(exc), "llm.claude_key") from exc
+            raise LLMError(str(exc), "llm.claude_down") from exc
         except httpx.HTTPError as exc:
-            raise LLMError(str(exc), "인터넷 연결을 확인해 주세요.") from exc
+            raise LLMError(str(exc), "llm.offline") from exc
         for block in resp.json().get("content", []):
             if block.get("type") == "tool_use":
                 data = block.get("input") or {}
@@ -245,6 +248,4 @@ class AnthropicProvider:
                     self.name,
                     self.model,
                 )
-        raise LLMError(
-            "Anthropic returned no tool_use block", "AI 응답을 읽지 못했어요. 다시 시도해 주세요."
-        )
+        raise LLMError("Anthropic returned no tool_use block", "llm.unreadable")

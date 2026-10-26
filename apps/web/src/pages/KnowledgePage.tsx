@@ -7,6 +7,7 @@ import { useAsync } from '../lib/useAsync'
 import { EmptyState, ErrorState, Spinner } from '../components/ui'
 import { FilterChip } from '../components/FilterChip'
 import { RecordListItem } from '../components/RecordListItem'
+import { tr, pick } from '../lib/i18n'
 
 export function KnowledgePage() {
   const knowledge = useAsync((signal) => fetchKnowledge(undefined, signal), [])
@@ -21,7 +22,7 @@ export function KnowledgePage() {
     return [...seen.entries()].map(([key, label]) => ({ key, label }))
   }, [knowledge])
 
-  if (knowledge.kind === 'loading') return <Spinner label="Loading knowledge…" />
+  if (knowledge.kind === 'loading') return <Spinner label={tr('Loading knowledge…')} />
   if (knowledge.kind === 'error') return <ErrorState message={knowledge.message} onRetry={knowledge.retry} />
 
   const items = knowledge.data.items
@@ -29,12 +30,12 @@ export function KnowledgePage() {
 
   return (
     <>
-      <h1 className="page-title">Knowledge</h1>
-      <p className="subtitle">Durable wiki notes — concepts, overviews, models, and how-tos.</p>
+      <h1 className="page-title">{tr('Knowledge')}</h1>
+      <p className="subtitle">{tr('Durable wiki notes — concepts, overviews, models, and how-tos.')}</p>
 
       {subtypes.length > 0 ? (
         <div className="filters" role="group" aria-label="Filter by subtype">
-          <FilterChip label="All" pressed={subtype === 'all'} onClick={() => setSubtype('all')} />
+          <FilterChip label={tr('All')} pressed={subtype === 'all'} onClick={() => setSubtype('all')} />
           {subtypes.map((s) => (
             <FilterChip
               key={s.key}
@@ -47,11 +48,11 @@ export function KnowledgePage() {
       ) : null}
 
       {items.length === 0 ? (
-        <EmptyState title="No knowledge notes">
-          Nothing indexed under <code>wiki/</code> yet.
+        <EmptyState title={tr('No knowledge notes')}>
+          {pick('Nothing indexed under wiki/ yet.', '위에서 파일을 넣으면 Wooju가 정리해서 여기에 모아 줘요.')}
         </EmptyState>
       ) : filtered.length === 0 ? (
-        <EmptyState title="No notes for this filter" />
+        <EmptyState title={tr('No notes for this filter')} />
       ) : (
         <div className="card-list">
           {filtered.map((item) => (

@@ -32,6 +32,9 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - Measured in phase 1 (see `docs/PHASE-1-FINDINGS.md`): 9B files 76% of notes
   correctly, 4B 69%. Model output is never filed without approval, and the
   source-vs-memory decision is made from the item's origin, not by the model.
+- The recommended model is only a default. Settings lists every installed
+  Ollama model, can download a suggested one or any model by name, and can
+  switch to Claude or OpenAI. Files waiting for the AI resume after a switch.
 - Search starts as keyword search and always works without Ollama. Semantic
   search (`qwen3-embedding:0.6b` via Ollama) is added in phase 4.
 
@@ -41,6 +44,8 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   always English.
 - Note content and UI follow the Mac's language, falling back to English, and
   can be changed in settings (`content.language: auto`).
+- App messages (including server errors and change-history titles) are keyed
+  and rendered in the Mac's language; history stays stored in English.
 
 ## Distribution and license
 

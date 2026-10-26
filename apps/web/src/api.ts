@@ -177,8 +177,30 @@ export function chooseBrain(path: string): Promise<{ brain_path: string; created
   return postJson('/api/setup/brain', { path })
 }
 
-export function chooseAi(provider: AiStatus['provider'], apiKey?: string): Promise<AiStatus> {
-  return postJson('/api/setup/ai', { provider, api_key: apiKey })
+export function chooseAi(
+  provider: AiStatus['provider'],
+  apiKey?: string,
+  model?: string | null,
+): Promise<AiStatus> {
+  return postJson('/api/setup/ai', { provider, api_key: apiKey, model: model ?? undefined })
+}
+
+export interface ModelsResponse {
+  running: boolean
+  provider: AiStatus['provider']
+  current: string | null
+  recommended: string
+  installed: { name: string; size: number; recommended: boolean }[]
+  suggested: { name: string; recommended: boolean; installed: boolean; note: string }[]
+}
+
+export function fetchModels(signal?: AbortSignal): Promise<ModelsResponse> {
+  return apiGet('/api/setup/ai/models', signal)
+}
+
+/** Show the Mac's folder chooser; resolves to null when cancelled. */
+export async function pickFolder(): Promise<string | null> {
+  return (await postJson<{ path: string | null }>('/api/setup/pick-folder')).path
 }
 
 export function uploadFiles(
@@ -220,8 +242,8 @@ export function undoChange(id: string): Promise<{ commit: string }> {
   return postJson(`/api/history/${encodeURIComponent(id)}/undo`)
 }
 
-export function pullModel(): Promise<{ model: string | null; state: string | null }> {
-  return postJson('/api/setup/ai/pull')
+export function pullModel(model?: string): Promise<{ model: string | null; state: string | null }> {
+  return postJson('/api/setup/ai/pull', model ? { model } : undefined)
 }
 
 /** Open an allowed web page in the user's browser (works inside the desktop app). */

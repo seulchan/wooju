@@ -1,5 +1,7 @@
 /** Display formatting + label/tone helpers (pure, no React). */
 
+import { tr } from './i18n'
+
 /** Format an ISO-8601 timestamp as e.g. "Aug 8, 2026", or "—" when absent. */
 export function formatDate(iso?: string | null): string {
   if (!iso) return '—'
@@ -15,11 +17,12 @@ export function formatDate(iso?: string | null): string {
 /** Title-case a slug-like value: "mental-model" -> "Mental Model". */
 export function titleCase(value?: string | null): string | null {
   if (!value) return null
-  return value
+  const title = value
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase())
+  return tr(title)
 }
 
 export interface Tone {
@@ -39,7 +42,8 @@ const STATUS_TONES: Record<string, Tone> = {
 export function statusMeta(status?: string | null): Tone | null {
   if (!status) return null
   const key = status.trim().toLowerCase()
-  return STATUS_TONES[key] ?? { tone: 'tone-neutral', label: titleCase(status) ?? status }
+  const meta = STATUS_TONES[key] ?? { tone: 'tone-neutral', label: titleCase(status) ?? status }
+  return { ...meta, label: tr(meta.label) }
 }
 
 export function pluralize(count: number, singular: string, plural?: string): string {

@@ -73,7 +73,7 @@ def test_first_run_creates_brain_from_template(client, tmp_path):
     assert (brain / ".git").is_dir()
     assert app_settings.load().brain_path == str(brain.resolve())
     assert client.get("/api/setup").json()["brain_ready"] is True
-    assert client.get("/api/history").json()["items"][0]["title"] == "Start this Brain"
+    assert client.get("/api/history").json()["items"][0]["title"] == "Brain 시작"
 
     # Choosing it again opens it instead of copying over it.
     again = client.post("/api/setup/brain", json={"path": str(brain)}).json()
@@ -203,7 +203,7 @@ def test_undo_refused_after_later_edit(client, tmp_path):
     commit = client.post(f"/api/proposals/{p.id}/approve").json()["commit"]
     (brain / "wiki/concepts/a.md").write_text("# A edited by the user\n")
     r = client.post(f"/api/history/{commit}/undo")
-    assert r.status_code == 409 and "changed again" in r.json()["detail"]
+    assert r.status_code == 409 and "다시 바뀌어서" in r.json()["detail"]
 
 
 def test_ai_status_without_ollama(client, monkeypatch):
@@ -274,8 +274,11 @@ def test_launcher_uses_bundle_paths(monkeypatch, tmp_path):
 
     calls = {}
     monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
-    monkeypatch.delenv("WOOJU_WEB_DIST", raising=False)
-    monkeypatch.delenv("WOOJU_TEMPLATE_DIR", raising=False)
+    # setenv first so monkeypatch restores both variables after the test;
+    # the launcher writes os.environ directly.
+    for name in ("WOOJU_WEB_DIST", "WOOJU_TEMPLATE_DIR"):
+        monkeypatch.setenv(name, "unset")
+        monkeypatch.delenv(name)
     monkeypatch.setattr("uvicorn.run", lambda app, **kw: calls.update(kw))
     launcher.main(["--port", "9123"])
     import os
@@ -283,3 +286,104 @@ def test_launcher_uses_bundle_paths(monkeypatch, tmp_path):
     assert calls == {"host": "127.0.0.1", "port": 9123, "log_level": "info"}
     assert os.environ["WOOJU_WEB_DIST"] == str(tmp_path / "web")
     assert os.environ["WOOJU_TEMPLATE_DIR"] == str(tmp_path / "template")
+
+
+def test_english_mac_gets_english_messages(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("WOOJU_LANGUAGE", "en")
+    busy = tmp_path / "busy"
+    busy.mkdir()
+    (busy / "x.txt").write_text("x")
+    r = client.post("/api/setup/brain", json={"path": str(busy)})
+    assert (
+        r.json()["detail"] == "This folder already has other files. Choose an empty or new folder."
+    )
+    brain = setup_brain(client, tmp_path)
+    titles = [i["title"] for i in client.get("/api/history").json()["items"]]
+    assert titles == ["Start this Brain"]
+    r = client.post("/api/inbox", files=[("files", ("a.heic", b"x", "image/heic"))])
+    assert r.json()["refused"][0]["message"].startswith("'a.heic' can't be read yet")
+    assert brain.exists()
+
+
+def test_history_titles_in_korean():
+    from app.api.actions import display_title
+
+    assert display_title("Received report.pdf", "ko") == "받은 파일: report.pdf"
+    assert display_title("Received 3 file(s)", "ko") == "파일 3개 받음"
+    assert display_title("Undo: Received a.txt", "ko") == "되돌림: 받은 파일: a.txt"
+    assert display_title("자료를 저장했어요: X", "ko") == "자료를 저장했어요: X"
+    assert display_title("Received a.txt", "en") == "Received a.txt"
+
+
+def test_model_list_and_choice(client, monkeypatch):
+    monkeypatch.setattr(
+        "wooju_agents.llm.OllamaProvider.installed",
+        lambda self: [
+            {"name": "qwen3.5:9b", "size": 6600000000},
+            {"name": "llama3.2:3b", "size": 2000000000},
+        ],
+    )
+    monkeypatch.setattr(
+        "wooju_agents.llm.OllamaProvider.status",
+        lambda self: {
+            "running": True,
+            "models": ["qwen3.5:9b", "llama3.2:3b"],
+            "model_ready": self.model in ("qwen3.5:9b", "llama3.2:3b"),
+        },
+    )
+    monkeypatch.setattr("app.api.actions.recommended_ollama_model", lambda: "qwen3.5:9b")
+    models = client.get("/api/setup/ai/models").json()
+    assert models["running"] is True and models["current"] == "qwen3.5:9b"
+    assert [m["name"] for m in models["installed"]] == ["llama3.2:3b", "qwen3.5:9b"]
+    assert [m["recommended"] for m in models["installed"]] == [False, True]
+    assert {s["name"]: s["installed"] for s in models["suggested"]} == {
+        "qwen3.5:4b": False,
+        "qwen3.5:9b": True,
+    }
+
+    status = client.post(
+        "/api/setup/ai", json={"provider": "ollama", "model": "llama3.2:3b"}
+    ).json()
+    assert status["model"] == "llama3.2:3b" and status["ready"] is True
+    assert app_settings.load().ai.model == "llama3.2:3b"
+    assert client.get("/api/setup/ai/models").json()["current"] == "llama3.2:3b"
+
+    bad = client.post("/api/setup/ai", json={"provider": "ollama", "model": "x; rm -rf /"})
+    assert bad.status_code == 400
+
+
+def test_models_when_ollama_is_off(client, monkeypatch):
+    monkeypatch.setattr("wooju_agents.llm.OllamaProvider.installed", lambda self: None)
+    models = client.get("/api/setup/ai/models").json()
+    assert models["running"] is False and models["installed"] == []
+
+
+def test_pull_a_chosen_model(client, monkeypatch):
+    pulled = []
+    monkeypatch.setattr(
+        "wooju_agents.llm.OllamaProvider.pull", lambda self: pulled.append(self.model)
+    )
+    client.post("/api/setup/ai/pull", json={"model": "llama3.2:3b"})
+    deadline = time.time() + 5
+    while time.time() < deadline and client.app.state.engine.pull_state["state"] == "pulling":
+        time.sleep(0.05)
+    assert pulled == ["llama3.2:3b"]
+    assert client.app.state.engine.pull_state["state"] == "done"
+
+
+def test_pick_folder(client, monkeypatch):
+    import subprocess as sp
+
+    monkeypatch.setattr("app.api.actions.sys.platform", "darwin")
+    monkeypatch.setattr(
+        "app.api.actions.subprocess.run",
+        lambda args, **kw: sp.CompletedProcess(
+            args, 0, stdout="/Users/me/Documents/Wooju/\n", stderr=""
+        ),
+    )
+    assert client.post("/api/setup/pick-folder").json() == {"path": "/Users/me/Documents/Wooju"}
+    monkeypatch.setattr(
+        "app.api.actions.subprocess.run",
+        lambda args, **kw: sp.CompletedProcess(args, 1, stdout="", stderr="User canceled."),
+    )
+    assert client.post("/api/setup/pick-folder").json() == {"path": None}

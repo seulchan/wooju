@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { fetchHealth } from '../api'
 import type { HealthResponse } from '../types'
-import { useT } from '../lib/i18n'
+import { tr, useT } from '../lib/i18n'
 import { Link, navigate, routeSection, type Route, type Section } from '../lib/router'
 import { useAsync, type LoadState } from '../lib/useAsync'
 
@@ -22,6 +22,7 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
     ...NAV,
     { section: 'review' as const, label: t('review'), to: '/review' },
     { section: 'history' as const, label: t('history'), to: '/history' },
+    { section: 'settings' as const, label: t('settings'), to: '/settings' },
   ]
   const health = useAsync((signal) => fetchHealth(signal), [])
   const [query, setQuery] = useState('')
@@ -49,7 +50,7 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
                 className="nav-item"
                 aria-current={active === item.section ? 'page' : undefined}
               >
-                {item.label}
+                {tr(item.label)}
               </Link>
             ))}
           </nav>
@@ -58,13 +59,13 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
               type="search"
               name="q"
               className="search-input"
-              placeholder="Search the Brain…"
+              placeholder={tr('Search the Brain…')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search the Brain"
+              aria-label={tr('Search the Brain')}
             />
             <button className="btn search-btn" type="submit">
-              Search
+              {tr('Search')}
             </button>
           </form>
           <HealthChip health={health} />
@@ -82,23 +83,23 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
 }
 
 function HealthChip({ health }: { health: HealthState }) {
-  if (health.kind === 'loading') return <span className="health health-unknown" title="Checking backend">·</span>
+  if (health.kind === 'loading') return <span className="health health-unknown" title={tr('Checking backend')}>·</span>
   if (health.kind === 'error')
     return (
       <span className="health health-err" title={health.message}>
-        Offline
+        {tr('Offline')}
       </span>
     )
   const { data } = health
   if (data.status === 'ok')
     return (
       <span className="health health-ok" title={data.message}>
-        Brain ready
+        {tr('Brain ready')}
       </span>
     )
   return (
     <span className="health health-warn" title={data.message}>
-      Not configured
+      {tr('Not configured')}
     </span>
   )
 }
@@ -106,7 +107,7 @@ function HealthChip({ health }: { health: HealthState }) {
 /** A calm, dismissible-free banner shown only when something needs attention. */
 function healthBanner(health: HealthState): { tone: string; text: string } | null {
   if (health.kind === 'error') {
-    return { tone: 'err', text: 'Backend unavailable. Start the API (uvicorn on :8000) and it will reconnect.' }
+    return { tone: 'err', text: tr("Can't reach Wooju's server. Reopen the app if this continues.") }
   }
   if (health.kind === 'ready' && health.data.status !== 'ok') {
     return { tone: 'warn', text: health.data.message }

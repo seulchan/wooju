@@ -21,6 +21,7 @@ import { useAsync } from '../lib/useAsync'
 import { Link } from '../lib/router'
 import { EmptyState, ErrorState, Spinner } from './ui'
 import type { AttentionGroup, AttentionGroupKey, AttentionItem } from '../types'
+import { tr, pick } from '../lib/i18n'
 
 /** Cap the representative preview so the section stays scannable; counts above
  *  show the true total. */
@@ -71,14 +72,15 @@ function pickRepresentative(
 export function AttentionSection() {
   const state = useAsync((signal) => fetchAttention(signal), [])
 
-  if (state.kind === 'loading') return <Spinner label="Finding items to review…" />
+  if (state.kind === 'loading') return <Spinner label={tr('Finding items to review…')} />
   if (state.kind === 'error') return <ErrorState message={state.message} onRetry={state.retry} />
 
   if (state.data.total === 0 || state.data.groups.length === 0) {
     return (
-      <EmptyState title="Nothing needs attention right now">
-        No provisional or candidate insights, open questions, contested claims, or unresolved
-        references were found in the Brain.
+      <EmptyState title={tr('Nothing needs attention right now')}>
+        {tr(
+          'No provisional or candidate insights, open questions, contested claims, or unresolved references were found in the Brain.',
+        )}
       </EmptyState>
     )
   }
@@ -94,7 +96,7 @@ export function AttentionSection() {
           <li key={group.key} className="attention-summary__item">
             <span className="attention-summary__count">{group.count}</span>
             <span className="attention-summary__label">
-              {group.count === 1 ? SINGULAR[group.key] : group.label}
+              {tr(group.count === 1 ? SINGULAR[group.key] : group.label)}
             </span>
           </li>
         ))}
@@ -106,19 +108,19 @@ export function AttentionSection() {
             key={`${group.key}:${item.id}:${item.detail ?? ''}`}
             className="attention-item"
           >
-            <span className="attention-item__tag">{GROUP_TAG[group.key]}</span>
+            <span className="attention-item__tag">{tr(GROUP_TAG[group.key])}</span>
             <Link className="attention-item__title" to={`/record/${encodeId(item.id)}`}>
               {item.title}
             </Link>
             {item.detail ? (
-              <span className="attention-item__detail" title="Unresolved reference">
+              <span className="attention-item__detail" title={tr('Unresolved reference')}>
                 {item.detail}
               </span>
             ) : null}
           </li>
         ))}
       </ul>
-      {more > 0 ? <p className="attention-more">+{more} more</p> : null}
+      {more > 0 ? <p className="attention-more">{pick(`+${more} more`, `${more}개 더`)}</p> : null}
     </div>
   )
 }

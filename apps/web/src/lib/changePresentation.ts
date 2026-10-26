@@ -1,4 +1,5 @@
 import type { Category, ChangeItem } from '../types'
+import { pick } from './i18n'
 
 /** Semantic record categories that belong in Home's change summary. */
 export const CONTENT_CATEGORIES: ReadonlyArray<Category> = [
@@ -37,10 +38,21 @@ function categoryNoun(category: string): string {
   }
 }
 
+const KO_NOUN: Record<string, string> = {
+  insight: '연결',
+  source: '자료',
+  memory: '기억',
+  project: '프로젝트',
+  area: '영역',
+  knowledge: '지식',
+}
+
 /** Honest per-item label; added/modified comes from the UI-local known set. */
 export function changeLabel(item: ChangeItem): string {
-  const verb = item.change_type === 'added' ? 'New' : 'Updated'
-  return `${verb} ${categoryNoun(item.category)}`
+  const added = item.change_type === 'added'
+  const noun = categoryNoun(item.category)
+  const ko = KO_NOUN[noun] ?? noun
+  return pick(`${added ? 'New' : 'Updated'} ${noun}`, `${added ? '새' : '바뀐'} ${ko}`)
 }
 
 /** Summarize changed content in the stable category order used by Home. */

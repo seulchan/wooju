@@ -7,6 +7,7 @@ import { useAsync } from '../lib/useAsync'
 import { EmptyState, ErrorState, Spinner } from '../components/ui'
 import { FilterChip } from '../components/FilterChip'
 import { RecordListItem } from '../components/RecordListItem'
+import { tr, pick } from '../lib/i18n'
 
 export function InsightsPage() {
   const insights = useAsync((signal) => fetchInsights(undefined, undefined, signal), [])
@@ -30,7 +31,7 @@ export function InsightsPage() {
     }
   }, [insights])
 
-  if (insights.kind === 'loading') return <Spinner label="Loading insights…" />
+  if (insights.kind === 'loading') return <Spinner label={tr('Loading insights…')} />
   if (insights.kind === 'error') return <ErrorState message={insights.message} onRetry={insights.retry} />
 
   const items = insights.data.items
@@ -40,15 +41,17 @@ export function InsightsPage() {
 
   return (
     <>
-      <h1 className="page-title">Insights</h1>
+      <h1 className="page-title">{tr('Insights')}</h1>
       <p className="subtitle">
-        Derived notes (marked <code>origin: synthesis</code>). Status is read verbatim —{' '}
-        <em>established is never inferred</em>.
+        {pick(
+          'Derived notes (marked origin: synthesis). Status is read verbatim — established is never inferred.',
+          '여러 노트를 엮어 Wooju가 찾아낸 연결이에요. 상태는 노트에 적힌 그대로 보여 줘요.',
+        )}
       </p>
 
       <div className="filters" role="group" aria-label="Filter by status">
-        <span className="filter-label">Status</span>
-        <FilterChip label="All" pressed={status === 'all'} onClick={() => setStatus('all')} />
+        <span className="filter-label">{tr('Status')}</span>
+        <FilterChip label={tr('All')} pressed={status === 'all'} onClick={() => setStatus('all')} />
         {statuses.map((s) => (
           <FilterChip key={s.key} label={s.label} pressed={status === s.key} onClick={() => setStatus(s.key)} />
         ))}
@@ -56,8 +59,8 @@ export function InsightsPage() {
 
       {kinds.length > 0 ? (
         <div className="filters" role="group" aria-label="Filter by kind">
-          <span className="filter-label">Kind</span>
-          <FilterChip label="All" pressed={kind === 'all'} onClick={() => setKind('all')} />
+          <span className="filter-label">{tr('Kind')}</span>
+          <FilterChip label={tr('All')} pressed={kind === 'all'} onClick={() => setKind('all')} />
           {kinds.map((k) => (
             <FilterChip key={k.key} label={k.label} pressed={kind === k.key} onClick={() => setKind(k.key)} />
           ))}
@@ -65,11 +68,14 @@ export function InsightsPage() {
       ) : null}
 
       {items.length === 0 ? (
-        <EmptyState title="No insights">
-          No notes are marked as derived synthesis. Insights are shown separately from knowledge.
+        <EmptyState title={tr('No insights')}>
+          {pick(
+            'No notes are marked as derived synthesis. Insights are shown separately from knowledge.',
+            '아직 Wooju가 찾아낸 연결이 없어요.',
+          )}
         </EmptyState>
       ) : filtered.length === 0 ? (
-        <EmptyState title="No insights for these filters" />
+        <EmptyState title={tr('No insights for these filters')} />
       ) : (
         <div className="card-list">
           {filtered.map((item) => (

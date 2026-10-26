@@ -26,6 +26,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError
 
 from brain_core.changes import FileChange, Proposal, approval_for
+from brain_core.messages import UserFacingError
 from brain_core.schema import SourceFrontmatter, SourceType
 
 from .llm import Provider
@@ -34,10 +35,8 @@ from .text import SUPPORTED_SUFFIXES, UnsupportedFile, extract_text, first_url, 
 AGENT = "ingest"
 
 
-class IngestError(Exception):
-    def __init__(self, message: str, user_message: str) -> None:
-        super().__init__(message)
-        self.user_message = user_message
+class IngestError(UserFacingError):
+    """A file cannot be turned into a source note; ``key`` names the user message."""
 
 
 class SourceDraft(BaseModel):
@@ -171,20 +170,14 @@ def ingest_file(
     """Read ``rel`` (a path under ``inbox/``) and return a pending proposal."""
     rel_path = PurePosixPath(rel)
     if rel_path.parts[:1] != ("inbox",) or ".." in rel_path.parts:
-        raise IngestError(
-            f"Not an inbox path: {rel}", "받은 편지함에 있는 파일만 정리할 수 있어요."
-        )
+        raise IngestError(f"Not an inbox path: {rel}", "ingest.inbox_only")
     path = brain / rel_path
     try:
         text, title_hint = extract_text(path)
     except UnsupportedFile as exc:
-        raise IngestError(
-            str(exc), "이 파일 형식은 아직 읽을 수 없어요. PDF, 텍스트, HTML 파일을 넣어 주세요."
-        ) from exc
+        raise IngestError(str(exc), "ingest.unsupported") from exc
     if len(text.strip()) < 40:
-        raise IngestError(
-            "No text", "파일에서 글자를 찾지 못했어요. 스캔한 PDF는 아직 지원하지 않아요."
-        )
+        raise IngestError("No text", "ingest.no_text")
 
     user = text if not title_hint else f"Title (from file metadata): {title_hint}\n\n{text}"
     system = _SYSTEM.format(language=_LANGUAGE_NAME.get(language, "English"))
@@ -192,9 +185,7 @@ def ingest_file(
     try:
         draft = SourceDraft.model_validate(result.data)
     except ValidationError as exc:
-        raise IngestError(
-            str(exc), "AI가 정리한 결과가 형식에 맞지 않아요. 다시 시도해 주세요."
-        ) from exc
+        raise IngestError(str(exc), "ingest.bad_shape") from exc
 
     stem = (
         slugify(draft.title)

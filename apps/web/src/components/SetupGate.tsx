@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
-import { ApiError, chooseAi, chooseBrain, fetchSetup, openExternal, pullModel } from '../api'
+import { ApiError, chooseAi, chooseBrain, fetchSetup, openExternal, pickFolder, pullModel } from '../api'
 import { LangProvider, useT } from '../lib/i18n'
 import type { AiStatus, SetupStatus } from '../types'
 import { ErrorState, Spinner } from './ui'
@@ -71,13 +71,25 @@ function FirstRun({ onDone }: { onDone: () => void }) {
       <p className="first-run-lead">{t('welcomeBody')}</p>
       <form onSubmit={onSubmit} className="first-run-form">
         <label htmlFor="brain-folder">{t('folderLabel')}</label>
-        <input
-          id="brain-folder"
-          className="text-input"
-          value={folder}
-          onChange={(e) => setFolder(e.target.value)}
-          autoComplete="off"
-        />
+        <div className="folder-row">
+          <input
+            id="brain-folder"
+            className="text-input"
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            className="btn"
+            onClick={async () => {
+              const picked = await pickFolder().catch(() => null)
+              if (picked) setFolder(picked)
+            }}
+          >
+            {t('chooseFolder')}
+          </button>
+        </div>
         <p className="hint">{t('folderHint')}</p>
         {error ? (
           <p className="form-error" role="alert">

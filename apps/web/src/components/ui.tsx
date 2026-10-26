@@ -1,9 +1,11 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 
 import { statusMeta } from '../lib/format'
+import { tr } from '../lib/i18n'
 
 /** Centered "Loading…" placeholder. */
-export function Spinner({ label = 'Loading…' }: { label?: string }) {
+export function Spinner({ label }: { label?: string }) {
+  label = label ?? tr('Loading…')
   return (
     <div className="state state-loading" role="status" aria-live="polite">
       <span className="spinner" aria-hidden="true" />
@@ -16,11 +18,11 @@ export function Spinner({ label = 'Loading…' }: { label?: string }) {
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="state state-error" role="alert">
-      <strong>Something went wrong</strong>
+      <strong>{tr('Something went wrong')}</strong>
       <p className="state-message">{message}</p>
       {onRetry ? (
         <button className="btn" onClick={onRetry}>
-          Try again
+          {tr('Try again')}
         </button>
       ) : null}
     </div>
@@ -65,7 +67,7 @@ export function StatusBadge({ status }: { status?: string | null }) {
 export function MetaBadge({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
-    <span className="badge tone-muted" aria-label={`${label}: ${value}`}>
+    <span className="badge tone-muted" aria-label={`${tr(label)}: ${value}`}>
       {value}
     </span>
   )
