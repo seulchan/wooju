@@ -47,7 +47,8 @@ from .watcher import watch_and_refresh
 
 logger = logging.getLogger("wooju")
 
-JobState = Literal["queued", "working", "done", "failed"]
+JobState = Literal["queued", "working", "waiting", "done", "failed"]
+RETRY_SECONDS = 10.0
 
 
 class SetupError(Exception):
@@ -113,7 +114,9 @@ class Engine:
         self.lock = asyncio.Lock()
         self._worker: asyncio.Task[None] | None = None
         self._watcher: asyncio.Task[None] | None = None
+        self._retry: asyncio.Task[None] | None = None
         self.provider_override: Provider | None = None  # tests
+        self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
 
     # ------------------------------------------------------------ lifecycle
 
@@ -122,9 +125,10 @@ class Engine:
         if path is not None and path.is_dir():
             await self.open(path)
         self._worker = asyncio.create_task(self._work(), name="wooju-ingest")
+        self._retry = asyncio.create_task(self._retry_loop(), name="wooju-retry")
 
     async def stop(self) -> None:
-        for task in (self._worker, self._watcher):
+        for task in (self._worker, self._watcher, self._retry):
             if task is not None:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -169,10 +173,26 @@ class Engine:
             return OllamaProvider(ai.model or recommended_ollama_model(), host=ai.ollama_host)
         key = app_settings.get_api_key(ai.provider)
         if not key:
-            raise LLMError("missing key", "API 키를 먼저 입력해 주세요.")
+            raise LLMError("missing key", "API 키를 먼저 입력해 주세요.", retryable=True)
         if ai.provider == "openai":
             return OpenAIProvider(key, model=ai.model) if ai.model else OpenAIProvider(key)
         return AnthropicProvider(key, model=ai.model) if ai.model else AnthropicProvider(key)
+
+    async def pull_model(self) -> None:
+        """Download the recommended Ollama model in the background."""
+        provider = self.provider()
+        if not isinstance(provider, OllamaProvider) or self.pull_state["state"] == "pulling":
+            return
+        self.pull_state = {"model": provider.model, "state": "pulling", "message": None}
+
+        async def run() -> None:
+            try:
+                await asyncio.to_thread(provider.pull)
+                self.pull_state["state"] = "done"
+            except LLMError as exc:
+                self.pull_state.update(state="failed", message=exc.user_message)
+
+        asyncio.create_task(run())
 
     # --------------------------------------------------------------- inbox
 
@@ -212,8 +232,35 @@ class Engine:
             )
         return rel
 
+    def ai_ready(self) -> bool:
+        try:
+            provider = self.provider()
+        except LLMError:
+            return False
+        if isinstance(provider, OllamaProvider):
+            return bool(provider.status()["model_ready"])
+        return True
+
+    async def retry_waiting(self) -> int:
+        """Re-queue files that were waiting for the AI, if it is ready now."""
+        waiting = [j for j in self.jobs.values() if j.state == "waiting"]
+        if not waiting or not await asyncio.to_thread(self.ai_ready):
+            return 0
+        for job in waiting:
+            job.state, job.message = "queued", None
+            await self.queue.put(job)
+        return len(waiting)
+
+    async def _retry_loop(self) -> None:
+        while True:
+            await asyncio.sleep(RETRY_SECONDS)
+            try:
+                await self.retry_waiting()
+            except Exception:  # noqa: BLE001
+                logger.exception("Retry check failed")
+
     async def enqueue(self, rel: str) -> Job:
-        active = {j.file for j in self.jobs.values() if j.state in ("queued", "working")}
+        active = {j.file for j in self.jobs.values() if j.state in ("queued", "working", "waiting")}
         if rel in active:
             return next(
                 j for j in self.jobs.values() if j.file == rel and j.state in ("queued", "working")
@@ -255,7 +302,13 @@ class Engine:
             proposal = await asyncio.to_thread(
                 ingest_file, brain, job.file, provider, language=self.language()
             )
-        except (IngestError, LLMError) as exc:
+        except LLMError as exc:
+            if exc.retryable:
+                job.state, job.message = "waiting", "AI가 준비되면 자동으로 정리해요."
+            else:
+                job.state, job.message = "failed", exc.user_message
+            return
+        except IngestError as exc:
             job.state, job.message = "failed", exc.user_message
             return
         self.store.save(proposal)

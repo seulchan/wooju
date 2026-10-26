@@ -21,6 +21,8 @@ export type Route =
   | { name: 'sourceDetail'; id: string }
   | { name: 'recordDetail'; id: string }
   | { name: 'search'; q: string }
+  | { name: 'review' }
+  | { name: 'history' }
   | { name: 'notFound'; path: string }
 
 function decodeSafe(part: string): string {
@@ -53,6 +55,10 @@ export function parseHash(hash: string): Route {
       return rest ? { name: 'recordDetail', id: rest } : { name: 'notFound', path: h }
     case 'search':
       return { name: 'search', q }
+    case 'review':
+      return { name: 'review' }
+    case 'history':
+      return { name: 'history' }
     default:
       return { name: 'notFound', path: h }
   }
@@ -66,7 +72,9 @@ export function routeKey(route: Route): string {
 }
 
 /** Section a route belongs to, for nav highlighting ("home" on the home page). */
-export function routeSection(route: Route): 'home' | 'knowledge' | 'insights' | 'sources' | null {
+export type Section = 'home' | 'knowledge' | 'insights' | 'sources' | 'review' | 'history'
+
+export function routeSection(route: Route): Section | null {
   switch (route.name) {
     case 'home':
       return 'home'
@@ -79,6 +87,10 @@ export function routeSection(route: Route): 'home' | 'knowledge' | 'insights' | 
     case 'sources':
     case 'sourceDetail':
       return 'sources'
+    case 'review':
+      return 'review'
+    case 'history':
+      return 'history'
     default:
       return null
   }

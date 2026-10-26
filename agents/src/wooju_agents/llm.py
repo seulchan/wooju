@@ -27,9 +27,12 @@ ANTHROPIC_DEFAULT_MODEL = "claude-haiku-5-5"
 class LLMError(Exception):
     """The provider could not produce a usable answer. ``user_message`` is shown in the app."""
 
-    def __init__(self, message: str, user_message: str) -> None:
+    def __init__(self, message: str, user_message: str, retryable: bool = False) -> None:
         super().__init__(message)
         self.user_message = user_message
+        # True when the AI is simply not available yet (not running, model not
+        # downloaded, no key). Work can wait and continue once it is.
+        self.retryable = retryable
 
 
 @dataclass(frozen=True)
@@ -93,6 +96,18 @@ class OllamaProvider:
         names = [m.get("name", "") for m in resp.json().get("models", [])]
         return {"running": True, "models": names, "model_ready": self.model in names}
 
+    def pull(self) -> None:
+        """Download the model through Ollama (may take minutes)."""
+        try:
+            resp = self.client.post(
+                f"{self.host}/api/pull", json={"model": self.model, "stream": False}, timeout=None
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise LLMError(
+                str(exc), "모델을 받지 못했어요. 인터넷 연결과 Ollama 실행 여부를 확인해 주세요."
+            ) from exc
+
     def generate_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult:
         payload = {
             "model": self.model,
@@ -115,7 +130,9 @@ class OllamaProvider:
             ) from exc
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
-                raise LLMError(str(exc), f"AI 모델({self.model})을 아직 받지 않았어요.") from exc
+                raise LLMError(
+                    str(exc), f"AI 모델({self.model})을 아직 받지 않았어요.", retryable=True
+                ) from exc
             raise LLMError(str(exc), "AI가 응답하지 않았어요. 잠시 후 다시 시도해 주세요.") from exc
         except httpx.HTTPError as exc:
             raise LLMError(str(exc), "AI가 응답하지 않았어요. 잠시 후 다시 시도해 주세요.") from exc

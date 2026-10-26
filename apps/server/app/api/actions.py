@@ -46,6 +46,7 @@ class AiStatus(BaseModel):
     provider: str
     model: str
     ready: bool
+    pulling: bool = False
     ollama_running: bool | None = None
     model_downloaded: bool | None = None
     has_key: bool | None = None
@@ -91,12 +92,25 @@ def _ai_status() -> AiStatus:
 
 @actions_router.get("/setup", tags=["setup"], response_model=SetupStatus)
 def setup_status(engine: EngineDep) -> SetupStatus:
+    ai = _ai_status()
+    pull = engine.pull_state
+    if pull["model"] == ai.model:
+        ai.pulling = pull["state"] == "pulling"
+        if pull["state"] == "failed" and not ai.ready:
+            ai.message = pull["message"]
     return SetupStatus(
         brain_path=str(engine.brain) if engine.brain else None,
         brain_ready=engine.brain is not None,
         language=engine.language(),
-        ai=_ai_status(),
+        ai=ai,
     )
+
+
+@actions_router.post("/setup/ai/pull", tags=["setup"])
+async def pull_model(engine: EngineDep) -> dict[str, Any]:
+    """Download the recommended local model through Ollama (no terminal needed)."""
+    await engine.pull_model()
+    return dict(engine.pull_state)
 
 
 class ChooseBrain(BaseModel):

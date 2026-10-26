@@ -7,6 +7,7 @@ import { changesSince, isFirstVisit, type PeriodId } from '../lib/periods'
 import { EmptyState, ErrorState, Spinner } from '../components/ui'
 import { AttentionSection } from '../components/AttentionSection'
 import { HomeChanges } from '../components/HomeChanges'
+import { DropZone } from '../components/DropZone'
 
 const BrainMap = lazy(() =>
   import('../components/BrainMap').then(({ BrainMap: BrainMapComponent }) => ({
@@ -57,12 +58,12 @@ export function HomePage() {
   const { knowledge, insight, source, total, main_areas: mainAreas } = overview.data
   if (total === 0) {
     return (
-      <EmptyState title="Your Brain is empty">
-        No notes were indexed. Add Markdown notes under <code>wiki/</code>,{' '}
-        <code>sources/</code>, <code>library/</code>, or <code>projects/</code> and they will
-        appear automatically — the backend watches the Brain for changes and this page
-        refreshes on focus/navigation.
-      </EmptyState>
+      <>
+        <DropZone />
+        <EmptyState title="Your Brain is empty">
+          Drop a file above to add your first note.
+        </EmptyState>
+      </>
     )
   }
 
@@ -77,6 +78,8 @@ export function HomePage() {
   return (
     <>
       <h1 className="page-title">Brain</h1>
+
+      <DropZone />
 
       <section className="section section-first" aria-labelledby="know-heading">
         <h2 id="know-heading" className="section-title">

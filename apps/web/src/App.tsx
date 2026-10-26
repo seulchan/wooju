@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
 import { Layout } from './components/Layout'
+import { SetupGate } from './components/SetupGate'
 import { useRefreshController } from './lib/freshness'
 import { routeKey, useRoute } from './lib/router'
 import { HomePage } from './pages/HomePage'
@@ -10,6 +11,8 @@ import { SourcesPage } from './pages/SourcesPage'
 import { SearchPage } from './pages/SearchPage'
 import { RecordDetailPage } from './pages/RecordDetailPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ReviewPage } from './pages/ReviewPage'
+import { HistoryPage } from './pages/HistoryPage'
 
 export default function App() {
   const route = useRoute()
@@ -38,6 +41,12 @@ export default function App() {
     case 'search':
       page = <SearchPage key={route.q} q={route.q} />
       break
+    case 'review':
+      page = <ReviewPage />
+      break
+    case 'history':
+      page = <HistoryPage />
+      break
     case 'knowledgeDetail':
     case 'insightDetail':
     case 'sourceDetail':
@@ -49,8 +58,10 @@ export default function App() {
   }
 
   return (
-    <Layout route={route}>
-      <div key={key}>{page}</div>
-    </Layout>
+    <SetupGate>
+      <Layout route={route}>
+        <div key={key}>{page}</div>
+      </Layout>
+    </SetupGate>
   )
 }

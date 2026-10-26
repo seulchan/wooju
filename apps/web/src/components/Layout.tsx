@@ -2,12 +2,13 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { fetchHealth } from '../api'
 import type { HealthResponse } from '../types'
-import { Link, navigate, routeSection, type Route } from '../lib/router'
+import { useT } from '../lib/i18n'
+import { Link, navigate, routeSection, type Route, type Section } from '../lib/router'
 import { useAsync, type LoadState } from '../lib/useAsync'
 
 type HealthState = LoadState<HealthResponse>
 
-const NAV: ReadonlyArray<{ section: 'home' | 'knowledge' | 'insights' | 'sources'; label: string; to: string }> = [
+const NAV: ReadonlyArray<{ section: Section; label: string; to: string }> = [
   { section: 'home', label: 'Home', to: '/' },
   { section: 'knowledge', label: 'Knowledge', to: '/knowledge' },
   { section: 'insights', label: 'Insights', to: '/insights' },
@@ -16,6 +17,12 @@ const NAV: ReadonlyArray<{ section: 'home' | 'knowledge' | 'insights' | 'sources
 
 export function Layout({ route, children }: { route: Route; children: ReactNode }) {
   const active = routeSection(route)
+  const t = useT()
+  const nav = [
+    ...NAV,
+    { section: 'review' as const, label: t('review'), to: '/review' },
+    { section: 'history' as const, label: t('history'), to: '/history' },
+  ]
   const health = useAsync((signal) => fetchHealth(signal), [])
   const [query, setQuery] = useState('')
 
@@ -32,10 +39,10 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
       <header className="header">
         <div className="header-row">
           <Link to="/" className="brand">
-            Wooju Brain
+            Wooju
           </Link>
           <nav className="nav" aria-label="Primary">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.section}
                 to={item.to}
@@ -68,7 +75,7 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
       <main className="main">{children}</main>
 
       <footer className="footer">
-        <span>Read-only view · the Brain is never modified</span>
+        <span>{t('footer')}</span>
       </footer>
     </div>
   )

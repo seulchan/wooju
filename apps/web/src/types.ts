@@ -236,3 +236,59 @@ export interface AttentionResponse {
   groups: AttentionGroup[]
   total: number
 }
+
+// ------------------------------------------------------------ app actions
+
+export interface AiStatus {
+  provider: 'ollama' | 'openai' | 'anthropic'
+  model: string
+  ready: boolean
+  pulling?: boolean
+  ollama_running?: boolean | null
+  model_downloaded?: boolean | null
+  has_key?: boolean | null
+  message?: string | null
+}
+
+export interface SetupStatus {
+  brain_path: string | null
+  brain_ready: boolean
+  language: string
+  ai: AiStatus
+}
+
+export type JobState = 'queued' | 'working' | 'waiting' | 'done' | 'failed'
+
+export interface Job {
+  id: string
+  file: string
+  state: JobState
+  message: string | null
+  proposal_id: string | null
+  created_at: string
+}
+
+export interface ProposalView {
+  id: string
+  title: string
+  summary: string
+  approval: 'auto' | 'batch' | 'individual'
+  status: 'pending' | 'applied' | 'rejected' | 'failed'
+  agent: string
+  origin: string | null
+  created_at: string
+  decided_at: string | null
+  commit: string | null
+  error: string | null
+  changes: { op: string; path: string }[]
+  preview: string | null
+}
+
+export interface HistoryItem {
+  id: string
+  title: string
+  committed_at: string
+  paths: string[]
+  undoes: string | null
+  undone: boolean
+}

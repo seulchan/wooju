@@ -46,10 +46,11 @@ uv run pytest packages/brain-core agents
 npm run web:install
 npm run web:test
 
-# Run locally against a Brain folder
-# The app asks for a Brain folder on first run; WOOJU_BRAIN_PATH overrides it.
-(cd apps/server && uv run uvicorn app.main:app --reload)   # API on :8000
-npm run web:dev                                             # UI on :5173
+# Run the app locally (one server for API and UI)
+npm run web:build
+(cd apps/server && uv run uvicorn app.main:app)               # open http://localhost:8000
+# For UI development with hot reload instead: npm run web:dev  (UI on :5173)
+
 # Check a Brain against the rules (errors exit 1)
 uv run wooju-validate /path/to/a/brain
 

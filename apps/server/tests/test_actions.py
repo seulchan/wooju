@@ -225,3 +225,33 @@ def test_choosing_a_cloud_provider_stores_the_key_in_the_keychain(client, monkey
     assert saved == {"anthropic": "sk-ant-x"}
     assert status["provider"] == "anthropic" and status["ready"] is True
     assert "sk-ant" not in app_settings.settings_file().read_text()
+
+
+class DownProvider:
+    name, model = "ollama", "qwen3.5:4b"
+
+    def generate_json(self, system, user, schema):
+        from wooju_agents.llm import LLMError
+
+        raise LLMError("refused", "Ollama가 실행 중이 아니에요.", retryable=True)
+
+
+def test_files_wait_for_the_ai_and_continue_when_it_is_ready(client, tmp_path, monkeypatch):
+    brain = setup_brain(client, tmp_path)
+    engine = client.app.state.engine
+    engine.provider_override = DownProvider()
+    client.post("/api/inbox", files=[("files", ("a.txt", TEXT, "text/plain"))])
+    deadline = time.time() + 5
+    while (
+        time.time() < deadline and client.get("/api/jobs").json()["items"][0]["state"] != "waiting"
+    ):
+        time.sleep(0.05)
+    job = client.get("/api/jobs").json()["items"][0]
+    assert job["state"] == "waiting" and "자동으로" in job["message"]
+    assert (brain / "inbox/a.txt").exists()
+
+    engine.provider_override = FakeProvider()
+    monkeypatch.setattr(engine, "ai_ready", lambda: True)
+    client.portal.call(engine.retry_waiting)
+    assert wait_jobs(client)[0]["state"] == "done"
+    assert (brain / "sources/korea-value-up-index-launch.md").exists()

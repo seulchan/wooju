@@ -8,10 +8,13 @@ routes that change things live in :mod:`app.api.actions`.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .api.actions import actions_router
 from .api.routes import api_router
@@ -52,3 +55,14 @@ app.add_middleware(
 )
 app.include_router(api_router)
 app.include_router(actions_router)
+
+
+def web_dist() -> Path:
+    """The built UI (``npm run web:build``); override with ``WOOJU_WEB_DIST``."""
+    override = os.environ.get("WOOJU_WEB_DIST", "").strip()
+    return Path(override) if override else Path(__file__).resolve().parents[2] / "web" / "dist"
+
+
+# One process serves both the API and the UI, so the desktop app starts one server.
+if web_dist().is_dir():
+    app.mount("/", StaticFiles(directory=web_dist(), html=True), name="web")

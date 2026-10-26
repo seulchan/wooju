@@ -1,5 +1,10 @@
 import type {
+  AiStatus,
   AttentionResponse,
+  HistoryItem,
+  Job,
+  ProposalView,
+  SetupStatus,
   BrainRecord,
   ChangesResponse,
   GraphResponse,
@@ -42,7 +47,16 @@ export async function apiRequest<T>(
     throw new ApiError('Could not reach the backend. Is the API running on :8000?')
   }
   if (res.status === 404) throw new NotFoundError('Record not found.')
-  if (!res.ok) throw new ApiError(`Request failed (HTTP ${res.status}).`)
+  if (!res.ok) {
+    // Action routes return a message written for the user in `detail`.
+    let detail: unknown
+    try {
+      detail = ((await res.json()) as { detail?: unknown }).detail
+    } catch {
+      detail = undefined
+    }
+    throw new ApiError(typeof detail === 'string' ? detail : `Request failed (HTTP ${res.status}).`)
+  }
   return (await res.json()) as T
 }
 
@@ -143,4 +157,69 @@ export function searchBrain(
   signal?: AbortSignal,
 ): Promise<SearchResponse> {
   return apiGet<SearchResponse>(`/api/search${qs({ q, ...params })}`, signal)
+}
+
+// ------------------------------------------------------------ app actions
+
+function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return apiRequest<T>(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+
+export function fetchSetup(signal?: AbortSignal): Promise<SetupStatus> {
+  return apiGet<SetupStatus>('/api/setup', signal)
+}
+
+export function chooseBrain(path: string): Promise<{ brain_path: string; created: boolean }> {
+  return postJson('/api/setup/brain', { path })
+}
+
+export function chooseAi(provider: AiStatus['provider'], apiKey?: string): Promise<AiStatus> {
+  return postJson('/api/setup/ai', { provider, api_key: apiKey })
+}
+
+export function uploadFiles(
+  files: File[],
+): Promise<{ added: Job[]; refused: { file: string; message: string }[] }> {
+  const form = new FormData()
+  for (const f of files) form.append('files', f, f.name)
+  return apiRequest('/api/inbox', { method: 'POST', body: form })
+}
+
+export function fetchJobs(signal?: AbortSignal): Promise<{ items: Job[] }> {
+  return apiGet('/api/jobs', signal)
+}
+
+export function fetchProposals(
+  status?: ProposalView['status'],
+  signal?: AbortSignal,
+): Promise<{ total: number; items: ProposalView[] }> {
+  return apiGet(`/api/proposals${qs({ status })}`, signal)
+}
+
+export function approveProposal(id: string): Promise<ProposalView> {
+  return postJson(`/api/proposals/${encodeURIComponent(id)}/approve`)
+}
+
+export function rejectProposal(id: string): Promise<ProposalView> {
+  return postJson(`/api/proposals/${encodeURIComponent(id)}/reject`)
+}
+
+export function approveProposals(ids: string[]): Promise<{ items: ProposalView[] }> {
+  return postJson('/api/proposals/approve', { ids })
+}
+
+export function fetchHistory(signal?: AbortSignal): Promise<{ items: HistoryItem[] }> {
+  return apiGet('/api/history', signal)
+}
+
+export function undoChange(id: string): Promise<{ commit: string }> {
+  return postJson(`/api/history/${encodeURIComponent(id)}/undo`)
+}
+
+export function pullModel(): Promise<{ model: string | null; state: string | null }> {
+  return postJson('/api/setup/ai/pull')
 }
