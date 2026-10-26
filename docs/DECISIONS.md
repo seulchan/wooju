@@ -57,6 +57,26 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   config are kept, the old file is backed up, and an unreadable file is never
   overwritten.
 
+## Maintainer, meaning search, and capture (phase 4)
+
+- The Maintainer runs when Home is shown, not on a timer and never as a
+  notification: notes past `review_after` (most overdue first, with one-click
+  "reviewed: in 3 months / 1 year / clear") and notes that break the rules.
+- Every proposal first records the files it touches as they are, so undo
+  never deletes a note written outside Wooju or discards the user's edits.
+- Meaning search uses `qwen3-embedding:0.6b` through Ollama, always on this
+  Mac (also when answers come from Claude or OpenAI). Vectors are cached in
+  the app data folder by (model, text) hash; keyword and meaning rankings are
+  fused with reciprocal rank fusion. Without the model, search is keyword-only.
+- Capture: a pasted or shared link is fetched once (public http/https only)
+  and becomes a source whose `canonical_ref` is the real URL. A memo is the
+  user's own words: it is kept as written in `inbox/memos/` (the Brain's rules
+  keep passing thoughts out of durable memory) and is searchable and askable.
+- Phone: an iCloud Drive "Wooju Inbox" folder (no account or server; files are
+  taken once they stop changing) and the user's own Telegram bot (token in
+  the keychain, long polling while Wooju is open, one paired chat; others are
+  refused). KakaoTalk has no personal bot API. The web demo is deferred.
+
 ## Language
 
 - Structural identifiers (frontmatter keys, controlled values, file names) are

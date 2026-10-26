@@ -61,6 +61,47 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "시스템 설정 > Apple 계정 > iCloud에서 iCloud Drive를 켜 주세요.",
         "iCloud Drive is off on this Mac. Turn it on in System Settings > Apple Account > iCloud.",
     ),
+    # telegram
+    "telegram.paired": (
+        "연결됐어요. 이제 링크, 메모, 파일(PDF, 텍스트, HTML)을 보내면 Wooju에 저장해요. "
+        "Mac에서 Wooju가 열려 있을 때 처리돼요.",
+        "Connected. Send links, memos, or files (PDF, text, HTML) and Wooju saves them. "
+        "They're handled while Wooju is open on your Mac.",
+    ),
+    "telegram.pair_first": (
+        "아직 연결 전이에요. Mac의 Wooju 설정에서 'Telegram 열기'를 눌러 연결해 주세요.",
+        "Not connected yet. In Wooju's Settings on your Mac, press 'Open Telegram' to connect.",
+    ),
+    "telegram.private": ("이 봇은 개인용이에요.", "This bot is private."),
+    "telegram.received": (
+        "받았어요: {name}. 정리하는 중이에요.",
+        "Got it: {name}. Organizing it now.",
+    ),
+    "telegram.memo": ("메모를 저장했어요.", "Memo saved."),
+    "telegram.link": (
+        "링크를 받았어요. 페이지를 정리하는 중이에요.",
+        "Link received. Organizing the page.",
+    ),
+    "telegram.waiting": (
+        "AI가 준비되면 정리할게요. Mac에서 Ollama가 켜져 있는지 확인해 주세요.",
+        "It'll be organized once the AI is ready. Check that Ollama is running on your Mac.",
+    ),
+    "telegram.no_photos": (
+        "사진은 아직 읽지 못해요. PDF나 링크로 보내 주세요.",
+        "Photos can't be read yet. Send a PDF or a link instead.",
+    ),
+    "telegram.help": (
+        "링크나 메모를 그냥 보내거나, 파일(PDF, 텍스트, HTML)을 보내 주세요.",
+        "Just send a link or a memo, or a file (PDF, text, HTML).",
+    ),
+    "telegram.download_failed": (
+        "파일을 받지 못했어요. 20MB보다 작은 파일만 받을 수 있어요.",
+        "Couldn't get the file. Files must be under 20 MB.",
+    ),
+    "telegram.bad_token": (
+        "토큰이 맞지 않아요. @BotFather가 준 토큰 전체를 붙여 넣어 주세요.",
+        "That token didn't work. Paste the whole token @BotFather gave you.",
+    ),
     # maintainer
     "review.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
     "review.unreadable": (

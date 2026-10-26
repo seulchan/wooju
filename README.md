@@ -9,7 +9,7 @@ add into evidence, world knowledge, personal memory, and work context, but they
 only ever **propose** changes: nothing reaches your Brain without passing
 validation and, where it matters, your approval.
 
-**Status:** early development (phase 3 of 4: ask with sources, Challenger, Claude connection). Not ready for everyday use yet.
+**Status:** early development (phase 4 of 4: review dates, search by meaning, capture from the phone and Telegram). Not ready for everyday use yet.
 
 ## Principles
 
@@ -28,7 +28,7 @@ wooju/
 ├── apps/server/           # FastAPI server: Brain index + app API (uses brain-core)
 ├── apps/web/              # React UI
 ├── apps/desktop/          # Tauri shell that runs the server as a sidecar
-├── agents/                # AI provider layer and agents: Ingest, Ask, Challenger
+├── agents/                # AI providers, embeddings, capture, and agents: Ingest, Ask, Challenger
 ├── template/              # Brain template copied into a new Brain (CC BY 4.0)
 └── docs/                  # Project decisions
 ```

@@ -6,6 +6,7 @@ written for the person using the app, in the app's language (``ko``/``en``).
 
 from __future__ import annotations
 
+import asyncio
 import re
 import subprocess
 import sys
@@ -245,7 +246,10 @@ OPENABLE_URLS = {
     "https://console.anthropic.com/settings/keys",
     "https://platform.openai.com/api-keys",
     "https://claude.ai/download",
+    "https://t.me/BotFather",
 }
+# The user's own bot, optionally with this Mac's pairing code.
+_TELEGRAM_LINK = re.compile(r"https://t\.me/[A-Za-z0-9_]{5,32}(\?start=[A-Za-z0-9]{6,32})?")
 
 
 class OpenUrl(BaseModel):
@@ -255,7 +259,7 @@ class OpenUrl(BaseModel):
 @actions_router.post("/open", tags=["setup"])
 def open_url(body: OpenUrl, engine: EngineDep) -> dict[str, bool]:
     """Open an allowed page in the default browser (the desktop window cannot)."""
-    if body.url not in OPENABLE_URLS:
+    if body.url not in OPENABLE_URLS and not _TELEGRAM_LINK.fullmatch(body.url):
         raise _fail(engine, "open.refused", 403)
     if sys.platform == "darwin":
         subprocess.run(["open", body.url], check=False, timeout=10)
@@ -305,11 +309,23 @@ def _capture_status(engine: Engine) -> dict[str, Any]:
     from .. import icloud
 
     cap = app_settings.load().capture
+    bot = engine.telegram_bot_name
+    paired = cap.telegram_chat_id is not None
     return {
         "icloud": {
             "available": icloud.available(),
             "enabled": cap.icloud,
             "folder": str(icloud.capture_folder()),
+        },
+        "telegram": {
+            "enabled": cap.telegram,
+            "bot": bot,
+            "paired": paired,
+            "pair_link": (
+                f"https://t.me/{bot}?start={engine.telegram_pair_code}"
+                if cap.telegram and bot and not paired
+                else None
+            ),
         },
         "recent": engine.capture_log[:10],
     }
@@ -335,6 +351,52 @@ def set_icloud(body: Toggle, engine: EngineDep) -> dict[str, Any]:
     current = app_settings.load()
     current.capture.icloud = body.enabled
     app_settings.save(current)
+    return _capture_status(engine)
+
+
+class TelegramToken(BaseModel):
+    token: str
+
+
+@actions_router.post("/capture/telegram", tags=["inbox"])
+async def set_telegram(body: TelegramToken, engine: EngineDep) -> dict[str, Any]:
+    """Check the bot token, keep it in the keychain, and wait for pairing."""
+    from .. import telegram
+
+    token = body.token.strip()
+    if not re.fullmatch(r"\d{5,}:[A-Za-z0-9_-]{30,}", token):
+        raise _fail(engine, "telegram.bad_token")
+    try:
+        me = await asyncio.to_thread(engine.telegram_factory(token).me)
+    except telegram.TelegramError as exc:
+        raise _fail(engine, "telegram.bad_token") from exc
+    try:
+        app_settings.set_api_key(telegram.KEY_NAME, token)
+    except app_settings.KeyStoreError as exc:
+        raise _fail(engine, "ai.keychain") from exc
+    current = app_settings.load()
+    current.capture.telegram = True
+    current.capture.telegram_chat_id = None
+    app_settings.save(current)
+    engine.telegram_bot_name = me.get("username")
+    engine.telegram_pair_code = telegram.new_pairing_code()
+    telegram.save_state({})
+    await engine.start_telegram()
+    return _capture_status(engine)
+
+
+@actions_router.post("/capture/telegram/off", tags=["inbox"])
+async def telegram_off(engine: EngineDep) -> dict[str, Any]:
+    from .. import telegram
+
+    current = app_settings.load()
+    current.capture.telegram = False
+    current.capture.telegram_chat_id = None
+    app_settings.save(current)
+    app_settings.delete_api_key(telegram.KEY_NAME)
+    engine.telegram_bot_name = None
+    telegram.save_state({})
+    await engine.start_telegram()  # stops the loop
     return _capture_status(engine)
 
 

@@ -7,6 +7,11 @@ import { RecordDetailPage } from '../pages/RecordDetailPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { mockFetch } from './mockApi'
 
+const captureOff = {
+  icloud: { available: true, enabled: false, folder: '/Users/me/Library/Mobile Documents/com~apple~CloudDocs/Wooju Inbox' },
+  telegram: { enabled: false, bot: null, paired: false, pair_link: null },
+  recent: [],
+}
 const searchOff = { model: 'qwen3-embedding:0.6b', state: 'off', done: 0, total: 0, pulling: false }
 
 type Call = [string | Request, RequestInit | undefined]
@@ -148,6 +153,7 @@ describe('Claude connection', () => {
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: claudeOff },
       { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
       { match: /^\/api\/claude\/connect$/, body: { ...claudeOff, connected: true } },
     ])
     render(<SettingsPage />)
@@ -164,6 +170,7 @@ describe('Claude connection', () => {
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: { ...claudeOff, installed: false } },
       { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
     ])
     render(<SettingsPage />)
     expect(await screen.findByRole('button', { name: 'Get Claude' })).toBeInTheDocument()
@@ -175,6 +182,7 @@ describe('Claude connection', () => {
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: { ...claudeOff, connected: true, outdated: true } },
       { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
     ])
     render(<SettingsPage />)
     expect(await screen.findByRole('button', { name: 'Reconnect' })).toBeInTheDocument()
@@ -207,6 +215,7 @@ describe('Search by meaning', () => {
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: claudeOff },
       { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
       { match: /^\/api\/setup\/ai\/pull/, body: { model: 'qwen3-embedding:0.6b', state: 'pulling' } },
     ])
     render(<SettingsPage />)
@@ -226,5 +235,63 @@ describe('Search by meaning', () => {
     ])
     render(<SettingsPage />)
     expect(await screen.findByText('On')).toBeInTheDocument()
+  })
+})
+
+describe('Send from your phone', () => {
+  const base = [
+    { match: /^\/api\/setup$/, body: setup },
+    { match: /^\/api\/setup\/ai\/models/, body: models },
+    { match: /^\/api\/claude$/, body: claudeOff },
+    { match: /^\/api\/search\/status/, body: searchOff },
+  ]
+
+  it('turns on the iCloud folder', async () => {
+    const fetchMock = mockFetch([
+      ...base,
+      { match: /^\/api\/capture\/status/, body: captureOff },
+      { match: /^\/api\/capture\/icloud$/, body: { ...captureOff, icloud: { ...captureOff.icloud, enabled: true } } },
+    ])
+    render(<SettingsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Use the iCloud folder' }))
+    expect(await screen.findByRole('button', { name: 'Turn off' })).toBeInTheDocument()
+    expect(posted(fetchMock, '/api/capture/icloud')).toEqual([{ enabled: true }])
+  })
+
+  it('connects a Telegram bot and then asks to press Start', async () => {
+    const waiting = {
+      ...captureOff,
+      telegram: { enabled: true, bot: 'my_wooju_bot', paired: false, pair_link: 'https://t.me/my_wooju_bot?start=abc12345' },
+    }
+    let connected = false
+    const fetchMock = mockFetch([
+      ...base,
+      { match: /^\/api\/capture\/status/, body: () => (connected ? waiting : captureOff) },
+      {
+        match: /^\/api\/capture\/telegram$/,
+        body: () => {
+          connected = true
+          return waiting
+        },
+      },
+      { match: /^\/api\/open$/, body: { opened: true } },
+    ])
+    render(<SettingsPage />)
+    await userEvent.type(await screen.findByLabelText('Bot token'), '123456789:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+    await userEvent.click(screen.getByRole('button', { name: 'Connect bot' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Telegram' }))
+    expect(posted(fetchMock, '/api/open')).toEqual([{ url: 'https://t.me/my_wooju_bot?start=abc12345' }])
+  })
+
+  it('shows a connected bot', async () => {
+    mockFetch([
+      ...base,
+      {
+        match: /^\/api\/capture\/status/,
+        body: { ...captureOff, telegram: { enabled: true, bot: 'my_wooju_bot', paired: true, pair_link: null } },
+      },
+    ])
+    render(<SettingsPage />)
+    expect(await screen.findByText('@my_wooju_bot')).toBeInTheDocument()
   })
 })

@@ -58,7 +58,7 @@ from wooju_agents.llm import (
 )
 from wooju_agents.text import ACCEPTED_SUFFIXES, resolve_language
 
-from . import icloud
+from . import icloud, telegram
 from . import settings as app_settings
 from .config import resolve_brain_path, watch_enabled
 from .watcher import watch_and_refresh
@@ -142,6 +142,10 @@ class Engine:
         self.search_state: dict[str, Any] = {"state": "off", "done": 0, "total": 0}
         self._embedding: asyncio.Task[None] | None = None
         self.icloud_watch = icloud.Watcher()
+        self.telegram_factory: Any = telegram.Bot  # tests replace this
+        self.telegram_task: asyncio.Task[None] | None = None
+        self.telegram_bot_name: str | None = None
+        self.telegram_pair_code: str = telegram.new_pairing_code()
         self.capture_log: list[dict[str, Any]] = []  # recent captures, newest first
         self.provider_override: Provider | None = None  # tests
         self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
@@ -153,10 +157,11 @@ class Engine:
         if path is not None and path.is_dir():
             await self.open(path)
         self._worker = asyncio.create_task(self._work(), name="wooju-ingest")
+        await self.start_telegram()
         self._retry = asyncio.create_task(self._retry_loop(), name="wooju-retry")
 
     async def stop(self) -> None:
-        for task in (self._worker, self._watcher, self._retry):
+        for task in (self._worker, self._watcher, self._retry, self.telegram_task):
             if task is not None:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -329,6 +334,118 @@ class Engine:
             path.unlink(missing_ok=True)
             taken += 1
         return taken
+
+    # ----------------------------------------------------------- telegram
+
+    async def start_telegram(self) -> None:
+        """Start (or restart) listening to the user's bot, if it is set up."""
+        if self.telegram_task is not None:
+            self.telegram_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await self.telegram_task
+            self.telegram_task = None
+        if not app_settings.load().capture.telegram:
+            return
+        token = app_settings.get_api_key(telegram.KEY_NAME)
+        if not token:
+            return
+        bot = self.telegram_factory(token)
+        self.telegram_task = asyncio.create_task(self._telegram_loop(bot), name="wooju-telegram")
+
+    async def _telegram_loop(self, bot: Any) -> None:
+        state = telegram.load_state()
+        offset = state.get("offset")
+        if self.telegram_bot_name is None:
+            with contextlib.suppress(telegram.TelegramError):
+                self.telegram_bot_name = (await asyncio.to_thread(bot.me)).get("username")
+        while True:
+            try:
+                updates = await asyncio.to_thread(bot.updates, offset)
+            except telegram.TelegramError as exc:
+                logger.info("Telegram unreachable (%s); retrying", exc)
+                await asyncio.sleep(15)
+                continue
+            for update in updates:
+                offset = update["update_id"] + 1
+                telegram.save_state({"offset": offset})
+                message = update.get("message")
+                if message:
+                    try:
+                        await self._telegram_message(bot, message)
+                    except Exception:  # noqa: BLE001 — one message must not stop the bot
+                        logger.exception("Telegram message failed")
+
+    def _say(self, key: str, **params: Any) -> str:
+        return render(key, self.language(), **params)
+
+    async def _telegram_message(self, bot: Any, message: dict[str, Any]) -> None:
+        chat_id = message["chat"]["id"]
+        text = (message.get("text") or message.get("caption") or "").strip()
+        settings = app_settings.load()
+        paired = settings.capture.telegram_chat_id
+        send = lambda key, **p: asyncio.to_thread(bot.send, chat_id, self._say(key, **p))  # noqa: E731
+
+        if paired is None:
+            if telegram.pairing_code_in(text) == self.telegram_pair_code:
+                settings.capture.telegram_chat_id = chat_id
+                app_settings.save(settings)
+                self.telegram_pair_code = telegram.new_pairing_code()
+                await send("telegram.paired")
+            else:
+                await send("telegram.pair_first")
+            return
+        if chat_id != paired:
+            await send("telegram.private")
+            return
+        if self.brain is None:
+            await send("setup.brain_first")
+            return
+
+        try:
+            if message.get("document"):
+                doc = message["document"]
+                name = doc.get("file_name") or "file"
+                data = await asyncio.to_thread(bot.download, doc["file_id"])
+                rel = await self.receive(name, data)
+                job = await self.enqueue(rel)
+                self._log_capture("telegram", "file", name)
+                await send("telegram.received", name=name)
+                asyncio.create_task(self._telegram_follow(bot, chat_id, job))
+            elif message.get("photo"):
+                await send("telegram.no_photos")
+            elif text.startswith("/"):
+                await send("telegram.help")
+            elif text:
+                result = await self.receive_text(text, via="telegram")
+                self._log_capture("telegram", result["kind"], text[:40])
+                if result["kind"] == "memo":
+                    await send("telegram.memo")
+                else:
+                    await send("telegram.link")
+                    job = self.jobs.get(result["job"]["id"])
+                    if job:
+                        asyncio.create_task(self._telegram_follow(bot, chat_id, job))
+        except UserFacingError as exc:
+            await asyncio.to_thread(bot.send, chat_id, exc.localized(self.language()))
+        except telegram.TelegramError:
+            await send("telegram.download_failed")
+
+    async def _telegram_follow(self, bot: Any, chat_id: int, job: Job, wait: float = 2.0) -> None:
+        """Tell the chat how a captured item turned out."""
+        told_waiting = False
+        for _ in range(int(3600 / wait)):
+            if job.state == "done":
+                proposal = self.store.get(job.proposal_id) if job.proposal_id else None
+                title = proposal.title if proposal else job.file
+                await asyncio.to_thread(bot.send, chat_id, f"✓ {title}")
+                return
+            if job.state == "failed":
+                await asyncio.to_thread(bot.send, chat_id, f"✗ {job.message or job.file}")
+                return
+            if job.state == "waiting" and not told_waiting:
+                told_waiting = True
+                await asyncio.to_thread(bot.send, chat_id, self._say("telegram.waiting"))
+            await asyncio.sleep(wait)
 
     async def _open_link_file(self, job: Job) -> bool:
         """Replace a .webloc/.url in the inbox with the page it points to."""

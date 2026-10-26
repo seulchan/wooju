@@ -7,6 +7,11 @@ import {
   disconnectClaude,
   fetchClaude,
   fetchSearchStatus,
+  fetchCaptureStatus,
+  setIcloud,
+  connectTelegram,
+  disconnectTelegram,
+  type CaptureStatus,
   type SearchStatus,
   type ClaudeStatus,
   chooseBrain,
@@ -60,6 +65,7 @@ export function SettingsPage() {
     <div className="settings">
       <h1 className="page-title">{t('settingsTitle')}</h1>
       <AiSettings setup={setup} models={models} onChange={reload} />
+      <PhoneCapture />
       <SmartSearch ollamaRunning={models.running} />
       <ClaudeSettings status={claude} />
       <FolderSettings setup={setup} onChange={() => window.location.reload()} />
@@ -463,6 +469,161 @@ function SmartSearch({ ollamaRunning }: { ollamaRunning: boolean }) {
           </p>
         ) : null}
       </div>
+    </section>
+  )
+}
+
+/** iCloud folder and Telegram bot, so things can be sent from the phone. */
+function PhoneCapture() {
+  const t = useT()
+  const [status, setStatus] = useState<CaptureStatus | null>(null)
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    let timer: number | undefined
+    const load = async () => {
+      try {
+        const s = await fetchCaptureStatus()
+        if (!alive) return
+        setStatus(s)
+        // Waiting for the user to press Start in Telegram.
+        if (s.telegram.enabled && !s.telegram.paired) timer = window.setTimeout(load, 3000)
+      } catch {
+        /* the rest of Settings still works */
+      }
+    }
+    void load()
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+    }
+  }, [status?.telegram.enabled, status?.telegram.paired])
+
+  async function run(fn: () => Promise<CaptureStatus>) {
+    setBusy(true)
+    setError(null)
+    try {
+      setStatus(await fn())
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!status) return null
+  const { icloud, telegram, recent } = status
+  return (
+    <section className="section" aria-label={t('phoneTitle')}>
+      <h2 className="section-title">{t('phoneTitle')}</h2>
+      <p className="hint">{t('phoneIntro')}</p>
+
+      <div className="settings-block">
+        <h3 className="subsection-title">{t('icloudTitle')}</h3>
+        {!icloud.available ? (
+          <p className="hint">{t('icloudMissing')}</p>
+        ) : icloud.enabled ? (
+          <>
+            <p>
+              <Badge tone="tone-ok">{t('smartOn')}</Badge> <code>{icloud.folder}</code>
+            </p>
+            <p className="hint">{t('icloudSteps')}</p>
+            <button className="btn btn-small btn-quiet" disabled={busy} onClick={() => void run(() => setIcloud(false))}>
+              {t('icloudOff')}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="hint">{t('icloudSteps')}</p>
+            <button className="btn btn-primary" disabled={busy} onClick={() => void run(() => setIcloud(true))}>
+              {t('icloudOn')}
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="settings-block">
+        <h3 className="subsection-title">{t('telegramTitle')}</h3>
+        {telegram.enabled && telegram.paired ? (
+          <p className="claude-row">
+            <Badge tone="tone-ok">{t('telegramPaired')}</Badge>
+            {telegram.bot ? <span>@{telegram.bot}</span> : null}
+            <button className="btn btn-small btn-quiet" disabled={busy} onClick={() => void run(disconnectTelegram)}>
+              {t('telegramOff')}
+            </button>
+          </p>
+        ) : telegram.enabled ? (
+          <>
+            <p>{t('telegramPair')}</p>
+            <div className="claude-row">
+              <button
+                className="btn btn-primary"
+                disabled={!telegram.pair_link}
+                onClick={() => telegram.pair_link && void openExternal(telegram.pair_link)}
+              >
+                {t('telegramOpen')}
+              </button>
+              <button className="btn btn-small btn-quiet" disabled={busy} onClick={() => void run(disconnectTelegram)}>
+                {t('telegramOff')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <ol className="steps">
+              <li>
+                {t('telegramStep1')}{' '}
+                <button className="btn btn-small" onClick={() => void openExternal('https://t.me/BotFather')}>
+                  {t('telegramOpenFather')}
+                </button>
+              </li>
+              <li>{t('telegramStep2')}</li>
+            </ol>
+            <form
+              className="key-form"
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault()
+                void run(() => connectTelegram(token)).then(() => setToken(''))
+              }}
+            >
+              <input
+                className="text-input"
+                type="password"
+                autoComplete="off"
+                aria-label={t('telegramToken')}
+                placeholder="123456789:AA…"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+              />
+              <button className="btn btn-primary" type="submit" disabled={busy || !token.trim()}>
+                {t('telegramConnect')}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {recent.length ? (
+        <div className="settings-block">
+          <h3 className="subsection-title">{t('recentCaptures')}</h3>
+          <ul className="job-list">
+            {recent.map((r) => (
+              <li key={`${r.at}-${r.name}`} className={`job ${r.kind === 'refused' ? 'job-failed' : 'job-done'}`}>
+                <span className="job-file">{r.name}</span>
+                <span className="job-state">{r.via === 'telegram' ? 'Telegram' : 'iCloud'}</span>
+                {r.message ? <span className="job-message">{r.message}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -18,6 +18,8 @@ The agent is responsible for inspecting the material and deciding whether it sho
 - archived;
 - or discarded as not worth durable storage.
 
+`inbox/memos/` holds the user's own captured memos (typed in Wooju, sent from Telegram, or saved from the phone). They are kept as written and are not processed into sources; promote one into `memory/` or `wiki/` only when it is durable.
+
 Do not treat `inbox/` as permanent storage. Processed items should leave the inbox once their durable destination is clear.
 
 > **Humans capture to `inbox/`. Agents curate the brain.**

@@ -83,3 +83,12 @@ def set_api_key(provider: str, key: str) -> None:
         keyring.set_password(KEYRING_SERVICE, provider, key)
     except Exception as exc:  # noqa: BLE001
         raise KeyStoreError(str(exc)) from exc
+
+
+def delete_api_key(provider: str) -> None:
+    try:
+        import keyring
+
+        keyring.delete_password(KEYRING_SERVICE, provider)
+    except Exception:  # noqa: BLE001 — nothing stored is fine
+        pass

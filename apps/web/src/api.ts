@@ -336,3 +336,27 @@ export function captureText(
 ): Promise<{ kind: 'link' | 'memo'; file: string; url?: string; job?: Job }> {
   return postJson('/api/capture', { text })
 }
+
+// ------------------------------------------------------------ phone capture
+
+export interface CaptureStatus {
+  icloud: { available: boolean; enabled: boolean; folder: string }
+  telegram: { enabled: boolean; bot: string | null; paired: boolean; pair_link: string | null }
+  recent: { via: string; kind: string; name: string; message: string | null; at: string }[]
+}
+
+export function fetchCaptureStatus(signal?: AbortSignal): Promise<CaptureStatus> {
+  return apiGet('/api/capture/status', signal)
+}
+
+export function setIcloud(enabled: boolean): Promise<CaptureStatus> {
+  return postJson('/api/capture/icloud', { enabled })
+}
+
+export function connectTelegram(token: string): Promise<CaptureStatus> {
+  return postJson('/api/capture/telegram', { token })
+}
+
+export function disconnectTelegram(): Promise<CaptureStatus> {
+  return postJson('/api/capture/telegram/off')
+}
