@@ -47,8 +47,11 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - Local desktop app first, Apple Silicon Mac first. Cloud only for an optional
   mobile inbox relay and a read-only web demo (phase 4).
 - Code: Apache 2.0. Brain template: CC BY 4.0. Copyright: Seulchan Hwang.
-- Desktop shell (Tauri or Electron): decide in phase 2. CLA or DCO: decide
-  before accepting outside contributions.
+- Desktop shell: **Tauri 2** (decided in phase 2). Small bundle, first-class
+  sidecar support for the Python server, and Rust is already on the dev Mac.
+  The server is frozen with PyInstaller into one sidecar binary; the window
+  shows a loading page until the server answers on a free local port.
+- CLA or DCO: decide before accepting outside contributions.
 
 ## Roadmap
 

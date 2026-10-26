@@ -27,6 +27,7 @@ wooju/
 ├── packages/brain-core/   # Brain domain model: reader, records, index, relationships
 ├── apps/server/           # FastAPI server: Brain index + app API (uses brain-core)
 ├── apps/web/              # React UI
+├── apps/desktop/          # Tauri shell that runs the server as a sidecar
 ├── agents/                # AI provider layer and agents (Ingest now; more later)
 ├── template/              # Brain template copied into a new Brain (CC BY 4.0)
 └── docs/                  # Project decisions
@@ -57,6 +58,8 @@ uv run wooju-validate /path/to/a/brain
 # Measure local model quality on a Brain (needs Ollama on this Mac)
 uv run python evals/local_model_quality.py /path/to/a/brain --models qwen3.5:4b qwen3.5:9b
 ```
+
+To build the Mac app (Wooju.app and a .dmg): `./scripts/build-mac.sh`.
 
 To try it with an empty Brain, copy `template/` somewhere outside this repository
 and point `WOOJU_BRAIN_PATH` at the copy.

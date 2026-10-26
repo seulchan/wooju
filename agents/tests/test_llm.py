@@ -58,11 +58,18 @@ def test_ollama_errors_have_user_messages():
     with pytest.raises(LLMError) as exc:
         OllamaProvider("m", client=client(down)).generate_json("s", "u", SCHEMA)
     assert "Ollama" in exc.value.user_message
+    assert exc.value.retryable  # files wait for Ollama instead of failing
 
     missing = client(lambda r: httpx.Response(404, json={"error": "model not found"}))
     with pytest.raises(LLMError) as exc:
         OllamaProvider("qwen3.5:9b", client=missing).generate_json("s", "u", SCHEMA)
     assert "qwen3.5:9b" in exc.value.user_message
+    assert exc.value.retryable
+
+    server_error = client(lambda r: httpx.Response(500, json={}))
+    with pytest.raises(LLMError) as exc:
+        OllamaProvider("m", client=server_error).generate_json("s", "u", SCHEMA)
+    assert not exc.value.retryable
 
 
 def test_ollama_status():

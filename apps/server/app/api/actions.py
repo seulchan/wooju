@@ -6,6 +6,9 @@ written for the person using the app, not for developers.
 
 from __future__ import annotations
 
+import subprocess
+import sys
+import webbrowser
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -158,6 +161,31 @@ async def choose_ai(body: ChooseAi, engine: EngineDep) -> AiStatus:
         except LLMError as exc:
             status.ready, status.message = False, exc.user_message
     return status
+
+
+# Pages the app may open in the user's browser. Anything else is refused, so a
+# compromised page cannot use this to launch arbitrary URLs or programs.
+OPENABLE_URLS = {
+    "https://ollama.com/download",
+    "https://console.anthropic.com/settings/keys",
+    "https://platform.openai.com/api-keys",
+}
+
+
+class OpenUrl(BaseModel):
+    url: str
+
+
+@actions_router.post("/open", tags=["setup"])
+def open_url(body: OpenUrl) -> dict[str, bool]:
+    """Open an allowed page in the default browser (the desktop window cannot)."""
+    if body.url not in OPENABLE_URLS:
+        raise _fail("이 주소는 열 수 없어요.", 403)
+    if sys.platform == "darwin":
+        subprocess.run(["open", body.url], check=False, timeout=10)
+    else:
+        webbrowser.open(body.url)
+    return {"opened": True}
 
 
 # --------------------------------------------------------------------- inbox

@@ -255,3 +255,31 @@ def test_files_wait_for_the_ai_and_continue_when_it_is_ready(client, tmp_path, m
     client.portal.call(engine.retry_waiting)
     assert wait_jobs(client)[0]["state"] == "done"
     assert (brain / "sources/korea-value-up-index-launch.md").exists()
+
+
+def test_open_url_only_allows_known_pages(client, monkeypatch):
+    opened = []
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url))
+    monkeypatch.setattr("subprocess.run", lambda args, **kw: opened.append(args[-1]))
+    assert client.post("/api/open", json={"url": "https://ollama.com/download"}).status_code == 200
+    assert client.post("/api/open", json={"url": "file:///etc/passwd"}).status_code == 403
+    assert client.post("/api/open", json={"url": "https://evil.example"}).status_code == 403
+    assert opened == ["https://ollama.com/download"]
+
+
+def test_launcher_uses_bundle_paths(monkeypatch, tmp_path):
+    import sys
+
+    from app import launcher
+
+    calls = {}
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+    monkeypatch.delenv("WOOJU_WEB_DIST", raising=False)
+    monkeypatch.delenv("WOOJU_TEMPLATE_DIR", raising=False)
+    monkeypatch.setattr("uvicorn.run", lambda app, **kw: calls.update(kw))
+    launcher.main(["--port", "9123"])
+    import os
+
+    assert calls == {"host": "127.0.0.1", "port": 9123, "log_level": "info"}
+    assert os.environ["WOOJU_WEB_DIST"] == str(tmp_path / "web")
+    assert os.environ["WOOJU_TEMPLATE_DIR"] == str(tmp_path / "template")

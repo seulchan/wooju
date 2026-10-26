@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
-import { ApiError, chooseAi, chooseBrain, fetchSetup, pullModel } from '../api'
+import { ApiError, chooseAi, chooseBrain, fetchSetup, openExternal, pullModel } from '../api'
 import { LangProvider, useT } from '../lib/i18n'
 import type { AiStatus, SetupStatus } from '../types'
 import { ErrorState, Spinner } from './ui'
@@ -128,9 +128,9 @@ export function AiBanner({ ai, onChange }: { ai: AiStatus; onChange: () => void 
       <p>{ai.message}</p>
       {ai.provider === 'ollama' && !ai.ollama_running ? (
         <p>
-          <a className="btn" href={OLLAMA_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+          <button className="btn" onClick={() => void openExternal(OLLAMA_DOWNLOAD_URL)}>
             {t('openOllama')}
-          </a>{' '}
+          </button>{' '}
           <span className="hint">{t('ollamaAfter')}</span>
         </p>
       ) : null}

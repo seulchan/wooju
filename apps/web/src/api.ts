@@ -223,3 +223,12 @@ export function undoChange(id: string): Promise<{ commit: string }> {
 export function pullModel(): Promise<{ model: string | null; state: string | null }> {
   return postJson('/api/setup/ai/pull')
 }
+
+/** Open an allowed web page in the user's browser (works inside the desktop app). */
+export async function openExternal(url: string): Promise<void> {
+  try {
+    await postJson('/api/open', { url })
+  } catch {
+    window.open(url, '_blank', 'noreferrer')
+  }
+}

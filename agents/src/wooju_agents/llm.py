@@ -126,7 +126,7 @@ class OllamaProvider:
             resp.raise_for_status()
         except httpx.ConnectError as exc:
             raise LLMError(
-                str(exc), "Ollama가 실행 중이 아니에요. Ollama 앱을 열어 주세요."
+                str(exc), "Ollama가 실행 중이 아니에요. Ollama 앱을 열어 주세요.", retryable=True
             ) from exc
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:

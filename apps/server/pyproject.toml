@@ -16,6 +16,9 @@ dependencies = [
     "watchfiles>=1.0",  # debounced file watching for live Brain refresh (app/watcher.py)
 ]
 
+[project.scripts]
+wooju-server = "app.launcher:main"
+
 [tool.uv.sources]
 brain-core = { workspace = true }
 wooju-agents = { workspace = true }

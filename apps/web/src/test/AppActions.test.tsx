@@ -60,7 +60,8 @@ describe('First run', () => {
   })
 
   it('guides Ollama install without blocking the app', async () => {
-    mockFetch([
+    const fetchMock = mockFetch([
+      { match: /^\/api\/open$/, body: { opened: true } },
       {
         match: /^\/api\/setup$/,
         body: setup({
@@ -75,7 +76,9 @@ describe('First run', () => {
       </SetupGate>,
     )
     expect(await screen.findByText('the app')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ollama 설치 페이지 열기' })).toHaveAttribute('href', OLLAMA_DOWNLOAD_URL)
+    await userEvent.click(screen.getByRole('button', { name: 'Ollama 설치 페이지 열기' }))
+    const [, init] = calls(fetchMock, 'POST', '/api/open')[0]
+    expect(JSON.parse(String(init?.body))).toEqual({ url: OLLAMA_DOWNLOAD_URL })
     await userEvent.click(screen.getByRole('button', { name: '대신 API 키로 시작' }))
     expect(screen.getByLabelText('API 키')).toHaveAttribute('type', 'password')
   })

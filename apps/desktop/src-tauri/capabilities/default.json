@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The loading window needs only core defaults; the app UI is served by the local server.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
