@@ -52,6 +52,18 @@ describe('Ask', () => {
     expect(await screen.findByText(/Your Brain has nothing that answers this yet/)).toBeInTheDocument()
   })
 
+  it('shows the notes read when the AI cited none', async () => {
+    mockFetch([
+      {
+        match: /^\/api\/ask$/,
+        body: { ...answer, answer: '100개예요.', found: false, related_only: true },
+      },
+    ])
+    render(<AskPage initial="밸류업 몇 개" />)
+    expect(await screen.findByText(/isn’t tied to specific notes/)).toBeInTheDocument()
+    expect(screen.getByText(/These are the notes it read/)).toBeInTheDocument()
+  })
+
   it('shows why the AI could not answer', async () => {
     mockFetch([{ match: /^\/api\/ask$/, status: 503, body: { detail: 'Ollama is not running.' } }])
     render(<AskPage initial="anything" />)

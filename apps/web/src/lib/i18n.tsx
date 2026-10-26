@@ -117,6 +117,14 @@ const STRINGS = {
     en: 'Your notes don’t fully answer this. The answer below covers only part of it.',
   },
   askBasedOn: { ko: '근거', en: 'Based on' },
+  askRelated: {
+    ko: 'AI가 근거를 콕 집지 못했어요. 답할 때 읽은 노트예요:',
+    en: 'The AI didn’t point to specific notes. These are the notes it read:',
+  },
+  askUnchecked: {
+    ko: '근거가 표시되지 않은 답이에요. 아래 노트에서 직접 확인해 주세요.',
+    en: 'This answer isn’t tied to specific notes. Check the notes below yourself.',
+  },
   askCheck: {
     ko: 'AI가 노트를 요약한 답이에요. 중요한 판단 전에는 근거 노트를 직접 확인해 주세요.',
     en: 'This is the AI’s summary of your notes. Check the notes themselves before relying on it.',

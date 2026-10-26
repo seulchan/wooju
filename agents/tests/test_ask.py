@@ -47,33 +47,47 @@ def index(tmp_path: Path) -> BrainIndex:
     return i
 
 
+def say(*statements, enough=True):
+    return {"statements": [{"text": s, "sources": n} for s, n in statements], "enough": enough}
+
+
 def test_answer_cites_passages_and_renumbers(index):
     provider = ScriptedProvider(
-        answer={"answer": "구성종목은 100개예요 [1]. 삼성전자가 포함됐어요 [1, 9].", "enough": True}
+        answer=say(("구성종목은 100개예요.", [1]), ("삼성전자가 포함됐어요.", [1, 9]))
     )
-    result = ask(index, "밸류업 지수 구성종목은 몇 개야?", provider, language="ko")
+    result = ask(index, "밸류업 지수 구성종목은 몇 개야?", provider, language="en")
     assert result.found
-    # The invalid [9] is dropped.
-    assert result.answer == "구성종목은 100개예요 [1]. 삼성전자가 포함됐어요 [1]."
+    # The invalid [9] is dropped; the first sentence is the direct answer.
+    assert result.answer == "구성종목은 100개예요. [1]\n- 삼성전자가 포함됐어요. [1]"
     assert [c.id for c in result.citations] == ["sources/value-up"]
     system, user, _ = provider.calls[-1]
     assert "Korean" in system and "[1] 코리아 밸류업" in user and "2024-09-24" in user
 
 
 def test_citations_renumber_in_reading_order(index):
-    provider = ScriptedProvider(answer={"answer": "A [2]. B [1].", "enough": True})
+    provider = ScriptedProvider(answer=say(("A.", [2]), ("B.", [1])))
     result = ask(index, "밸류업 지수 PBR 코스피", provider, language="en")
     user = provider.calls[-1][1]
     second = user.split("[2] ")[1].split(" (")[0].split(" — ")[0]
-    assert result.answer == "A [1]. B [2]."
+    assert result.answer == "A. [1]\n- B. [2]"
     assert result.citations[0].title == second
     assert [c.n for c in result.citations] == [1, 2]
 
 
-def test_uncited_answer_is_not_found(index):
-    provider = ScriptedProvider(answer={"answer": "100개예요.", "enough": True})
+def test_uncited_answer_shows_what_was_read(index):
+    provider = ScriptedProvider(answer=say(("100개예요.", [7])))
     result = ask(index, "밸류업 지수 구성종목은 몇 개야?", provider, language="ko")
-    assert not result.found and result.citations == []
+    assert not result.found and result.related_only
+    assert result.answer == "100개예요."
+    assert result.citations[0].id == "sources/value-up"
+
+
+def test_answers_in_the_question_language(index):
+    provider = ScriptedProvider(answer=say(("x", [1])))
+    ask(index, "밸류업 지수 구성종목은 몇 개야?", provider, language="en")
+    assert "in Korean" in provider.calls[-1][0]
+    ask(index, "What share of KOSPI stocks have a PBR below 1?", provider, language="ko")
+    assert "in English" in provider.calls[-1][0]
 
 
 def test_nothing_relevant_calls_model_only_for_search_terms(index):
@@ -86,7 +100,7 @@ def test_nothing_relevant_calls_model_only_for_search_terms(index):
 def test_weak_question_is_widened_with_model_terms(index):
     provider = ScriptedProvider(
         queries=["PBR", "주가순자산비율"],
-        answer={"answer": "75% trade below book [1].", "enough": True},
+        answer=say(("75% trade below book.", [1])),
     )
     result = ask(index, "How many stocks trade below book value?", provider, language="en")
     assert result.found

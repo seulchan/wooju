@@ -39,8 +39,19 @@ class SearchTerms(BaseModel):
     )
 
 
+class Statement(BaseModel):
+    text: str = Field(description="One sentence of the answer.")
+    sources: Annotated[list[int], Field(min_length=1)] = Field(
+        description="Numbers of the passages this sentence comes from."
+    )
+
+
 class AnswerDraft(BaseModel):
-    answer: str = Field(description="The answer, citing passages like [1] after each claim.")
+    # Small local models skip inline [n] markers when asked for prose, so each
+    # sentence carries its passage numbers as a required field instead.
+    statements: list[Statement] = Field(
+        description="The answer as sentences: the direct answer first, then supporting points."
+    )
     enough: bool = Field(description="False if the passages do not answer the question.")
 
 
@@ -53,12 +64,20 @@ _TERMS_SYSTEM = (
 
 _ANSWER_SYSTEM = (
     "You answer questions using only the numbered passages from the user's own notes. "
-    "Rules: use no outside knowledge; after every claim cite the passage number in "
-    "square brackets like [2]; if passages disagree, say so; if they do not answer the "
-    "question, say plainly what is missing and set enough to false; give no investment "
-    "advice or price predictions of your own. Write in {language}, concisely: a short "
-    "direct answer first, then supporting points."
+    "Rules: use no outside knowledge; give each sentence the numbers of the passages it "
+    "comes from; if passages disagree, say so; if they do not answer the question, say "
+    "plainly what is missing and set enough to false; give no investment advice or price "
+    "predictions of your own. Write every sentence in {language}, concisely: the direct "
+    "answer first, then at most four supporting points."
 )
+_HANGUL = re.compile(r"[가-힣]")
+
+
+def answer_language(question: str, default: str) -> str:
+    """Answer in the question's language: Korean if it contains Hangul, else the app's."""
+    if _HANGUL.search(question):
+        return "ko"
+    return "en" if re.search(r"[A-Za-z]", question) else default
 
 
 @dataclass
@@ -77,6 +96,8 @@ class Answer:
     answer: str
     found: bool
     citations: list[Citation] = field(default_factory=list)
+    # True when the citations are notes the AI read but did not cite.
+    related_only: bool = False
     model: str | None = None
     seconds: float = 0.0
 
@@ -173,6 +194,7 @@ def ask(
     if not found:
         return Answer(question, "", found=False, seconds=seconds)
 
+    language = answer_language(question, language)
     system = _ANSWER_SYSTEM.format(language=_LANGUAGE_NAME.get(language, "English"))
     result = provider.generate_json(
         system, _prompt(question, found), AnswerDraft.model_json_schema()
@@ -181,11 +203,33 @@ def ask(
         draft = AnswerDraft.model_validate(result.data)
     except ValidationError as exc:
         raise AskError(str(exc), "ask.bad_shape") from exc
-    text, citations = _cite(draft.answer, found)
+    lines = []
+    for i, s in enumerate(draft.statements):
+        marks = "".join(f"[{n}]" for n in dict.fromkeys(s.sources))
+        text = s.text.strip().rstrip()
+        if not text:
+            continue
+        lines.append(f"{'' if i == 0 else '- '}{text} {marks}".rstrip())
+    text, citations = _cite("\n".join(lines), found)
+    if not citations:
+        # The model cited nothing usable: show what it read, so the user can check.
+        citations = [
+            Citation(n, p.id, p.record.title, p.heading, p.record.category, _excerpt(p.text))
+            for n, p in enumerate(found[:3], 1)
+        ]
+        return Answer(
+            question,
+            re.sub(r"\s*\[\d+\]", "", text),
+            found=False,
+            citations=citations,
+            related_only=True,
+            model=result.model,
+            seconds=seconds + result.seconds,
+        )
     return Answer(
         question,
         text,
-        found=bool(draft.enough and citations),
+        found=draft.enough,
         citations=citations,
         model=result.model,
         seconds=seconds + result.seconds,

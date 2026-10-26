@@ -106,13 +106,17 @@ function AnswerCard({ answer, compact = false }: { answer: AskAnswer; compact?: 
         <p className="answer-empty">{t('askNothing')}</p>
       ) : (
         <>
-          {!answer.found ? <p className="answer-warning">{t('askPartial')}</p> : null}
+          {answer.related_only ? (
+            <p className="answer-warning">{t('askUnchecked')}</p>
+          ) : !answer.found ? (
+            <p className="answer-warning">{t('askPartial')}</p>
+          ) : null}
           <div className="answer-text">{renderAnswer(answer.answer, byN)}</div>
         </>
       )}
       {answer.citations.length ? (
         <section className="answer-sources" aria-label={t('askBasedOn')}>
-          <h3 className="subsection-title">{t('askBasedOn')}</h3>
+          <h3 className="subsection-title">{answer.related_only ? t('askRelated') : t('askBasedOn')}</h3>
           <ol className="citation-list">
             {answer.citations.map((c) => (
               <li key={c.n} id={`cite-${c.n}`} className="citation">

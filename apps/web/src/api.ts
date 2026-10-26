@@ -271,6 +271,8 @@ export interface AskAnswer {
   answer: string
   found: boolean
   citations: AskCitation[]
+  /** The AI cited nothing; these are the notes it read. */
+  related_only?: boolean
   model: string | null
   seconds: number
 }

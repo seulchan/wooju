@@ -44,7 +44,10 @@ class Scripted:
                 "reason": "범위를 좁혀야 한다.",
             }
         else:
-            data = {"answer": "1년 안에 소각해야 해요 [1].", "enough": True}
+            data = {
+                "statements": [{"text": "1년 안에 소각해야 해요.", "sources": [1]}],
+                "enough": True,
+            }
         return LLMResult(data, "", 0.2, self.name, self.model)
 
 
@@ -72,7 +75,7 @@ def test_ask_returns_cited_answer(client):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["found"] is True
-    assert body["answer"] == "1년 안에 소각해야 해요 [1]."
+    assert body["answer"] == "1년 안에 소각해야 해요. [1]"
     assert body["citations"][0]["id"] == "wiki/concepts/treasury"
     assert body["citations"][0]["title"] == "자사주 소각"
 
