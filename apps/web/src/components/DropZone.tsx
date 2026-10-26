@@ -50,11 +50,17 @@ export function DropZone() {
   const active = jobs.some((j) => j.state === 'queued' || j.state === 'working' || j.state === 'waiting')
   useEffect(() => {
     if (!active) return
-    const timer = window.setInterval(() => {
-      void refresh().then(() => requestRefresh())
-    }, 1500)
+    const timer = window.setInterval(() => void refresh(), 2000)
     return () => window.clearInterval(timer)
   }, [active, refresh])
+
+  // Reload the rest of the page only when a file finishes, not on every check.
+  const finished = jobs.filter((j) => j.state === 'done' || j.state === 'failed').length
+  const lastFinished = useRef(finished)
+  useEffect(() => {
+    if (finished > lastFinished.current) requestRefresh()
+    lastFinished.current = finished
+  }, [finished])
 
   async function send(files: File[]) {
     if (!files.length) return
