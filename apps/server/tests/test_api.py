@@ -237,3 +237,17 @@ def test_api_never_mutates_brain(make_brain, monkeypatch, snapshot):
         client.get("/api/records/wiki/concepts/llm-agent-memory")
     after = snapshot(brain)
     assert before == after
+
+
+def test_excerpt_skips_headings(make_brain, monkeypatch):
+    brain = make_brain(
+        {"sources/s.md": "# Title\n\n## One-line Summary\n\nThe index starts on Sept 30."}
+    )
+    monkeypatch.setenv("WOOJU_BRAIN_PATH", str(brain))
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        item = client.get("/api/sources").json()["items"][0]
+    assert item["excerpt"] == "The index starts on Sept 30."

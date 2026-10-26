@@ -302,7 +302,12 @@ def _excerpt(content: str, width: int = 180) -> str | None:
     Whitespace is collapsed so the preview reads as one line regardless of the
     source formatting. This is a display-only view; it never alters the note.
     """
-    flat = " ".join(content.split())
+    # Headings repeat the title or label sections ("## One-line Summary");
+    # a preview reads better from the prose, so skip them.
+    lines = [line for line in content.splitlines() if not line.lstrip().startswith("#")]
+    flat = " ".join(" ".join(lines).split())
+    if not flat:
+        flat = " ".join(content.split())
     if not flat:
         return None
     if len(flat) <= width:
