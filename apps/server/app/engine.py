@@ -190,6 +190,11 @@ class Engine:
     # ------------------------------------------------------------ settings
 
     def language(self) -> str:
+        """The app's own language (menus, messages, card titles): the Mac's."""
+        return resolve_language("auto")
+
+    def content_language(self) -> str:
+        """The language notes are written in: the Brain's content.language."""
         setting = "auto"
         if self.brain is not None:
             try:
@@ -539,7 +544,12 @@ class Engine:
         try:
             provider = self.provider()
             proposal = await asyncio.to_thread(
-                ingest_file, brain, job.file, provider, language=self.language()
+                ingest_file,
+                brain,
+                job.file,
+                provider,
+                language=self.content_language(),
+                ui_language=self.language(),
             )
         except LLMError as exc:
             if exc.retryable:
@@ -658,7 +668,8 @@ class Engine:
             self.index,
             insight_id,
             provider,
-            language=self.language(),
+            language=self.content_language(),
+            ui_language=self.language(),
             retriever=retriever,
             query_vec=query_vec,
         )

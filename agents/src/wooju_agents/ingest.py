@@ -173,8 +173,13 @@ def ingest_file(
     *,
     language: str,
     today: date | None = None,
+    ui_language: str | None = None,
 ) -> Proposal:
-    """Read ``rel`` (a path under ``inbox/``) and return a pending proposal."""
+    """Read ``rel`` (a path under ``inbox/``) and return a pending proposal.
+
+    ``language`` is the note's language; ``ui_language`` (default: the same)
+    is the language of the review card shown in the app.
+    """
     rel_path = PurePosixPath(rel)
     if rel_path.parts[:1] != ("inbox",) or ".." in rel_path.parts:
         raise IngestError(f"Not an inbox path: {rel}", "ingest.inbox_only")
@@ -218,7 +223,9 @@ def ingest_file(
     ]
     fix = normalize_korean if language == "ko" else (lambda s: s)
     title = (
-        f"자료를 저장했어요: {draft.title}" if language == "ko" else f"Saved source: {draft.title}"
+        f"자료를 저장했어요: {draft.title}"
+        if (ui_language or language) == "ko"
+        else f"Saved source: {draft.title}"
     )
     return Proposal(
         agent=AGENT,

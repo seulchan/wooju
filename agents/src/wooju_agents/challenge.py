@@ -219,6 +219,7 @@ def challenge_insight(
     retriever: Retriever | None = None,
     today: date | None = None,
     query_vec: Sequence[float] | None = None,
+    ui_language: str | None = None,
 ) -> Proposal:
     record = index.get(insight_id)
     if record is None:
@@ -252,8 +253,9 @@ def challenge_insight(
     labels = _LABELS.get(language, _LABELS["en"])
     updated = insert_challenge(original, lines, heading_note=f"{labels['by']} {today.isoformat()}")
     changes = [FileChange(op="write", path=path, content=updated)]
-    verdict = labels["verdicts"][draft.verdict]
-    title = f"반론 검토: {record.title}" if language == "ko" else f"Challenge: {record.title}"
+    ui = ui_language or language
+    verdict = _LABELS.get(ui, _LABELS["en"])["verdicts"][draft.verdict]
+    title = f"반론 검토: {record.title}" if ui == "ko" else f"Challenge: {record.title}"
     return Proposal(
         agent=AGENT,
         origin=path,

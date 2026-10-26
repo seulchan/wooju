@@ -451,3 +451,19 @@ def test_bad_link(client, tmp_path):
     setup_brain(client, tmp_path)
     r = client.post("/api/capture", json={"text": "http://127.0.0.1:8000/api/setup"})
     assert r.status_code == 400 and "링크" in r.json()["detail"]
+
+
+def test_app_follows_the_mac_and_notes_follow_the_brain(client, tmp_path, monkeypatch):
+    """A Korean Brain on an English Mac: English app, Korean notes."""
+    monkeypatch.setenv("WOOJU_LANGUAGE", "en")  # stands in for the Mac's language
+    brain = setup_brain(client, tmp_path)
+    cfg = brain / "wooju-brain.yaml"
+    cfg.write_text(cfg.read_text().replace("language: auto", "language: ko"), encoding="utf-8")
+
+    assert client.get("/api/setup").json()["language"] == "en"
+    client.post("/api/inbox", files=[("files", ("value-up.txt", TEXT, "text/plain"))])
+    assert wait_jobs(client)[0]["state"] == "done"
+    note = (brain / "sources/korea-value-up-index-launch.md").read_text(encoding="utf-8")
+    assert "## 한 줄 요약" in note
+    applied = client.get("/api/proposals?status=applied").json()["items"]
+    assert applied[0]["title"].startswith("Saved source:")

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Wooju</title>
@@ -17,6 +17,13 @@
   </head>
   <body>
     <div class="dot" aria-hidden="true"></div>
-    <p id="msg">Wooju를 준비하고 있어요…</p>
+    <p id="msg">Getting Wooju ready…</p>
+    <script>
+      // Follow the Mac's language, like the rest of the app.
+      if ((navigator.language || '').toLowerCase().startsWith('ko')) {
+        document.documentElement.lang = 'ko'
+        document.getElementById('msg').textContent = 'Wooju를 준비하고 있어요…'
+      }
+    </script>
   </body>
 </html>
