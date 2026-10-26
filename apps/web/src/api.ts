@@ -273,6 +273,8 @@ export interface AskAnswer {
   citations: AskCitation[]
   /** The AI cited nothing; these are the notes it read. */
   related_only?: boolean
+  /** What the notes don't cover; empty when they answer fully. */
+  missing?: string
   model: string | null
   seconds: number
 }

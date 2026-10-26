@@ -108,8 +108,10 @@ function AnswerCard({ answer, compact = false }: { answer: AskAnswer; compact?: 
         <>
           {answer.related_only ? (
             <p className="answer-warning">{t('askUnchecked')}</p>
-          ) : !answer.found ? (
-            <p className="answer-warning">{t('askPartial')}</p>
+          ) : answer.missing ? (
+            <p className="answer-warning">
+              {t('askPartial')} {answer.missing}
+            </p>
           ) : null}
           <div className="answer-text">{renderAnswer(answer.answer, byN)}</div>
         </>

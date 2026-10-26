@@ -52,7 +52,15 @@ class AnswerDraft(BaseModel):
     statements: list[Statement] = Field(
         description="The answer as sentences: the direct answer first, then supporting points."
     )
-    enough: bool = Field(description="False if the passages do not answer the question.")
+    # A yes/no "is this enough?" flag was unreliable on small models (set to
+    # false for complete answers); naming what is missing is concrete.
+    missing: str = Field(
+        default="",
+        description=(
+            "What the question asks that the passages do not say, in one sentence. "
+            "Empty string if the passages answer it fully."
+        ),
+    )
 
 
 _TERMS_SYSTEM = (
@@ -66,8 +74,9 @@ _ANSWER_SYSTEM = (
     "You answer questions using only the numbered passages from the user's own notes. "
     "Rules: use no outside knowledge; give each sentence the numbers of the passages it "
     "comes from; if passages disagree, say so; if they do not answer the question, say "
-    "plainly what is missing and set enough to false; give no investment advice or price "
-    "predictions of your own. Write every sentence in {language}, concisely: the direct "
+    "what is missing in the missing field (otherwise leave it empty); give no investment "
+    "advice or price predictions of your own. Write every sentence in {language}, "
+    "concisely: the direct "
     "answer first, then at most four supporting points."
 )
 _HANGUL = re.compile(r"[가-힣]")
@@ -98,6 +107,8 @@ class Answer:
     citations: list[Citation] = field(default_factory=list)
     # True when the citations are notes the AI read but did not cite.
     related_only: bool = False
+    # What the notes don't cover, in the answer's language; empty if nothing.
+    missing: str = ""
     model: str | None = None
     seconds: float = 0.0
 
@@ -223,14 +234,16 @@ def ask(
             found=False,
             citations=citations,
             related_only=True,
+            missing=draft.missing.strip(),
             model=result.model,
             seconds=seconds + result.seconds,
         )
     return Answer(
         question,
         text,
-        found=draft.enough,
+        found=not draft.missing.strip(),
         citations=citations,
+        missing=draft.missing.strip(),
         model=result.model,
         seconds=seconds + result.seconds,
     )

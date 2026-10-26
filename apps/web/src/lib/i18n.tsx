@@ -113,8 +113,8 @@ const STRINGS = {
     en: 'Your Brain has nothing that answers this yet. Add material on it and ask again.',
   },
   askPartial: {
-    ko: '자료가 이 질문에 충분히 답하지 못해요. 아래 답은 일부만 다뤄요.',
-    en: 'Your notes don’t fully answer this. The answer below covers only part of it.',
+    ko: '노트에 없는 부분:',
+    en: 'Not in your notes:',
   },
   askBasedOn: { ko: '근거', en: 'Based on' },
   askRelated: {

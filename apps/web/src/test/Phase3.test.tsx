@@ -176,3 +176,21 @@ describe('Claude connection', () => {
     await waitFor(() => expect(screen.getByText(/another location/)).toBeInTheDocument())
   })
 })
+
+describe('Ask, partial answers', () => {
+  it('names what the notes do not cover', async () => {
+    mockFetch([
+      { match: /^\/api\/ask$/, body: { ...answer, found: false, missing: 'Selection criteria are not in your notes.' } },
+    ])
+    render(<AskPage initial="value-up criteria" />)
+    expect(await screen.findByText(/Not in your notes: Selection criteria/)).toBeInTheDocument()
+  })
+
+  it('shows no warning for a full answer', async () => {
+    mockFetch([{ match: /^\/api\/ask$/, body: { ...answer, missing: '' } }])
+    render(<AskPage initial="value-up count" />)
+    await screen.findAllByRole('heading', { name: answer.question })
+    const newest = screen.getAllByRole('article')[0]
+    expect(newest.textContent).not.toMatch(/Not in your notes/)
+  })
+})

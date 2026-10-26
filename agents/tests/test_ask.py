@@ -47,8 +47,8 @@ def index(tmp_path: Path) -> BrainIndex:
     return i
 
 
-def say(*statements, enough=True):
-    return {"statements": [{"text": s, "sources": n} for s, n in statements], "enough": enough}
+def say(*statements, missing=""):
+    return {"statements": [{"text": s, "sources": n} for s, n in statements], "missing": missing}
 
 
 def test_answer_cites_passages_and_renumbers(index):
@@ -72,6 +72,15 @@ def test_citations_renumber_in_reading_order(index):
     assert result.answer == "A. [1]\n- B. [2]"
     assert result.citations[0].title == second
     assert [c.n for c in result.citations] == [1, 2]
+
+
+def test_missing_part_is_reported(index):
+    provider = ScriptedProvider(
+        answer=say(("구성종목은 100개예요.", [1]), missing="편입 기준은 노트에 없어요.")
+    )
+    result = ask(index, "밸류업 지수 구성종목과 편입 기준은?", provider, language="ko")
+    assert not result.found and result.missing == "편입 기준은 노트에 없어요."
+    assert result.citations
 
 
 def test_uncited_answer_shows_what_was_read(index):

@@ -46,7 +46,7 @@ class Scripted:
         else:
             data = {
                 "statements": [{"text": "1년 안에 소각해야 해요.", "sources": [1]}],
-                "enough": True,
+                "missing": "",
             }
         return LLMResult(data, "", 0.2, self.name, self.model)
 
