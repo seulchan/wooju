@@ -223,3 +223,31 @@ def make_snippet(content: str, terms: list[str], width: int = 200) -> str:
     if start > 0 or end < len(content):
         snippet = f"…{snippet}…"
     return snippet
+
+
+def set_frontmatter_value(text: str, key: str, value: str | None) -> str:
+    """Set, add, or (``value=None``) remove one top-level scalar frontmatter key.
+
+    Edits only that line, so the rest of the file — comments, key order, quoting —
+    stays exactly as the user wrote it. A file without frontmatter gets one.
+    """
+    import re
+
+    line = f"{key}: {value}" if value is not None else None
+    if not text.startswith("---"):
+        return f"---\n{line}\n---\n{text}" if line else text
+    lines = text.split("\n")
+    close = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if close is None:
+        raise ValueError("Frontmatter never closes")
+    pattern = re.compile(rf"^{re.escape(key)}\s*:")
+    for i in range(1, close):
+        if pattern.match(lines[i]):
+            if line is None:
+                del lines[i]
+            else:
+                lines[i] = line
+            return "\n".join(lines)
+    if line is not None:
+        lines.insert(close, line)
+    return "\n".join(lines)

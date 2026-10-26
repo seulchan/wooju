@@ -308,3 +308,10 @@ export function connectClaude(): Promise<ClaudeStatus> {
 export function disconnectClaude(): Promise<ClaudeStatus> {
   return postJson('/api/claude/disconnect')
 }
+
+// ---------------------------------------------------------------- maintainer
+
+/** Set a note's next review date (YYYY-MM-DD), or clear it with null. */
+export function setReviewDate(id: string, until: string | null): Promise<ProposalView> {
+  return postJson('/api/review-date', { id, until })
+}

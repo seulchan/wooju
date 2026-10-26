@@ -225,6 +225,8 @@ class UiStateUpdate(BaseModel):
 # existing Brain uncertainty only — it never invents confidence, quality, or
 # conflict (see app.projections.attention).
 AttentionGroupKey = Literal[
+    "review_due",
+    "rule_errors",
     "provisional",
     "candidate",
     "open_questions",

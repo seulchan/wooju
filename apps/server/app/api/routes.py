@@ -167,9 +167,10 @@ def graph(
 
 
 @api_router.get("/attention", tags=["brain"], response_model=AttentionResponse)
-def attention(index: IndexDep) -> AttentionResponse:
-    """Project uncertainty already represented by Brain metadata and structure."""
-    return compute_attention(index)
+def attention(index: IndexDep, brain_path: BrainPathDep) -> AttentionResponse:
+    """Project uncertainty already represented by Brain metadata and structure,
+    plus notes due for review and notes that break the Brain's rules."""
+    return compute_attention(index, brain=brain_path)
 
 
 @api_router.get("/ui-state", tags=["system"], response_model=UiState)

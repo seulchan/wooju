@@ -21,7 +21,8 @@ import { useAsync } from '../lib/useAsync'
 import { Link } from '../lib/router'
 import { EmptyState, ErrorState, Spinner } from './ui'
 import type { AttentionGroup, AttentionGroupKey, AttentionItem } from '../types'
-import { tr, pick } from '../lib/i18n'
+import { tr, pick, useT } from '../lib/i18n'
+import { ReviewButtons } from './ReviewDate'
 
 /** Cap the representative preview so the section stays scannable; counts above
  *  show the true total. */
@@ -30,6 +31,8 @@ const MAX_REPRESENTATIVE = 5
 /** Singular form of each group label, for a "1 …" headline. Plural comes from
  *  the backend's group label. */
 const SINGULAR: Record<AttentionGroupKey, string> = {
+  review_due: 'Due for review',
+  rule_errors: "Note that breaks the Brain's rules",
   provisional: 'Provisional insight',
   candidate: 'Candidate insight',
   open_questions: 'Open question',
@@ -40,6 +43,8 @@ const SINGULAR: Record<AttentionGroupKey, string> = {
 
 /** Short tag for a representative item, e.g. "Provisional". */
 const GROUP_TAG: Record<AttentionGroupKey, string> = {
+  review_due: 'Due: review',
+  rule_errors: 'Rule problem',
   provisional: 'Provisional',
   candidate: 'Candidate',
   open_questions: 'Open question',
@@ -69,6 +74,33 @@ function pickRepresentative(
   return out
 }
 
+/** Notes whose review date has passed, each with one-click "reviewed" actions. */
+function DueList({ items }: { items: AttentionItem[] }) {
+  const t = useT()
+  return (
+    <section className="due" aria-label={t('reviewDue')}>
+      <h3 className="subsection-title">
+        {t('reviewDue')} <span className="due-count">{items.length}</span>
+      </h3>
+      <ul className="due-list">
+        {items.slice(0, 10).map((item) => (
+          <li key={item.id} className="due-item">
+            <div className="due-main">
+              <Link className="attention-item__title" to={`/record/${encodeId(item.id)}`}>
+                {item.title}
+              </Link>
+              <span className="hint">
+                {t('reviewDueSince')} {item.detail}
+              </span>
+            </div>
+            <ReviewButtons id={item.id} compact />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 export function AttentionSection() {
   const state = useAsync((signal) => fetchAttention(signal), [])
 
@@ -85,12 +117,15 @@ export function AttentionSection() {
     )
   }
 
-  const { groups, total } = state.data
+  const due = state.data.groups.find((g) => g.key === 'review_due')
+  const groups = state.data.groups.filter((g) => g.key !== 'review_due')
+  const total = state.data.total - (due?.count ?? 0)
   const preview = pickRepresentative(groups)
   const more = Math.max(0, total - preview.length)
 
   return (
     <div className="attention">
+      {due ? <DueList items={due.items} /> : null}
       <ul className="attention-summary" aria-label="Attention summary">
         {groups.map((group) => (
           <li key={group.key} className="attention-summary__item">
@@ -113,7 +148,10 @@ export function AttentionSection() {
               {item.title}
             </Link>
             {item.detail ? (
-              <span className="attention-item__detail" title={tr('Unresolved reference')}>
+              <span
+                className="attention-item__detail"
+                title={group.key === 'rule_errors' ? tr('Rule problem') : tr('Unresolved reference')}
+              >
                 {item.detail}
               </span>
             ) : null}

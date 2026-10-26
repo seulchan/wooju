@@ -15,7 +15,7 @@ import re
 import shutil
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -23,6 +23,7 @@ import yaml
 
 from brain_core import history
 from brain_core.changes import (
+    FileChange,
     Proposal,
     ProposalError,
     ProposalStore,
@@ -30,6 +31,7 @@ from brain_core.changes import (
     reject_proposal,
 )
 from brain_core.index import BrainIndex
+from brain_core.markdown import set_frontmatter_value
 from brain_core.messages import UserFacingError, render
 from brain_core.retrieve import RetrieverCache
 from wooju_agents.ask import Answer, ask
@@ -354,6 +356,46 @@ class Engine:
             retriever=retriever,
         )
         return self.store.save(proposal)
+
+    # ----------------------------------------------------------- maintainer
+
+    async def set_review_date(self, record_id: str, until: date | None) -> Proposal:
+        """The user reviewed a note: move its review date, or clear it.
+
+        The user's click is the approval, so this applies at once (and can be
+        undone in History like any other change).
+        """
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        text = (brain / record.path).read_text(encoding="utf-8")
+        try:
+            updated = set_frontmatter_value(
+                text, "review_after", until.isoformat() if until else None
+            )
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
+        ko = self.language() == "ko"
+        if until is None:
+            title = (
+                f"검토 날짜 지움: {record.title}" if ko else f"Review date cleared: {record.title}"
+            )
+        else:
+            title = (
+                f"검토함, 다음 검토 {until.isoformat()}: {record.title}"
+                if ko
+                else f"Reviewed, next review {until.isoformat()}: {record.title}"
+            )
+        proposal = Proposal(
+            agent="you",
+            origin=record.path,
+            title=title,
+            changes=[FileChange(op="write", path=record.path, content=updated)],
+            approval="auto",
+        )
+        self.store.save(proposal)
+        return await self.apply(proposal)
 
     # -------------------------------------------------------------- writes
 

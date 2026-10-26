@@ -34,12 +34,18 @@ reflects the Brain's *current* uncertainty, not only recent changes.
 
 from __future__ import annotations
 
+from datetime import date
+from pathlib import Path
+
 from brain_core.index import BrainIndex
+from brain_core.validate import validate_brain
 
 from ..api.models import AttentionGroup, AttentionGroupKey, AttentionItem, AttentionResponse
 
 # Canonical display order of attention categories.
 _GROUP_ORDER: tuple[AttentionGroupKey, ...] = (
+    "review_due",
+    "rule_errors",
     "provisional",
     "candidate",
     "open_questions",
@@ -51,6 +57,8 @@ _GROUP_ORDER: tuple[AttentionGroupKey, ...] = (
 # Human labels for each stable group key. The label is always shown in the UI
 # (state is never color-only).
 _LABELS: dict[AttentionGroupKey, str] = {
+    "review_due": "Due for review",
+    "rule_errors": "Notes that break the Brain's rules",
     "provisional": "Provisional insights",
     "candidate": "Candidate insights",
     "open_questions": "Open questions",
@@ -103,11 +111,48 @@ def _is_question(record) -> bool:
     return (record.subtype or "").strip().lower() == "question"
 
 
-def _collect(index: BrainIndex) -> dict[str, list[AttentionItem]]:
+def _review_date(record) -> date | None:
+    """``review_after`` as a date. The Maintainer's one scheduled signal (RETRIEVAL.md)."""
+    value = record.metadata.get("review_after")
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
+# Validation reads every file; reuse the result until the index is rescanned.
+_RULES_CACHE: dict[tuple[str, str | None], list[tuple[str, str]]] = {}
+
+
+def _rule_errors(brain: Path, indexed_at: str | None) -> list[tuple[str, str]]:
+    key = (str(brain), indexed_at)
+    if key not in _RULES_CACHE:
+        _RULES_CACHE.clear()
+        report = validate_brain(brain)
+        _RULES_CACHE[key] = [(issue.path, issue.message) for issue in report.errors]
+    return _RULES_CACHE[key]
+
+
+def _collect(index: BrainIndex, today: date, brain: Path | None) -> dict[str, list[AttentionItem]]:
     """Group every attention item by its stable key, sorted by path (deterministic)."""
     groups: dict[str, list[AttentionItem]] = {key: [] for key in _GROUP_ORDER}
 
+    if brain is not None and brain.is_dir():
+        by_path = {r.path: r for r in index.all_records()}
+        for path, message in _rule_errors(brain, index.indexed_at):
+            record = by_path.get(path)
+            if record is not None:
+                groups["rule_errors"].append(_item_from(record, detail=message))
+
     for record in sorted(index.all_records(), key=lambda r: r.path):
+        due = _review_date(record)
+        if due is not None and due <= today:
+            groups["review_due"].append(_item_from(record, detail=due.isoformat()))
+
         if record.category == "insight":
             status = (record.status or "").strip().lower() if record.status else None
             if status == "provisional":
@@ -142,9 +187,13 @@ def _collect(index: BrainIndex) -> dict[str, list[AttentionItem]]:
     return groups
 
 
-def compute_attention(index: BrainIndex) -> AttentionResponse:
+def compute_attention(
+    index: BrainIndex, *, today: date | None = None, brain: Path | None = None
+) -> AttentionResponse:
     """Build the deterministic, read-only "What needs attention?" projection."""
-    collected = _collect(index)
+    collected = _collect(index, today or date.today(), brain)
+    # Most overdue first: the oldest review date is the most stale.
+    collected["review_due"].sort(key=lambda item: (item.detail or "", item.path))
 
     response_groups: list[AttentionGroup] = []
     total = 0
@@ -155,7 +204,7 @@ def compute_attention(index: BrainIndex) -> AttentionResponse:
         total += len(items)
         # Unresolved groups can grow large; trim the returned examples while the
         # count still reports the true total found (small + actionable).
-        is_unresolved = key in ("unresolved_derived_from", "unresolved_links")
+        is_unresolved = key in ("unresolved_derived_from", "unresolved_links", "rule_errors")
         shown = items[:_MAX_UNRESOLVED_ITEMS] if is_unresolved else items
         response_groups.append(
             AttentionGroup(

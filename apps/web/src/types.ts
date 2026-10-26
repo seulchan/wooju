@@ -207,6 +207,8 @@ export interface GraphResponse {
  * unresolved target), never an inference.
  */
 export type AttentionGroupKey =
+  | 'review_due'
+  | 'rule_errors'
   | 'provisional'
   | 'candidate'
   | 'open_questions'

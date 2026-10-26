@@ -37,6 +37,7 @@ Status = Literal["pending", "applied", "rejected", "failed"]
 
 _WRITABLE_ROOTS = {"sources", "library", "wiki", "memory", "projects", "areas", "inbox", "logs"}
 _RANK = {"auto": 0, "batch": 1, "individual": 2}
+SNAPSHOT_MESSAGE = "Save your own edits"
 
 
 class ProposalError(Exception):
@@ -158,6 +159,13 @@ def apply_proposal(brain: Path, proposal: Proposal, store: ProposalStore | None 
         if change.op == "copy":
             if change.source is None or not (brain / _safe_rel(change.source)).is_file():
                 raise ProposalError(f"Nothing to copy from {change.source}")
+
+    # Record the files as they are now first. A note written or edited outside
+    # Wooju (Obsidian, a text editor) isn't in history yet; without this, undoing
+    # the proposal would delete the note or discard the user's own edits.
+    existing = [r.as_posix() for r in rels if (brain / r).is_file()]
+    if existing:
+        history.commit_paths(brain, existing, SNAPSHOT_MESSAGE)
 
     before = _error_keys(brain)
     backup: dict[PurePosixPath, bytes | None] = {

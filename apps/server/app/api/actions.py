@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import webbrowser
+from datetime import date
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -398,6 +399,8 @@ def display_title(title: str, lang: str) -> str:
         return title
     if title == "Start this Brain":
         return "Brain 시작"
+    if title == "Save your own edits":
+        return "직접 고친 내용 저장"
     if title.startswith("Undo: "):
         return f"되돌림: {display_title(title.removeprefix('Undo: '), lang)}"
     if m := _RECEIVED_MANY.match(title):
@@ -445,6 +448,26 @@ async def challenge(body: ChallengeRequest, engine: EngineDep) -> ProposalView:
         raise _fail_from(engine, exc, 404 if exc.key == "challenge.not_found" else 400) from exc
     except SetupError as exc:
         raise _fail_from(engine, exc) from exc
+    return _view(proposal)
+
+
+# ---------------------------------------------------------------- maintainer
+
+
+class ReviewDate(BaseModel):
+    id: str
+    until: date | None = None  # None clears the review date
+
+
+@actions_router.post("/review-date", tags=["maintainer"], response_model=ProposalView)
+async def set_review_date(body: ReviewDate, engine: EngineDep) -> ProposalView:
+    """The user reviewed a note: set its next review date, or clear it."""
+    try:
+        proposal = await engine.set_review_date(body.id, body.until)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "review.failed")
     return _view(proposal)
 
 

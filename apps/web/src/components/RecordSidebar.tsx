@@ -5,12 +5,16 @@ import { encodeId } from '../lib/paths'
 import { formatDate, pluralize, titleCase } from '../lib/format'
 import { Link } from '../lib/router'
 import { tr } from '../lib/i18n'
+import { ReviewPanel } from './ReviewDate'
 
 /** Right-hand panels for a record detail view. */
 export function RecordSidebar({ record }: { record: BrainRecord }) {
   return (
     <aside className="detail-aside">
       <Metadata record={record} />
+      {record.category !== 'other' ? (
+        <ReviewPanel id={record.id} value={record.metadata.review_after} />
+      ) : null}
       {record.category === 'insight' ? (
         <Derivation derived={record.derived_from_resolved} />
       ) : null}

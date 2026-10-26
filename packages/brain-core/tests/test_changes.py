@@ -130,3 +130,34 @@ def test_store_round_trip_and_reject(tmp_path):
     assert store.get("../../etc") is None
     with pytest.raises(ProposalError):
         reject_proposal(p, store)
+
+
+def test_undo_keeps_a_note_edited_outside_wooju(tmp_path):
+    """A note the user wrote or edited elsewhere survives undoing a later proposal."""
+    from brain_core import history
+    from brain_core.changes import FileChange, Proposal, apply_proposal
+
+    history.ensure_repo(tmp_path)
+    note = tmp_path / "wiki" / "concepts" / "mine.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("---\ntitle: 내 노트\n---\n# 내 노트\n\n직접 쓴 글\n", encoding="utf-8")
+
+    p = apply_proposal(
+        tmp_path,
+        Proposal(
+            agent="test",
+            title="Edit",
+            changes=[
+                FileChange(
+                    op="write",
+                    path="wiki/concepts/mine.md",
+                    content="---\ntitle: 내 노트\nreview_after: 2027-01-01\n---\n# 내 노트\n\n직접 쓴 글\n",
+                )
+            ],
+            approval="batch",
+        ),
+    )
+    assert p.status == "applied"
+    history.undo(tmp_path, p.commit)
+    assert note.read_text(encoding="utf-8").endswith("직접 쓴 글\n")
+    assert "review_after" not in note.read_text(encoding="utf-8")

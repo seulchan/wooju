@@ -38,6 +38,16 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "AI의 답이 형식에 맞지 않아요. 다시 물어봐 주세요.",
         "The AI's answer didn't have the right shape. Please ask again.",
     ),
+    # maintainer
+    "review.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
+    "review.unreadable": (
+        "노트 앞부분(frontmatter)이 깨져 있어서 날짜를 바꾸지 못했어요.",
+        "The note's frontmatter is broken, so the date couldn't be changed.",
+    ),
+    "review.failed": (
+        "날짜를 바꾸면 노트 규칙에 어긋나서 저장하지 않았어요.",
+        "Changing the date would break the note's rules, so nothing was saved.",
+    ),
     # challenger
     "challenge.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
     "challenge.not_insight": (

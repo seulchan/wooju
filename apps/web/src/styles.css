@@ -1452,3 +1452,62 @@ code {
     align-items: stretch;
   }
 }
+
+/* ---------------------------------------------------------- maintainer */
+
+.due {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.due .subsection-title {
+  margin-top: 0;
+}
+.due-count {
+  color: var(--warn);
+  margin-left: 0.25rem;
+}
+.due-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.due-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+}
+.due-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.review-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+.review-custom {
+  display: flex;
+  gap: 0.4rem;
+}
+.review-custom .text-input {
+  padding: 0.25rem 0.4rem;
+}
+.btn-small {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+.btn-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}

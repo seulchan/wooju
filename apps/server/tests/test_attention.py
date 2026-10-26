@@ -199,6 +199,8 @@ def test_group_order_is_canonical(make_brain, monkeypatch):
     keys = [g["key"] for g in data["groups"]]
     # Returned groups are a subsequence of the canonical order.
     canonical = [
+        "review_due",
+        "rule_errors",
         "provisional",
         "candidate",
         "open_questions",
