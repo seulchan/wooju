@@ -31,6 +31,9 @@ from brain_core.changes import (
 )
 from brain_core.index import BrainIndex
 from brain_core.messages import UserFacingError, render
+from brain_core.retrieve import RetrieverCache
+from wooju_agents.ask import Answer, ask
+from wooju_agents.challenge import challenge_insight
 from wooju_agents.ingest import IngestError, inbox_files, ingest_file
 from wooju_agents.llm import (
     AnthropicProvider,
@@ -119,6 +122,7 @@ class Engine:
         self._worker: asyncio.Task[None] | None = None
         self._watcher: asyncio.Task[None] | None = None
         self._retry: asyncio.Task[None] | None = None
+        self.retrievers = RetrieverCache()
         self.provider_override: Provider | None = None  # tests
         self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
 
@@ -323,6 +327,33 @@ class Engine:
                 job.state, job.message = "failed", render("job.invalid", self.language())
                 return
         job.state = "done"
+
+    # ------------------------------------------------------- ask, challenge
+
+    async def ask(self, question: str) -> Answer:
+        """Answer from the Brain. Read-only; raises LLMError/AskError."""
+        self._require_brain()
+        provider = self.provider()
+        retriever = await asyncio.to_thread(self.retrievers.get, self.index)
+        return await asyncio.to_thread(
+            ask, self.index, question, provider, language=self.language(), retriever=retriever
+        )
+
+    async def challenge(self, insight_id: str) -> Proposal:
+        """Propose a Challenge section for an insight; the user approves it in Review."""
+        brain = self._require_brain()
+        provider = self.provider()
+        retriever = await asyncio.to_thread(self.retrievers.get, self.index)
+        proposal = await asyncio.to_thread(
+            challenge_insight,
+            brain,
+            self.index,
+            insight_id,
+            provider,
+            language=self.language(),
+            retriever=retriever,
+        )
+        return self.store.save(proposal)
 
     # -------------------------------------------------------------- writes
 

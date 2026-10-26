@@ -24,6 +24,7 @@ OLLAMA_MODEL_LARGE = "qwen3.5:9b"  # 16 GB or more
 # Cloud defaults. Users can change them in settings; keep these current.
 OPENAI_DEFAULT_MODEL = "gpt-5-mini"
 ANTHROPIC_DEFAULT_MODEL = "claude-haiku-5-5"
+OLLAMA_CONTEXT = 16384
 
 
 class LLMError(UserFacingError):
@@ -128,7 +129,9 @@ class OllamaProvider:
             "format": schema,
             "stream": False,
             "think": False,
-            "options": {"temperature": 0},
+            # Ollama's default context (2–4K tokens) silently cuts long sources
+            # and Ask's passages; 16K fits both on an 8 GB Mac with the 4B model.
+            "options": {"temperature": 0, "num_ctx": OLLAMA_CONTEXT},
         }
         start = time.monotonic()
         try:

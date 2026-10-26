@@ -254,3 +254,53 @@ export async function openExternal(url: string): Promise<void> {
     window.open(url, '_blank', 'noreferrer')
   }
 }
+
+// ------------------------------------------------------------ ask, challenge
+
+export interface AskCitation {
+  n: number
+  id: string
+  title: string
+  heading: string | null
+  category: string
+  excerpt: string
+}
+
+export interface AskAnswer {
+  question: string
+  answer: string
+  found: boolean
+  citations: AskCitation[]
+  model: string | null
+  seconds: number
+}
+
+export function askBrain(question: string): Promise<AskAnswer> {
+  return postJson('/api/ask', { question })
+}
+
+export function challengeInsight(id: string): Promise<ProposalView> {
+  return postJson('/api/challenge', { id })
+}
+
+// --------------------------------------------------------- Claude connection
+
+export interface ClaudeStatus {
+  installed: boolean
+  connected: boolean
+  outdated: boolean
+  config_readable: boolean
+  command: string
+}
+
+export function fetchClaude(signal?: AbortSignal): Promise<ClaudeStatus> {
+  return apiGet('/api/claude', signal)
+}
+
+export function connectClaude(): Promise<ClaudeStatus> {
+  return postJson('/api/claude/connect')
+}
+
+export function disconnectClaude(): Promise<ClaudeStatus> {
+  return postJson('/api/claude/disconnect')
+}

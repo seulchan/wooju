@@ -39,6 +39,8 @@ uv run --with "pyinstaller>=6.10" pyinstaller --noconfirm --clean --onefile \
   --collect-submodules app \
   --collect-submodules uvicorn \
   --collect-submodules keyring \
+  --collect-submodules mcp \
+  --collect-data jsonschema_specifications \
   "$ROOT/apps/server/app/launcher.py"
 mkdir -p apps/desktop/src-tauri/binaries
 # Replace, never overwrite in place: macOS caches the old code signature for
@@ -58,6 +60,22 @@ done
 kill "$PID" 2>/dev/null || true
 [[ -n "$ok" ]] || { tail -40 "$SMOKE/server.log"; fail "서버 실행 파일이 시작되지 않았어요. 위 로그를 확인해 주세요."; }
 echo "서버 실행 파일 정상 (API와 화면 응답 확인)"
+
+# The Claude connection: the same binary must answer an MCP handshake on stdio.
+mkdir -p "$SMOKE/brain"
+printf '{"brain_path": "%s"}' "$SMOKE/brain" >"$SMOKE/settings.json"
+INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}'
+(printf '%s\n' "$INIT"; sleep 20) | WOOJU_DATA_DIR="$SMOKE" "apps/desktop/src-tauri/binaries/wooju-server-$TRIPLE" --mcp >"$SMOKE/mcp.out" 2>"$SMOKE/mcp.err" &
+MCP_PID=$!
+ok=""
+for _ in $(seq 1 60); do
+  if grep -q '"serverInfo"' "$SMOKE/mcp.out" 2>/dev/null; then ok=1; break; fi
+  sleep 0.5
+done
+kill "$MCP_PID" 2>/dev/null || true
+pkill -f "wooju-server-$TRIPLE --mcp" 2>/dev/null || true
+[[ -n "$ok" ]] || { tail -40 "$SMOKE/mcp.err"; fail "Claude 연결(MCP)이 응답하지 않았어요. 위 로그를 확인해 주세요."; }
+echo "Claude 연결(MCP) 정상"
 
 step "4/4 데스크톱 앱 빌드 (처음에는 Rust 컴파일로 몇 분 걸려요)"
 npm ci --prefix apps/desktop --no-audit --no-fund

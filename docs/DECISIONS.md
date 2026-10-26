@@ -38,6 +38,25 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - Search starts as keyword search and always works without Ollama. Semantic
   search (`qwen3-embedding:0.6b` via Ollama) is added in phase 4.
 
+## Ask, Challenger, and the Claude connection (phase 3)
+
+- Ask answers only from the user's own notes. Retrieval is BM25 over note
+  sections with Korean particle stripping and bigrams, so it works without an
+  embedding model; when results are weak the model writes extra search terms
+  (other language, synonyms). Every [n] citation is checked in code and an
+  answer with no valid citation is shown as "not answered by your notes".
+  Ask never writes to the Brain.
+- The Challenger proposes a `## Challenge` section for an insight (or a dated
+  addition under an existing one), with counter-evidence linked to notes. It
+  never changes `status`: promoting or rejecting stays the user's decision.
+- The Claude connection is an MCP server inside the same binary
+  (`wooju-server --mcp`), added to Claude Desktop's config with one click.
+  Claude can search, read, and list notes, and can only *propose* notes;
+  proposals from Claude are always reviewed, even ones that would be applied
+  automatically if they came from the Ingest agent. Other entries in Claude's
+  config are kept, the old file is backed up, and an unreadable file is never
+  overwritten.
+
 ## Language
 
 - Structural identifiers (frontmatter keys, controlled values, file names) are

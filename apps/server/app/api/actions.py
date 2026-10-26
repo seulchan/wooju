@@ -19,6 +19,8 @@ from pydantic import BaseModel
 from brain_core import history
 from brain_core.changes import Proposal, ProposalError
 from brain_core.messages import UserFacingError, render
+from wooju_agents.ask import AskError
+from wooju_agents.challenge import ChallengeError
 from wooju_agents.llm import (
     ANTHROPIC_DEFAULT_MODEL,
     OLLAMA_MODEL_LARGE,
@@ -29,6 +31,7 @@ from wooju_agents.llm import (
     recommended_ollama_model,
 )
 
+from .. import claude_link
 from .. import settings as app_settings
 from ..engine import Engine, SetupError
 
@@ -240,6 +243,7 @@ OPENABLE_URLS = {
     "https://ollama.com/search",
     "https://console.anthropic.com/settings/keys",
     "https://platform.openai.com/api-keys",
+    "https://claude.ai/download",
 }
 
 
@@ -401,6 +405,73 @@ def display_title(title: str, lang: str) -> str:
     if title.startswith("Received "):
         return f"받은 파일: {title.removeprefix('Received ')}"
     return title
+
+
+# ------------------------------------------------------- ask, challenge
+
+
+class AskRequest(BaseModel):
+    question: str
+
+
+def _ai_fail(engine: Engine, exc: LLMError) -> HTTPException:
+    # "Not ready yet" (Ollama off, model missing, no key) is 503; the UI shows
+    # the message with the setup hint. Other AI failures are 502.
+    return _fail_from(engine, exc, 503 if exc.retryable else 502)
+
+
+@actions_router.post("/ask", tags=["ask"])
+async def ask_question(body: AskRequest, engine: EngineDep) -> dict[str, Any]:
+    try:
+        answer = await engine.ask(body.question)
+    except LLMError as exc:
+        raise _ai_fail(engine, exc) from exc
+    except (AskError, SetupError) as exc:
+        raise _fail_from(engine, exc) from exc
+    return answer.to_dict()
+
+
+class ChallengeRequest(BaseModel):
+    id: str
+
+
+@actions_router.post("/challenge", tags=["ask"], response_model=ProposalView)
+async def challenge(body: ChallengeRequest, engine: EngineDep) -> ProposalView:
+    try:
+        proposal = await engine.challenge(body.id)
+    except LLMError as exc:
+        raise _ai_fail(engine, exc) from exc
+    except ChallengeError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "challenge.not_found" else 400) from exc
+    except SetupError as exc:
+        raise _fail_from(engine, exc) from exc
+    return _view(proposal)
+
+
+# -------------------------------------------------------- Claude connection
+
+
+@actions_router.get("/claude", tags=["claude"])
+def claude_status() -> dict[str, Any]:
+    return claude_link.status()
+
+
+@actions_router.post("/claude/connect", tags=["claude"])
+def claude_connect(engine: EngineDep) -> dict[str, Any]:
+    if engine.brain is None:
+        raise _fail(engine, "setup.brain_first")
+    try:
+        return claude_link.connect()
+    except claude_link.ClaudeLinkError as exc:
+        raise _fail_from(engine, exc) from exc
+
+
+@actions_router.post("/claude/disconnect", tags=["claude"])
+def claude_disconnect(engine: EngineDep) -> dict[str, Any]:
+    try:
+        return claude_link.disconnect()
+    except claude_link.ClaudeLinkError as exc:
+        raise _fail_from(engine, exc) from exc
 
 
 @actions_router.get("/history", tags=["history"])

@@ -19,7 +19,9 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
   const active = routeSection(route)
   const t = useT()
   const nav = [
-    ...NAV,
+    NAV[0],
+    { section: 'ask' as const, label: t('ask'), to: '/ask' },
+    ...NAV.slice(1),
     { section: 'review' as const, label: t('review'), to: '/review' },
     { section: 'history' as const, label: t('history'), to: '/history' },
     { section: 'settings' as const, label: t('settings'), to: '/settings' },

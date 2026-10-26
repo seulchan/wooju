@@ -9,7 +9,7 @@ add into evidence, world knowledge, personal memory, and work context, but they
 only ever **propose** changes: nothing reaches your Brain without passing
 validation and, where it matters, your approval.
 
-**Status:** early development (phase 2 of 4: first-run, ingest, approvals; UI in progress). Not ready for everyday use yet.
+**Status:** early development (phase 3 of 4: ask with sources, Challenger, Claude connection). Not ready for everyday use yet.
 
 ## Principles
 
@@ -28,7 +28,7 @@ wooju/
 ├── apps/server/           # FastAPI server: Brain index + app API (uses brain-core)
 ├── apps/web/              # React UI
 ├── apps/desktop/          # Tauri shell that runs the server as a sidecar
-├── agents/                # AI provider layer and agents (Ingest now; more later)
+├── agents/                # AI provider layer and agents: Ingest, Ask, Challenger
 ├── template/              # Brain template copied into a new Brain (CC BY 4.0)
 └── docs/                  # Project decisions
 ```
@@ -51,6 +51,9 @@ npm run web:test
 npm run web:build
 (cd apps/server && uv run uvicorn app.main:app)               # open http://localhost:8000
 # For UI development with hot reload instead: npm run web:dev  (UI on :5173)
+
+# Serve the Brain to Claude over MCP (stdio); the app's Settings adds this to Claude Desktop
+(cd apps/server && uv run wooju-server --mcp)
 
 # Check a Brain against the rules (errors exit 1)
 uv run wooju-validate /path/to/a/brain

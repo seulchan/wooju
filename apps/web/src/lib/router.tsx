@@ -13,6 +13,7 @@ import { decodeId } from './paths'
 
 export type Route =
   | { name: 'home' }
+  | { name: 'ask'; q: string }
   | { name: 'knowledge' }
   | { name: 'knowledgeDetail'; id: string }
   | { name: 'insights' }
@@ -56,6 +57,8 @@ export function parseHash(hash: string): Route {
       return rest ? { name: 'recordDetail', id: rest } : { name: 'notFound', path: h }
     case 'search':
       return { name: 'search', q }
+    case 'ask':
+      return { name: 'ask', q }
     case 'review':
       return { name: 'review' }
     case 'history':
@@ -70,17 +73,20 @@ export function parseHash(hash: string): Route {
 /** Stable string key for a route (used to remount/scroll on navigation). */
 export function routeKey(route: Route): string {
   if (route.name === 'search') return `search::${route.q}`
+  if (route.name === 'ask') return 'ask'
   if ('id' in route) return `${route.name}::${route.id}`
   return route.name
 }
 
 /** Section a route belongs to, for nav highlighting ("home" on the home page). */
-export type Section = 'home' | 'knowledge' | 'insights' | 'sources' | 'review' | 'history' | 'settings'
+export type Section = 'home' | 'ask' | 'knowledge' | 'insights' | 'sources' | 'review' | 'history' | 'settings'
 
 export function routeSection(route: Route): Section | null {
   switch (route.name) {
     case 'home':
       return 'home'
+    case 'ask':
+      return 'ask'
     case 'knowledge':
     case 'knowledgeDetail':
       return 'knowledge'

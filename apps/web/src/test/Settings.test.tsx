@@ -38,10 +38,19 @@ const models = {
   ],
 }
 
+const claude = {
+  installed: true,
+  connected: false,
+  outdated: false,
+  config_readable: true,
+  command: '/Applications/Wooju.app/Contents/MacOS/wooju-server --mcp',
+}
+
 describe('Settings', () => {
   it('lists installed models and switches the model in use', async () => {
     const fetchMock = mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
       { match: /^\/api\/setup\/ai\/pull/, body: { model: 'qwen3.5:4b', state: 'pulling' } },
       { match: /^\/api\/setup\/ai$/, body: { ...setup.ai, model: 'llama3.2:3b' } },
       { match: /^\/api\/setup$/, body: setup },
@@ -63,6 +72,7 @@ describe('Settings', () => {
   it('downloads a model by name', async () => {
     const fetchMock = mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
       { match: /^\/api\/setup\/ai\/pull/, body: { model: 'gemma4:e4b', state: 'pulling' } },
       { match: /^\/api\/setup$/, body: setup },
     ])
@@ -75,6 +85,7 @@ describe('Settings', () => {
   it('explains when Ollama is off', async () => {
     mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: { ...models, running: false, installed: [] } },
+      { match: /^\/api\/claude$/, body: claude },
       { match: /^\/api\/setup$/, body: setup },
     ])
     render(<SettingsPage />)
@@ -84,6 +95,7 @@ describe('Settings', () => {
   it('switches to Claude with a key', async () => {
     const fetchMock = mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
       { match: /^\/api\/setup\/ai$/, body: { provider: 'anthropic', model: 'claude-haiku-5-5', ready: true, has_key: true } },
       { match: /^\/api\/setup$/, body: setup },
     ])

@@ -93,6 +93,71 @@ const STRINGS = {
     ko: 'Mac 언어를 따라요. 바꾸려면 Mac의 시스템 설정 > 일반 > 언어 및 지역에서 바꾼 뒤 Wooju를 다시 열어 주세요.',
     en: 'Follows your Mac’s language. To change it, change System Settings > General > Language & Region, then reopen Wooju.',
   },
+  ask: { ko: '질문하기', en: 'Ask' },
+  askTitle: { ko: '내 자료에 질문하기', en: 'Ask your Brain' },
+  askIntro: {
+    ko: '저장한 자료와 노트만으로 답해요. 답마다 근거가 된 노트를 함께 보여 줘요.',
+    en: 'Answers come only from your saved material and notes, with the notes each answer is based on.',
+  },
+  askPlaceholder: {
+    ko: '예: 밸류업 지수에는 어떤 기업이 들어갔어?',
+    en: 'e.g. Which companies are in the Value-up Index?',
+  },
+  askButton: { ko: '질문하기', en: 'Ask' },
+  askThinking: {
+    ko: '노트를 찾아 읽는 중… 이 Mac의 모델은 1분쯤 걸릴 수 있어요.',
+    en: 'Finding and reading your notes… a model on this Mac can take about a minute.',
+  },
+  askNothing: {
+    ko: 'Brain에서 이 질문에 답할 자료를 찾지 못했어요. 관련 자료를 넣으면 답할 수 있어요.',
+    en: 'Your Brain has nothing that answers this yet. Add material on it and ask again.',
+  },
+  askPartial: {
+    ko: '자료가 이 질문에 충분히 답하지 못해요. 아래 답은 일부만 다뤄요.',
+    en: 'Your notes don’t fully answer this. The answer below covers only part of it.',
+  },
+  askBasedOn: { ko: '근거', en: 'Based on' },
+  askCheck: {
+    ko: 'AI가 노트를 요약한 답이에요. 중요한 판단 전에는 근거 노트를 직접 확인해 주세요.',
+    en: 'This is the AI’s summary of your notes. Check the notes themselves before relying on it.',
+  },
+  askEarlier: { ko: '이전 질문', en: 'Earlier questions' },
+  challengeTitle: { ko: '반론 검토', en: 'Challenge' },
+  challengeIntro: {
+    ko: 'AI가 이 가설을 Brain의 다른 자료와 대조해서, 무엇이 이걸 틀리게 만들 수 있는지 정리해요. 결과는 확인 화면에서 승인해야 노트에 들어가요. 상태는 바꾸지 않아요.',
+    en: 'The AI tests this idea against the rest of your Brain and writes down what could make it wrong. It goes into the note only after you approve it in Review. The status is not changed.',
+  },
+  challengeButton: { ko: '반론 검토하기', en: 'Challenge this insight' },
+  challengeWorking: { ko: '검토하는 중…', en: 'Reviewing…' },
+  challengeReady: { ko: '검토 결과를 확인 화면에 올렸어요:', en: 'The review is waiting in Review:' },
+  openReview: { ko: '확인하러 가기', en: 'Open Review' },
+  claudeTitle: { ko: 'Claude 연결', en: 'Claude connection' },
+  claudeIntro: {
+    ko: 'Claude 데스크톱 앱에서 이 Brain을 찾아 읽고 답할 수 있게 해요. Claude가 노트를 만들자고 하면 확인 화면에 올라오고, 승인해야 저장돼요.',
+    en: 'Lets the Claude desktop app search and read this Brain. If Claude suggests a note, it waits in Review and is saved only when you approve it.',
+  },
+  claudePrivacy: {
+    ko: 'Claude가 읽은 노트 내용은 Anthropic으로 전송돼요.',
+    en: 'Notes Claude reads are sent to Anthropic.',
+  },
+  claudeConnect: { ko: 'Claude에 연결', en: 'Connect to Claude' },
+  claudeDisconnect: { ko: '연결 해제', en: 'Disconnect' },
+  claudeReconnect: { ko: '다시 연결', en: 'Reconnect' },
+  claudeConnected: { ko: '연결됨', en: 'Connected' },
+  claudeOutdated: {
+    ko: '다른 위치의 Wooju에 연결돼 있어요. 앱을 옮겼다면 다시 연결해 주세요.',
+    en: 'Claude points to Wooju in another location. If you moved the app, reconnect.',
+  },
+  claudeRestart: {
+    ko: 'Claude 앱을 완전히 종료했다가 다시 열면 적용돼요. 그 다음 Claude에게 “내 Wooju에서 밸류업 관련 자료 찾아줘”처럼 물어보세요.',
+    en: 'Quit Claude completely and open it again to finish. Then ask Claude something like “Search my Wooju for value-up notes.”',
+  },
+  claudeMissing: {
+    ko: 'Claude 데스크톱 앱이 설치돼 있지 않아요.',
+    en: 'The Claude desktop app isn’t installed.',
+  },
+  claudeDownload: { ko: 'Claude 받기', en: 'Get Claude' },
+  claudeCode: { ko: 'Claude Code에서 쓰려면:', en: 'To use it in Claude Code:' },
   footer: {
     ko: '모든 변경은 기록되고 되돌릴 수 있어요',
     en: 'Every change is recorded and can be undone',

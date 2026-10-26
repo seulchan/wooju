@@ -3,6 +3,10 @@ import { useState, type FormEvent } from 'react'
 import {
   ApiError,
   chooseAi,
+  connectClaude,
+  disconnectClaude,
+  fetchClaude,
+  type ClaudeStatus,
   chooseBrain,
   fetchModels,
   fetchSetup,
@@ -32,8 +36,12 @@ export function SettingsPage() {
   const [nonce, setNonce] = useState(0)
   const state = useAsync(
     async (signal) => {
-      const [setup, models] = await Promise.all([fetchSetup(signal), fetchModels(signal)])
-      return { setup, models }
+      const [setup, models, claude] = await Promise.all([
+        fetchSetup(signal),
+        fetchModels(signal),
+        fetchClaude(signal),
+      ])
+      return { setup, models, claude }
     },
     [nonce],
   )
@@ -44,12 +52,13 @@ export function SettingsPage() {
 
   if (state.kind === 'loading') return <Spinner />
   if (state.kind === 'error') return <ErrorState message={state.message} onRetry={state.retry} />
-  const { setup, models } = state.data
+  const { setup, models, claude } = state.data
 
   return (
     <div className="settings">
       <h1 className="page-title">{t('settingsTitle')}</h1>
       <AiSettings setup={setup} models={models} onChange={reload} />
+      <ClaudeSettings status={claude} />
       <FolderSettings setup={setup} onChange={() => window.location.reload()} />
       <section className="section">
         <h2 className="section-title">{t('language')}</h2>
@@ -295,6 +304,79 @@ function FolderSettings({ setup, onChange }: { setup: SetupStatus; onChange: () 
           {error}
         </p>
       ) : null}
+    </section>
+  )
+}
+
+const CLAUDE_DOWNLOAD = 'https://claude.ai/download'
+
+/** One-click connection to the Claude desktop app (MCP). */
+function ClaudeSettings({ status: initial }: { status: ClaudeStatus }) {
+  const t = useT()
+  const [status, setStatus] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [changed, setChanged] = useState(false)
+
+  async function run(fn: () => Promise<ClaudeStatus>) {
+    setBusy(true)
+    setError(null)
+    try {
+      setStatus(await fn())
+      setChanged(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="section" aria-label={t('claudeTitle')}>
+      <h2 className="section-title">{t('claudeTitle')}</h2>
+      <p className="hint">{t('claudeIntro')}</p>
+      <p className="hint">{t('claudePrivacy')}</p>
+      <div className="settings-block">
+        {!status.installed ? (
+          <>
+            <p>{t('claudeMissing')}</p>
+            <button className="btn" onClick={() => void openExternal(CLAUDE_DOWNLOAD)}>
+              {t('claudeDownload')}
+            </button>
+          </>
+        ) : status.connected ? (
+          <div className="claude-row">
+            <Badge tone={status.outdated ? 'tone-warn' : 'tone-ok'}>{t('claudeConnected')}</Badge>
+            {status.outdated ? (
+              <button className="btn btn-primary" disabled={busy} onClick={() => void run(connectClaude)}>
+                {t('claudeReconnect')}
+              </button>
+            ) : null}
+            <button className="btn" disabled={busy} onClick={() => void run(disconnectClaude)}>
+              {t('claudeDisconnect')}
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn-primary" disabled={busy} onClick={() => void run(connectClaude)}>
+            {t('claudeConnect')}
+          </button>
+        )}
+        {status.outdated ? <p className="hint">{t('claudeOutdated')}</p> : null}
+        {changed ? (
+          <p className="form-ok" role="status">
+            {t('claudeRestart')}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <details className="claude-code">
+          <summary>{t('claudeCode')}</summary>
+          <code className="code-line">claude mcp add wooju -- {status.command}</code>
+        </details>
+      </div>
     </section>
   )
 }

@@ -1,5 +1,7 @@
-import { fetchRecord, NotFoundError } from '../api'
-import type { BrainRecord, Category } from '../types'
+import { useState } from 'react'
+
+import { ApiError, challengeInsight, fetchRecord, NotFoundError } from '../api'
+import type { BrainRecord, Category, ProposalView } from '../types'
 import { titleCase } from '../lib/format'
 import { extractEpistemicSections, stripLeadingH1, type EpistemicKey } from '../lib/sections'
 import { Link } from '../lib/router'
@@ -7,7 +9,7 @@ import { useAsync } from '../lib/useAsync'
 import { Markdown } from '../components/Markdown'
 import { RecordSidebar } from '../components/RecordSidebar'
 import { EmptyState, ErrorState, MetaBadge, Spinner, StatusBadge } from '../components/ui'
-import { tr, pick } from '../lib/i18n'
+import { tr, pick, useT } from '../lib/i18n'
 
 const SECTION_ROUTE: Partial<Record<Category, string>> = {
   knowledge: '/knowledge',
@@ -90,10 +92,57 @@ function RecordView({ record }: { record: BrainRecord }) {
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>
           )}
+          {isInsight ? <ChallengePanel id={record.id} /> : null}
         </div>
 
         <RecordSidebar record={record} />
       </div>
     </article>
+  )
+}
+
+/** Ask the Challenger to test this insight; the result waits in Review. */
+function ChallengePanel({ id }: { id: string }) {
+  const t = useT()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [made, setMade] = useState<ProposalView | null>(null)
+
+  async function run() {
+    setBusy(true)
+    setError(null)
+    try {
+      setMade(await challengeInsight(id))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="challenge-panel" aria-label={t('challengeTitle')}>
+      <h2 className="section-title">{t('challengeTitle')}</h2>
+      <p className="hint">{t('challengeIntro')}</p>
+      {made ? (
+        <div className="form-ok" role="status">
+          <p>
+            {t('challengeReady')} <strong>{made.summary}</strong>
+          </p>
+          <Link to="/review" className="btn btn-primary">
+            {t('openReview')}
+          </Link>
+        </div>
+      ) : (
+        <button className="btn" onClick={() => void run()} disabled={busy}>
+          {busy ? t('challengeWorking') : t('challengeButton')}
+        </button>
+      )}
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
   )
 }

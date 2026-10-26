@@ -28,6 +28,37 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "AI가 정리한 결과가 형식에 맞지 않아요. 다시 시도해 주세요.",
         "The AI's result didn't have the right shape. Please try again.",
     ),
+    # ask
+    "ask.empty": ("질문을 입력해 주세요.", "Type a question first."),
+    "ask.too_long": (
+        "질문이 너무 길어요. 1,000자 안으로 줄여 주세요.",
+        "The question is too long. Keep it under 1,000 characters.",
+    ),
+    "ask.bad_shape": (
+        "AI의 답이 형식에 맞지 않아요. 다시 물어봐 주세요.",
+        "The AI's answer didn't have the right shape. Please ask again.",
+    ),
+    # challenger
+    "challenge.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
+    "challenge.not_insight": (
+        "반론 검토는 발견한 연결(인사이트)에만 할 수 있어요.",
+        "Only insights can be challenged.",
+    ),
+    "challenge.bad_shape": (
+        "AI의 검토 결과가 형식에 맞지 않아요. 다시 시도해 주세요.",
+        "The AI's review didn't have the right shape. Please try again.",
+    ),
+    # Claude connection
+    "claude.not_installed": (
+        "Claude 데스크톱 앱이 없어요. 먼저 설치해 주세요.",
+        "The Claude desktop app isn't installed. Install it first.",
+    ),
+    "claude.config_unreadable": (
+        "Claude 설정 파일을 읽지 못해서 바꾸지 않았어요. "
+        "Claude 앱의 설정 > 개발자 > 설정 편집에서 파일을 확인해 주세요.",
+        "Claude's settings file couldn't be read, so it was left unchanged. "
+        "Check it in Claude → Settings → Developer → Edit Config.",
+    ),
     # AI providers
     "llm.unreadable": (
         "AI 응답을 읽지 못했어요. 다시 시도해 주세요.",
