@@ -400,3 +400,4 @@ dist
 !template/logs/
 # Local Brains used during development never belong in this repository.
 /brains/
+evals/results/

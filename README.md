@@ -9,7 +9,7 @@ add into evidence, world knowledge, personal memory, and work context, but they
 only ever **propose** changes: nothing reaches your Brain without passing
 validation and, where it matters, your approval.
 
-**Status:** early development (phase 0 of 4). Not ready for everyday use yet.
+**Status:** early development (phase 1 of 4: schemas, validator, real-note validation). Not ready for everyday use yet.
 
 ## Principles
 
@@ -50,6 +50,11 @@ npm run web:test
 export WOOJU_BRAIN_PATH=/absolute/path/to/a/brain
 (cd apps/server && uv run uvicorn app.main:app --reload)   # API on :8000
 npm run web:dev                                             # UI on :5173
+# Check a Brain against the rules (errors exit 1)
+uv run wooju-validate /path/to/a/brain
+
+# Measure local model quality on a Brain (needs Ollama on this Mac)
+uv run python evals/local_model_quality.py /path/to/a/brain --models qwen3.5:4b qwen3.5:9b
 ```
 
 To try it with an empty Brain, copy `template/` somewhere outside this repository

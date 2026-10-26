@@ -95,9 +95,10 @@ _SECRETS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("OpenAI API key", re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}")),
     ("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b")),
     ("Slack token", re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{10,}")),
-    ("Korean resident registration number", re.compile(r"\b\d{6}-[1-4]\d{6}\b")),
 )
+_URL = re.compile(r"(?:https?://|www\.)\S+")
 _CARD = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
+_RRN = re.compile(r"\b\d{6}-[1-4]\d{6}\b")
 _PASSWORD = re.compile(r"(?im)^\s*[-*]?\s*(password|passwd|비밀번호)\s*[:=]\s*\S+")
 
 
@@ -365,7 +366,10 @@ def _check_body_text(note: _Note, issues: list[Issue], durable: bool) -> None:
                     _line_of(text, m.start()),
                 )
             )
-    for m in _CARD.finditer(text):
+    # Number-shaped secrets are checked outside URLs: article IDs in links
+    # (e.g. news/202608270824322215) can pass a Luhn check by chance.
+    no_urls = _URL.sub(lambda m: " " * len(m.group(0)), text)
+    for m in _CARD.finditer(no_urls):
         digits = re.sub(r"\D", "", m.group(0))
         if 13 <= len(digits) <= 19 and _luhn(digits) and len(set(digits)) > 1:
             issues.append(
@@ -377,6 +381,17 @@ def _check_body_text(note: _Note, issues: list[Issue], durable: bool) -> None:
                     _line_of(text, m.start()),
                 )
             )
+    for m in _RRN.finditer(no_urls):
+        issues.append(
+            Issue(
+                "error",
+                "sensitive",
+                rel,
+                "Looks like a Korean resident registration number. "
+                "Secrets never belong in the Brain.",
+                _line_of(text, m.start()),
+            )
+        )
     for m in _PASSWORD.finditer(text):
         issues.append(
             Issue(

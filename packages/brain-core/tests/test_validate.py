@@ -194,6 +194,21 @@ def test_secrets_are_errors_everywhere_including_inbox(make_brain):
     assert {i.path for i in sensitive} == {"inbox/keys.md", "memory/records/bank.md"}
 
 
+def test_numbers_inside_urls_are_not_card_numbers(make_brain):
+    # Real case from the phase 1 dev Brain: an 18-digit article ID passes Luhn.
+    brain = make_brain(
+        {
+            "sources/a.md": '---\ntitle: A\nsource_type: article\ncanonical_ref: "https://en.fnnews.com/news/202608270824322215"\npublished: 2026\naccessed: 2026-10-26\n---\n'
+        }
+    )
+    assert not [i for i in validate_brain(brain).issues if i.code == "sensitive"]
+
+
+def test_resident_registration_number_is_detected(make_brain):
+    brain = make_brain({"inbox/x.md": "주민번호 900101-1234567"})
+    assert "sensitive" in codes(validate_brain(brain), "error")
+
+
 def test_ordinary_numbers_are_not_card_numbers(make_brain):
     brain = make_brain({"wiki/concepts/a.md": "# A\n\nRevenue 1234567890123 KRW; [[concepts/a]]"})
     assert not [i for i in validate_brain(brain).issues if i.code == "sensitive"]
