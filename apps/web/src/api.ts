@@ -315,3 +315,17 @@ export function disconnectClaude(): Promise<ClaudeStatus> {
 export function setReviewDate(id: string, until: string | null): Promise<ProposalView> {
   return postJson('/api/review-date', { id, until })
 }
+
+// ------------------------------------------------------------ meaning search
+
+export interface SearchStatus {
+  model: string
+  state: 'off' | 'indexing' | 'ready'
+  done: number
+  total: number
+  pulling: boolean
+}
+
+export function fetchSearchStatus(signal?: AbortSignal): Promise<SearchStatus> {
+  return apiGet('/api/search/status', signal)
+}

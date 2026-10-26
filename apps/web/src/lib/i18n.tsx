@@ -139,6 +139,19 @@ const STRINGS = {
   challengeWorking: { ko: '검토하는 중…', en: 'Reviewing…' },
   challengeReady: { ko: '검토 결과를 확인 화면에 올렸어요:', en: 'The review is waiting in Review:' },
   openReview: { ko: '확인하러 가기', en: 'Open Review' },
+  smartTitle: { ko: '의미로 찾기', en: 'Search by meaning' },
+  smartIntro: {
+    ko: '단어가 달라도, 영어로 물어도 뜻이 같은 노트를 찾아요. 작은 모델(약 640MB)이 이 Mac에서만 돌아가요. Claude나 OpenAI를 써도 노트를 색인하려고 밖으로 보내지 않아요.',
+    en: 'Finds notes that mean the same thing even in other words or the other language. A small model (about 640 MB) runs only on this Mac; your notes are never sent out to be indexed, even if you use Claude or OpenAI.',
+  },
+  smartOn: { ko: '켜짐', en: 'On' },
+  smartIndexing: { ko: '노트 정리 중', en: 'Indexing notes' },
+  smartGet: { ko: '모델 받고 켜기', en: 'Download and turn on' },
+  smartNeedsOllama: {
+    ko: 'Ollama가 켜져 있어야 해요. 지금은 단어로 찾아요.',
+    en: 'Needs Ollama running. Search uses words for now.',
+  },
+  smartOff: { ko: '지금은 단어로 찾아요.', en: 'Search uses words for now.' },
   claudeTitle: { ko: 'Claude 연결', en: 'Claude connection' },
   claudeIntro: {
     ko: 'Claude 데스크톱 앱에서 이 Brain을 찾아 읽고 답할 수 있게 해요. Claude가 노트를 만들자고 하면 확인 화면에 올라오고, 승인해야 저장돼요.',

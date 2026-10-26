@@ -10,6 +10,7 @@ Ask never writes to the Brain.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Annotated, Any
 
@@ -122,9 +123,20 @@ def _excerpt(text: str, limit: int = 220) -> str:
 
 
 def gather(
-    retriever: Retriever, question: str, provider: Provider | None
+    retriever: Retriever,
+    question: str,
+    provider: Provider | None,
+    query_vec: Sequence[float] | None = None,
 ) -> tuple[list[Passage], float]:
-    """Passages for ``question``; widens the search with the model when results are weak."""
+    """Passages for ``question``.
+
+    With meaning search (``query_vec``) one fused search is enough: it already
+    matches other wording and the other language. Keyword-only search is
+    widened with model-written search terms when its results are weak.
+    """
+    if query_vec is not None:
+        hits = retriever.search(question, limit=MAX_PASSAGES, query_vec=query_vec)
+        return [p for _, p in hits], 0.0
     hits = retriever.search(question, limit=MAX_PASSAGES)
     seconds = 0.0
     if provider is not None and (len(hits) < WEAK_HITS or hits[0][0] < WEAK_SCORE):
@@ -194,6 +206,7 @@ def ask(
     *,
     language: str,
     retriever: Retriever | None = None,
+    query_vec: Sequence[float] | None = None,
 ) -> Answer:
     question = question.strip()
     if not question:
@@ -201,7 +214,7 @@ def ask(
     if len(question) > 1000:
         raise AskError("Question too long", "ask.too_long")
     retriever = retriever or Retriever(index)
-    found, seconds = gather(retriever, question, provider)
+    found, seconds = gather(retriever, question, provider, query_vec)
     if not found:
         return Answer(question, "", found=False, seconds=seconds)
 

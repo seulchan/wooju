@@ -179,3 +179,26 @@ def test_moved_app_shows_outdated(config):
     config.write_text(json.dumps({"mcpServers": {"wooju": {"command": "/old/path"}}}))
     status = claude_link.status()
     assert status["connected"] and status["outdated"]
+
+
+def test_claude_search_uses_the_apps_meaning_index(brain, tmp_path):
+    """Claude's search reuses vectors the app computed; it only embeds the query."""
+    from brain_core.changes import data_dir
+    from brain_core.index import BrainIndex
+    from brain_core.retrieve import Retriever
+    from brain_core.vectors import VectorCache, normalize
+
+    class Fake:
+        model = "fake-embed"
+
+        def query(self, q):
+            return normalize([1.0, 0.0] if "index" in q.lower() else [0.0, 1.0])
+
+    index = BrainIndex()
+    index.scan(brain)
+    cache = VectorCache(data_dir() / "search" / "vectors.sqlite", "fake-embed")
+    cache.put_many([(k, [1.0, 0.0]) for k, _ in Retriever(index).load_vectors(cache)])
+
+    server = build_server(brain, ProposalStore(tmp_path / "data"), embedder=Fake())
+    data, _ = _call(server, "search_brain", {"query": "Which stock index launched?"})
+    assert data["result"][0]["id"] == "sources/value-up"

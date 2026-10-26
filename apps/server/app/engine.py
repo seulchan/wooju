@@ -28,14 +28,17 @@ from brain_core.changes import (
     ProposalError,
     ProposalStore,
     apply_proposal,
+    data_dir,
     reject_proposal,
 )
 from brain_core.index import BrainIndex
 from brain_core.markdown import set_frontmatter_value
 from brain_core.messages import UserFacingError, render
-from brain_core.retrieve import RetrieverCache
+from brain_core.retrieve import Retriever, RetrieverCache
+from brain_core.vectors import VectorCache
 from wooju_agents.ask import Answer, ask
-from wooju_agents.challenge import challenge_insight
+from wooju_agents.challenge import challenge_insight, challenge_query
+from wooju_agents.embed import EMBED_MODEL, Embedder
 from wooju_agents.ingest import IngestError, inbox_files, ingest_file
 from wooju_agents.llm import (
     AnthropicProvider,
@@ -125,6 +128,10 @@ class Engine:
         self._watcher: asyncio.Task[None] | None = None
         self._retry: asyncio.Task[None] | None = None
         self.retrievers = RetrieverCache()
+        self.embedder_override: Embedder | None = None  # tests
+        # Meaning-search indexing progress, shown in Settings.
+        self.search_state: dict[str, Any] = {"state": "off", "done": 0, "total": 0}
+        self._embedding: asyncio.Task[None] | None = None
         self.provider_override: Provider | None = None  # tests
         self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
 
@@ -154,6 +161,7 @@ class Engine:
             self._watcher = None
         if watch_enabled():
             self._watcher = asyncio.create_task(watch_and_refresh(self.index, path))
+        asyncio.create_task(self.refresh_vectors(), name="wooju-embed-start")
 
     async def choose_brain(self, path: Path) -> bool:
         created = await asyncio.to_thread(create_or_open_brain, path)
@@ -202,6 +210,7 @@ class Engine:
                 await asyncio.to_thread(provider.pull)
                 self.pull_state["state"] = "done"
                 await self.retry_waiting()
+                await self.refresh_vectors()
             except LLMError as exc:
                 self.pull_state.update(state="failed", message=exc.localized(self.language()))
 
@@ -266,8 +275,9 @@ class Engine:
             await asyncio.sleep(RETRY_SECONDS)
             try:
                 await self.retry_waiting()
+                await self.refresh_vectors()
             except Exception:  # noqa: BLE001
-                logger.exception("Retry check failed")
+                logger.exception("Background check failed")
 
     async def enqueue(self, rel: str) -> Job:
         active = {j.file for j in self.jobs.values() if j.state in ("queued", "working", "waiting")}
@@ -332,20 +342,97 @@ class Engine:
 
     # ------------------------------------------------------- ask, challenge
 
+    def embedder(self) -> Embedder:
+        if self.embedder_override is not None:
+            return self.embedder_override
+        return Embedder(EMBED_MODEL, host=app_settings.load().ai.ollama_host)
+
+    def vector_cache(self) -> VectorCache:
+        return VectorCache(data_dir() / "search" / "vectors.sqlite", EMBED_MODEL)
+
+    async def retriever(self) -> Retriever:
+        """The passage retriever for the current index, with cached vectors attached."""
+        retriever = await asyncio.to_thread(self.retrievers.get, self.index)
+        if retriever.pending is None:
+            await asyncio.to_thread(retriever.load_vectors, self.vector_cache())
+        return retriever
+
+    async def refresh_vectors(self) -> None:
+        """Embed passages that have no vector yet, in the background.
+
+        Runs when the embedding model is available; otherwise search simply
+        stays keyword-only. Safe to call often: it does nothing when up to date.
+        """
+        if self.brain is None or (self._embedding and not self._embedding.done()):
+            return
+        embedder = self.embedder()
+        if not await asyncio.to_thread(embedder.ready):
+            self.search_state = {"state": "off", "done": 0, "total": 0}
+            return
+        retriever = await self.retriever()
+        missing = list(retriever.pending or [])
+        done, total = retriever.vector_coverage
+        if not missing:
+            self.search_state = {"state": "ready", "done": done, "total": total}
+            return
+
+        # Set before the task starts, so a status check right now already sees it.
+        self.search_state = {"state": "indexing", "done": done, "total": total}
+
+        async def run() -> None:
+            cache = self.vector_cache()
+            try:
+                for start in range(0, len(missing), 64):
+                    chunk = missing[start : start + 64]
+                    vectors = await asyncio.to_thread(
+                        embedder.documents, [text for _, text in chunk]
+                    )
+                    await asyncio.to_thread(
+                        cache.put_many, [(k, v) for (k, _), v in zip(chunk, vectors, strict=True)]
+                    )
+                    self.search_state["done"] = min(total, self.search_state["done"] + len(chunk))
+                current = await asyncio.to_thread(self.retrievers.get, self.index)
+                await asyncio.to_thread(current.load_vectors, cache)
+                d, t = current.vector_coverage
+                self.search_state = {"state": "ready", "done": d, "total": t}
+            except LLMError:
+                logger.warning("Meaning search indexing paused; keyword search still works")
+                self.search_state["state"] = "off"
+
+        self._embedding = asyncio.create_task(run(), name="wooju-embed")
+
+    async def query_vector(self, text: str) -> Any:
+        """The query's embedding, or None (keyword search) if meaning search is off."""
+        if self.search_state.get("state") not in ("ready", "indexing"):
+            return None
+        try:
+            return await asyncio.to_thread(self.embedder().query, text)
+        except LLMError:
+            return None
+
     async def ask(self, question: str) -> Answer:
         """Answer from the Brain. Read-only; raises LLMError/AskError."""
         self._require_brain()
         provider = self.provider()
-        retriever = await asyncio.to_thread(self.retrievers.get, self.index)
+        retriever = await self.retriever()
+        query_vec = await self.query_vector(question)
         return await asyncio.to_thread(
-            ask, self.index, question, provider, language=self.language(), retriever=retriever
+            ask,
+            self.index,
+            question,
+            provider,
+            language=self.language(),
+            retriever=retriever,
+            query_vec=query_vec,
         )
 
     async def challenge(self, insight_id: str) -> Proposal:
         """Propose a Challenge section for an insight; the user approves it in Review."""
         brain = self._require_brain()
         provider = self.provider()
-        retriever = await asyncio.to_thread(self.retrievers.get, self.index)
+        retriever = await self.retriever()
+        record = self.index.get(insight_id)
+        query_vec = await self.query_vector(challenge_query(record)) if record else None
         proposal = await asyncio.to_thread(
             challenge_insight,
             brain,
@@ -354,6 +441,7 @@ class Engine:
             provider,
             language=self.language(),
             retriever=retriever,
+            query_vec=query_vec,
         )
         return self.store.save(proposal)
 

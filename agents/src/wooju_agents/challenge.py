@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Sequence
 from datetime import date
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
@@ -107,7 +108,12 @@ _LABELS = {
 }
 
 
-def evidence(index: BrainIndex, insight_id: str, retriever: Retriever) -> list[Passage]:
+def evidence(
+    index: BrainIndex,
+    insight_id: str,
+    retriever: Retriever,
+    query_vec: Sequence[float] | None = None,
+) -> list[Passage]:
     """The insight's own sources first, then other passages that may bear on it."""
     record = index.get(insight_id)
     assert record is not None
@@ -116,9 +122,9 @@ def evidence(index: BrainIndex, insight_id: str, retriever: Retriever) -> list[P
         target = index.get(ref.resolved_id) if ref.resolved_id else None
         if target is not None:
             found.extend(passages(target)[:2])
-    query = f"{record.title} {_section(record.content, 'Insight') or ''}"
+    query = challenge_query(record)
     seen = {(p.id, p.heading) for p in found}
-    for _, p in retriever.search(query, limit=MAX_PASSAGES * 2):
+    for _, p in retriever.search(query, limit=MAX_PASSAGES * 2, query_vec=query_vec):
         if p.id == insight_id or (p.id, p.heading) in seen:
             continue
         found.append(p)
@@ -126,6 +132,11 @@ def evidence(index: BrainIndex, insight_id: str, retriever: Retriever) -> list[P
         if len(found) >= MAX_PASSAGES:
             break
     return found[:MAX_PASSAGES]
+
+
+def challenge_query(record) -> str:  # noqa: ANN001 — a brain_core Record
+    """What to search for when looking for evidence about an insight."""
+    return f"{record.title} {_section(record.content, 'Insight') or ''}".strip()
 
 
 def _section(body: str, title: str) -> str | None:
@@ -207,6 +218,7 @@ def challenge_insight(
     language: str,
     retriever: Retriever | None = None,
     today: date | None = None,
+    query_vec: Sequence[float] | None = None,
 ) -> Proposal:
     record = index.get(insight_id)
     if record is None:
@@ -215,7 +227,7 @@ def challenge_insight(
         raise ChallengeError(insight_id, "challenge.not_insight")
     today = today or date.today()
     retriever = retriever or Retriever(index)
-    found = evidence(index, insight_id, retriever)
+    found = evidence(index, insight_id, retriever, query_vec)
 
     blocks = [
         f"[{n}] {p.record.title}{f' — {p.heading}' if p.heading else ''} "

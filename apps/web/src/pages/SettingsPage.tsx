@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import {
   ApiError,
@@ -6,6 +6,8 @@ import {
   connectClaude,
   disconnectClaude,
   fetchClaude,
+  fetchSearchStatus,
+  type SearchStatus,
   type ClaudeStatus,
   chooseBrain,
   fetchModels,
@@ -58,6 +60,7 @@ export function SettingsPage() {
     <div className="settings">
       <h1 className="page-title">{t('settingsTitle')}</h1>
       <AiSettings setup={setup} models={models} onChange={reload} />
+      <SmartSearch ollamaRunning={models.running} />
       <ClaudeSettings status={claude} />
       <FolderSettings setup={setup} onChange={() => window.location.reload()} />
       <section className="section">
@@ -376,6 +379,89 @@ function ClaudeSettings({ status: initial }: { status: ClaudeStatus }) {
           <summary>{t('claudeCode')}</summary>
           <code className="code-line">claude mcp add wooju -- {status.command}</code>
         </details>
+      </div>
+    </section>
+  )
+}
+
+/** Meaning search: the local embedding model and indexing progress. */
+function SmartSearch({ ollamaRunning }: { ollamaRunning: boolean }) {
+  const t = useT()
+  const [status, setStatus] = useState<SearchStatus | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    let timer: number | undefined
+    const load = async () => {
+      try {
+        const s = await fetchSearchStatus()
+        if (!alive) return
+        setStatus(s)
+        if (s.pulling || s.state === 'indexing') timer = window.setTimeout(load, 3000)
+      } catch {
+        // The rest of Settings still works; leave the last status shown.
+      }
+    }
+    void load()
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  async function turnOn() {
+    if (!status) return
+    setError(null)
+    try {
+      await pullModel(status.model)
+      setStatus({ ...status, pulling: true })
+      const poll = async () => {
+        const s = await fetchSearchStatus()
+        setStatus(s)
+        if (s.pulling || s.state === 'indexing') window.setTimeout(poll, 3000)
+      }
+      window.setTimeout(poll, 3000)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+    }
+  }
+
+  return (
+    <section className="section" aria-label={t('smartTitle')}>
+      <h2 className="section-title">{t('smartTitle')}</h2>
+      <p className="hint">{t('smartIntro')}</p>
+      <div className="settings-block">
+        {!status ? (
+          <Spinner />
+        ) : status.state === 'ready' ? (
+          <p>
+            <Badge tone="tone-ok">{t('smartOn')}</Badge>{' '}
+            <span className="hint">
+              {status.model} · {status.total}
+            </span>
+          </p>
+        ) : status.state === 'indexing' ? (
+          <p role="status">
+            {t('smartIndexing')} {status.done} / {status.total}
+          </p>
+        ) : status.pulling ? (
+          <p role="status">{t('downloading')}</p>
+        ) : !ollamaRunning ? (
+          <p className="hint">{t('smartNeedsOllama')}</p>
+        ) : (
+          <>
+            <p className="hint">{t('smartOff')}</p>
+            <button className="btn btn-primary" onClick={() => void turnOn()}>
+              {t('smartGet')}
+            </button>
+          </>
+        )}
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
     </section>
   )

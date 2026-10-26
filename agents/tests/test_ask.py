@@ -121,3 +121,29 @@ def test_empty_question(index):
     with pytest.raises(AskError) as err:
         ask(index, "  ", ScriptedProvider(), language="en")
     assert err.value.key == "ask.empty"
+
+
+def test_meaning_search_skips_the_search_terms_call(index):
+    from brain_core.retrieve import Retriever
+    from brain_core.vectors import VectorCache, normalize
+
+    retriever = Retriever(index)
+    import tempfile
+    from pathlib import Path
+
+    cache = VectorCache(Path(tempfile.mkdtemp()) / "v.sqlite", "fake")
+    cache.put_many(
+        [(k, [1.0, 0.0] if "PBR" in t else [0.0, 1.0]) for k, t in retriever.load_vectors(cache)]
+    )
+    retriever.load_vectors(cache)
+    provider = ScriptedProvider(answer=say(("75% trade below book.", [1])))
+    result = ask(
+        index,
+        "How many stocks trade below book value?",
+        provider,
+        language="en",
+        retriever=retriever,
+        query_vec=normalize([1.0, 0.0]),
+    )
+    assert result.citations[0].id == "sources/kospi-pbr"
+    assert len(provider.calls) == 1  # no search-terms call

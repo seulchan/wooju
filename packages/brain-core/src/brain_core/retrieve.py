@@ -16,10 +16,17 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from .index import BrainIndex
 from .records import Record
+from .vectors import VectorCache, cosine
+
+_RRF_K = 60
+_CANDIDATES = 50
+# Below this cosine similarity a passage is not a meaning match at all.
+_MIN_COSINE = 0.35
 
 _K1 = 1.4
 _B = 0.75
@@ -128,6 +135,11 @@ class Passage:
     def id(self) -> str:
         return self.record.id
 
+    def embedding_text(self) -> str:
+        """What gets embedded: where the passage is, then what it says."""
+        where = self.record.title + (f" — {self.heading}" if self.heading else "")
+        return f"{where}\n{self.text}"
+
 
 def _strip_particle(word: str) -> str:
     for p in _PARTICLES:
@@ -185,6 +197,9 @@ class Retriever:
     def __init__(self, index: BrainIndex) -> None:
         self.indexed_at = index.indexed_at
         self._passages: list[Passage] = []
+        self._vectors: list[Sequence[float] | None] = []
+        # (key, text) of passages without a vector; None until vectors are loaded.
+        self.pending: list[tuple[str, str]] | None = None
         self._tf: list[Counter[str]] = []
         self._len: list[int] = []
         df: Counter[str] = Counter()
@@ -204,9 +219,28 @@ class Retriever:
         n = max(len(self._passages), 1)
         self._avg = (sum(self._len) / n) or 1.0
         self._idf = {t: math.log(1 + (n - d + 0.5) / (d + 0.5)) for t, d in df.items()}
+        self._vectors = [None] * len(self._passages)
 
-    def search(self, query: str, limit: int = 8, per_note: int = 2) -> list[tuple[float, Passage]]:
-        """Best passages for ``query``, at most ``per_note`` from the same note."""
+    # ---------------------------------------------------------------- vectors
+
+    def load_vectors(self, cache: VectorCache) -> list[tuple[str, str]]:
+        """Attach cached vectors; return ``(key, text)`` for passages still missing one."""
+        keys = [cache.key(p.embedding_text()) for p in self._passages]
+        found = cache.get_many(keys)
+        missing: dict[str, str] = {}
+        for i, (key, p) in enumerate(zip(keys, self._passages, strict=True)):
+            self._vectors[i] = found.get(key)
+            if key not in found:
+                missing.setdefault(key, p.embedding_text())
+        self.pending = list(missing.items())
+        return self.pending
+
+    @property
+    def vector_coverage(self) -> tuple[int, int]:
+        """(passages with a vector, all passages)."""
+        return sum(v is not None for v in self._vectors), len(self._vectors)
+
+    def _bm25(self, query: str) -> list[tuple[float, int]]:
         q = list(dict.fromkeys(tokens(query)))
         if not q:
             return []
@@ -221,6 +255,40 @@ class Retriever:
             if score > 0:
                 scored.append((score, i))
         scored.sort(key=lambda s: (-s[0], self._passages[s[1]].record.path))
+        return scored
+
+    def _semantic(self, query_vec: Sequence[float]) -> list[tuple[float, int]]:
+        scored = [(cosine(query_vec, v), i) for i, v in enumerate(self._vectors) if v is not None]
+        scored = [s for s in scored if s[0] >= _MIN_COSINE]
+        scored.sort(key=lambda s: (-s[0], self._passages[s[1]].record.path))
+        return scored
+
+    def search(
+        self,
+        query: str,
+        limit: int = 8,
+        per_note: int = 2,
+        query_vec: Sequence[float] | None = None,
+    ) -> list[tuple[float, Passage]]:
+        """Best passages for ``query``, at most ``per_note`` from the same note.
+
+        With ``query_vec`` (the query's normalized embedding) and passage
+        vectors loaded, keyword and meaning rankings are fused (reciprocal rank
+        fusion), so a passage that says the same thing in other words, or in
+        the other language, is found too. Scores are then fusion scores.
+        """
+        keyword = self._bm25(query)
+        if query_vec is not None and any(v is not None for v in self._vectors):
+            fused: dict[int, float] = {}
+            for ranked in (keyword[:_CANDIDATES], self._semantic(query_vec)[:_CANDIDATES]):
+                for rank, (_, i) in enumerate(ranked):
+                    fused[i] = fused.get(i, 0.0) + 1.0 / (_RRF_K + rank + 1)
+            scored = sorted(
+                ((s, i) for i, s in fused.items()),
+                key=lambda s: (-s[0], self._passages[s[1]].record.path),
+            )
+        else:
+            scored = keyword
         out: list[tuple[float, Passage]] = []
         seen: Counter[str] = Counter()
         for score, i in scored:

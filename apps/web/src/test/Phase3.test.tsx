@@ -7,6 +7,8 @@ import { RecordDetailPage } from '../pages/RecordDetailPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { mockFetch } from './mockApi'
 
+const searchOff = { model: 'qwen3-embedding:0.6b', state: 'off', done: 0, total: 0, pulling: false }
+
 type Call = [string | Request, RequestInit | undefined]
 
 function posted(fetchMock: ReturnType<typeof mockFetch>, path: string): unknown[] {
@@ -145,6 +147,7 @@ describe('Claude connection', () => {
       { match: /^\/api\/setup$/, body: setup },
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: claudeOff },
+      { match: /^\/api\/search\/status/, body: searchOff },
       { match: /^\/api\/claude\/connect$/, body: { ...claudeOff, connected: true } },
     ])
     render(<SettingsPage />)
@@ -160,6 +163,7 @@ describe('Claude connection', () => {
       { match: /^\/api\/setup$/, body: setup },
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: { ...claudeOff, installed: false } },
+      { match: /^\/api\/search\/status/, body: searchOff },
     ])
     render(<SettingsPage />)
     expect(await screen.findByRole('button', { name: 'Get Claude' })).toBeInTheDocument()
@@ -170,6 +174,7 @@ describe('Claude connection', () => {
       { match: /^\/api\/setup$/, body: setup },
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: { ...claudeOff, connected: true, outdated: true } },
+      { match: /^\/api\/search\/status/, body: searchOff },
     ])
     render(<SettingsPage />)
     expect(await screen.findByRole('button', { name: 'Reconnect' })).toBeInTheDocument()
@@ -192,5 +197,34 @@ describe('Ask, partial answers', () => {
     await screen.findAllByRole('heading', { name: answer.question })
     const newest = screen.getAllByRole('article')[0]
     expect(newest.textContent).not.toMatch(/Not in your notes/)
+  })
+})
+
+describe('Search by meaning', () => {
+  it('turns on by downloading the small model', async () => {
+    const fetchMock = mockFetch([
+      { match: /^\/api\/setup$/, body: setup },
+      { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claudeOff },
+      { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/setup\/ai\/pull/, body: { model: 'qwen3-embedding:0.6b', state: 'pulling' } },
+    ])
+    render(<SettingsPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Download and turn on' }))
+    await waitFor(() =>
+      expect(posted(fetchMock, '/api/setup/ai/pull')).toEqual([{ model: 'qwen3-embedding:0.6b' }]),
+    )
+    expect(await screen.findByText('Downloading…')).toBeInTheDocument()
+  })
+
+  it('shows progress and then on', async () => {
+    mockFetch([
+      { match: /^\/api\/setup$/, body: setup },
+      { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claudeOff },
+      { match: /^\/api\/search\/status/, body: { ...searchOff, state: 'ready', done: 120, total: 120 } },
+    ])
+    render(<SettingsPage />)
+    expect(await screen.findByText('On')).toBeInTheDocument()
   })
 })

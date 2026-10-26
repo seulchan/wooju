@@ -451,6 +451,23 @@ async def challenge(body: ChallengeRequest, engine: EngineDep) -> ProposalView:
     return _view(proposal)
 
 
+# ------------------------------------------------------------ meaning search
+
+
+@actions_router.get("/search/status", tags=["setup"])
+async def search_status(engine: EngineDep) -> dict[str, Any]:
+    """Meaning search: is the embedding model there, and how much is indexed."""
+    from wooju_agents.embed import EMBED_MODEL
+
+    await engine.refresh_vectors()
+    state = dict(engine.search_state)
+    pulling = (
+        engine.pull_state.get("model") == EMBED_MODEL
+        and engine.pull_state.get("state") == "pulling"
+    )
+    return {"model": EMBED_MODEL, "pulling": pulling, **state}
+
+
 # ---------------------------------------------------------------- maintainer
 
 

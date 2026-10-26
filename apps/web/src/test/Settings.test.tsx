@@ -8,6 +8,8 @@ import { Layout } from '../components/Layout'
 import { LangProvider } from '../lib/i18n'
 import { mockFetch } from './mockApi'
 
+const searchOff = { model: 'qwen3-embedding:0.6b', state: 'off', done: 0, total: 0, pulling: false }
+
 type Call = [string | Request, RequestInit | undefined]
 
 function posted(fetchMock: ReturnType<typeof mockFetch>, path: string): unknown[] {
@@ -51,6 +53,7 @@ describe('Settings', () => {
     const fetchMock = mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
       { match: /^\/api\/setup\/ai\/pull/, body: { model: 'qwen3.5:4b', state: 'pulling' } },
       { match: /^\/api\/setup\/ai$/, body: { ...setup.ai, model: 'llama3.2:3b' } },
       { match: /^\/api\/setup$/, body: setup },
@@ -73,6 +76,7 @@ describe('Settings', () => {
     const fetchMock = mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
       { match: /^\/api\/setup\/ai\/pull/, body: { model: 'gemma4:e4b', state: 'pulling' } },
       { match: /^\/api\/setup$/, body: setup },
     ])
@@ -86,6 +90,7 @@ describe('Settings', () => {
     mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: { ...models, running: false, installed: [] } },
       { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
       { match: /^\/api\/setup$/, body: setup },
     ])
     render(<SettingsPage />)
@@ -96,6 +101,7 @@ describe('Settings', () => {
     const fetchMock = mockFetch([
       { match: /^\/api\/setup\/ai\/models/, body: models },
       { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
       { match: /^\/api\/setup\/ai$/, body: { provider: 'anthropic', model: 'claude-haiku-5-5', ready: true, has_key: true } },
       { match: /^\/api\/setup$/, body: setup },
     ])

@@ -51,12 +51,17 @@ needs origin: synthesis, insight_kind, status: candidate, derived_from, and a
 
 
 class BrainView:
-    """The Brain's index for this process, rescanned when it may be stale."""
+    """The Brain's index for this process, rescanned when it may be stale.
 
-    def __init__(self, brain: Path) -> None:
+    Meaning search reuses the vectors the Wooju app has already computed (it
+    never indexes on its own) and embeds only the query, when Ollama is there.
+    """
+
+    def __init__(self, brain: Path, embedder: Any = None) -> None:
         self.brain = brain
         self.index = BrainIndex()
         self.retrievers = RetrieverCache()
+        self.embedder = embedder
         self._scanned = 0.0
 
     def fresh(self) -> BrainIndex:
@@ -64,6 +69,26 @@ class BrainView:
             self.index.scan(self.brain)
             self._scanned = time.monotonic()
         return self.index
+
+    def search(self, query: str, limit: int) -> list[tuple[float, Any]]:
+        index = self.fresh()
+        retriever = self.retrievers.get(index)
+        query_vec = None
+        if self.embedder is not None:
+            try:
+                if retriever.pending is None:
+                    from brain_core.changes import data_dir
+                    from brain_core.vectors import VectorCache
+
+                    cache = VectorCache(
+                        data_dir() / "search" / "vectors.sqlite", self.embedder.model
+                    )
+                    retriever.load_vectors(cache)
+                if retriever.vector_coverage[0]:
+                    query_vec = self.embedder.query(query)
+            except Exception:  # noqa: BLE001 — meaning search is optional
+                logger.info("Meaning search unavailable; using keywords")
+        return retriever.search(query, limit=limit, query_vec=query_vec)
 
 
 def _note_id(value: str) -> str:
@@ -99,12 +124,14 @@ def check_proposal(brain: Path, path: str, content: str) -> str | None:
     return None
 
 
-def build_server(brain: Path, store: ProposalStore | None = None):  # noqa: ANN201
+def build_server(  # noqa: ANN201
+    brain: Path, store: ProposalStore | None = None, embedder: Any = None
+):
     from mcp.server.mcpserver import MCPServer
     from mcp.server.mcpserver.exceptions import ToolError
     from mcp.types import ToolAnnotations
 
-    view = BrainView(brain)
+    view = BrainView(brain, embedder)
     store = store or ProposalStore()
     server = MCPServer(name="wooju", title="Wooju Brain", instructions=INSTRUCTIONS)
     read_only = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
@@ -115,9 +142,7 @@ def build_server(brain: Path, store: ProposalStore | None = None):  # noqa: ANN2
 
         Returns the best-matching passages with the note id to pass to read_note.
         """
-        index = view.fresh()
-        retriever = view.retrievers.get(index)
-        hits = retriever.search(query, limit=max(1, min(limit, 20)))
+        hits = view.search(query, max(1, min(limit, 20)))
         return [
             {
                 "id": p.id,
@@ -221,4 +246,9 @@ def run_stdio() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
-    build_server(brain).run("stdio")
+    from wooju_agents.embed import EMBED_MODEL, Embedder
+
+    from .settings import load
+
+    embedder = Embedder(EMBED_MODEL, host=load().ai.ollama_host)
+    build_server(brain, embedder=embedder if embedder.ready() else None).run("stdio")
