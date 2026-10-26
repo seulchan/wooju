@@ -120,7 +120,7 @@ def _overview(
     ordered = list(adj.keys())
     # Stable sorts: id asc (final tiebreak), modified desc, then degree desc.
     ordered.sort(key=lambda n: n)
-    ordered.sort(key=lambda n: (records[n].modified_at or ""), reverse=True)
+    ordered.sort(key=lambda n: records[n].modified_at or "", reverse=True)
     ordered.sort(key=lambda n: degree[n], reverse=True)
 
     selected = ordered[:limit]
@@ -179,8 +179,7 @@ def project_graph(
         )
 
     graph_edges = [
-        GraphEdge(source=source, target=target, type=etype)
-        for source, target, etype in kept
+        GraphEdge(source=source, target=target, type=etype) for source, target, etype in kept
     ]
 
     meta = GraphMeta(

@@ -96,8 +96,12 @@ def test_decided_lifecycle_states_are_not_surfaced(make_brain, monkeypatch):
     with _client(monkeypatch, brain) as client:
         data = client.get("/api/attention").json()
     decided = {"wiki/insights/est", "wiki/insights/rej", "wiki/insights/sup"}
-    lifecycle = {i["id"] for g in data["groups"] for i in g["items"]
-                 if g["key"] in ("provisional", "candidate")}
+    lifecycle = {
+        i["id"]
+        for g in data["groups"]
+        for i in g["items"]
+        if g["key"] in ("provisional", "candidate")
+    }
     assert not (decided & lifecycle)
 
 
@@ -132,8 +136,7 @@ def test_unresolved_derived_from(make_brain, monkeypatch):
     groups = _by_key(data)
     items = groups["unresolved_derived_from"]["items"]
     assert any(
-        i["id"] == "wiki/insights/baddf" and i["detail"] == "[[concepts/ghost]]"
-        for i in items
+        i["id"] == "wiki/insights/baddf" and i["detail"] == "[[concepts/ghost]]" for i in items
     )
     assert groups["unresolved_derived_from"]["count"] == 1
 
@@ -233,10 +236,7 @@ def test_attention_is_deterministic(make_brain, monkeypatch):
 
 def test_unresolved_group_items_trimmed_but_count_true(make_brain, monkeypatch):
     """Many unresolved links: count reports the true total, items are trimmed."""
-    files = {
-        f"wiki/notes/n{i}.md": f"---\ntype: concept\n---\n[[ghost-{i}]].\n"
-        for i in range(30)
-    }
+    files = {f"wiki/notes/n{i}.md": f"---\ntype: concept\n---\n[[ghost-{i}]].\n" for i in range(30)}
     brain = make_brain(files)
     with _client(monkeypatch, brain) as client:
         data = client.get("/api/attention").json()

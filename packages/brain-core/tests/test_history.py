@@ -53,3 +53,11 @@ def test_first_commit_cannot_be_undone(make_brain):
 
 def test_log_without_repo_is_empty(make_brain):
     assert history.log(make_brain({})) == []
+
+
+def test_no_empty_commits(make_brain):
+    brain = make_brain({"a.md": "1"})
+    history.ensure_repo(brain)
+    head = history.log(brain)[0].id
+    assert history.commit_paths(brain, ["a.md"], "Nothing changed") == head
+    assert len(history.log(brain)) == 1

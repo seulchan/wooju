@@ -43,6 +43,11 @@ def resolve_brain_path() -> Path | None:
     """
     raw = os.environ.get(ENV_VAR, "").strip()
     if not raw:
+        # No override: use the folder chosen in the app's first-run setup.
+        from . import settings
+
+        raw = (settings.load().brain_path or "").strip()
+    if not raw:
         return None
     expanded = os.path.expandvars(os.path.expanduser(raw))
     try:
@@ -63,7 +68,7 @@ def build_health(brain_path: Path | None) -> HealthResponse:
             brain_exists=False,
             brain_is_directory=False,
             brain_valid=False,
-            message=f"{ENV_VAR} is not set.",
+            message="No Brain folder is chosen yet.",
         )
 
     exists = brain_path.exists()

@@ -12,5 +12,7 @@ do not confuse the two.
 4. Every user-facing change is judged by one question: can a first-time,
    non-developer user do this unaided? No terminal steps, no config files.
 5. Code, comments, and docs in this repository are written in English.
-6. Before finishing: `uv run pytest packages/brain-core`, `(cd apps/server && uv
-   run pytest)`, `uv run ruff check .`, and `npm run web:test` all pass.
+6. Before finishing: `uv run pytest packages/brain-core agents`, `(cd apps/server
+   && uv run pytest)`, `uv run ruff check .`, and `npm run web:test` all pass.
+7. Messages a user can see (API `detail`, job and card text) are written for a
+   non-developer and say what to do next.

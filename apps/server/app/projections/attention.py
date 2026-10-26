@@ -1,4 +1,4 @@
-""""What needs attention?" projection for the Home overview (Phase 4).
+""" "What needs attention?" projection for the Home overview (Phase 4).
 
 Surfaces review-worthy content that the Brain **already represents** by its own
 metadata, structure, or resolution state. It deterministically groups existing
@@ -127,9 +127,7 @@ def _collect(index: BrainIndex) -> dict[str, list[AttentionItem]]:
         if record.category == "insight":
             for ref in record.derived_from_resolved:
                 if ref.resolved_id is None:
-                    groups["unresolved_derived_from"].append(
-                        _item_from(record, detail=ref.ref)
-                    )
+                    groups["unresolved_derived_from"].append(_item_from(record, detail=ref.ref))
 
         # Unresolved wikilinks — knowledge-bearing records only (category !=
         # "other"); the Brain's docs/ templates are illustrative, not broken
@@ -139,9 +137,7 @@ def _collect(index: BrainIndex) -> dict[str, list[AttentionItem]]:
             for link in record.links:
                 if link.resolved_id is None and link.target not in seen_targets:
                     seen_targets.add(link.target)
-                    groups["unresolved_links"].append(
-                        _item_from(record, detail=link.target)
-                    )
+                    groups["unresolved_links"].append(_item_from(record, detail=link.target))
 
     return groups
 

@@ -66,6 +66,9 @@ def commit_paths(brain: Path, paths: list[str], message: str) -> str:
                 if key in index:
                     del index[key]
             index.write()
+        head = repo.head()
+        if repo.open_index().commit(repo.object_store) == repo[head].tree:
+            return head.decode("ascii")  # nothing changed; no empty commits
         sha = porcelain.commit(
             repo, message=message.encode("utf-8"), author=AUTHOR, committer=AUTHOR
         )

@@ -26,6 +26,12 @@ def _disable_file_watch(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _isolate_app_data(monkeypatch, tmp_path):
+    """Keep settings and proposals in a temp folder, never in ~/.wooju."""
+    monkeypatch.setenv("WOOJU_DATA_DIR", str(tmp_path / "app-data"))
+
+
+@pytest.fixture(autouse=True)
 def _isolate_ui_state(monkeypatch, tmp_path):
     """Point the UI-state file at a temp path so tests never touch ~/.wooju-brain-ui.
 

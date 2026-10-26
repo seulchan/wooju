@@ -9,7 +9,7 @@ add into evidence, world knowledge, personal memory, and work context, but they
 only ever **propose** changes: nothing reaches your Brain without passing
 validation and, where it matters, your approval.
 
-**Status:** early development (phase 1 of 4: schemas, validator, real-note validation). Not ready for everyday use yet.
+**Status:** early development (phase 2 of 4: first-run, ingest, approvals; UI in progress). Not ready for everyday use yet.
 
 ## Principles
 
@@ -27,7 +27,7 @@ wooju/
 ├── packages/brain-core/   # Brain domain model: reader, records, index, relationships
 ├── apps/server/           # FastAPI server: Brain index + app API (uses brain-core)
 ├── apps/web/              # React UI
-├── agents/                # Ingest, Challenger, Retriever, Maintainer (phase 2+)
+├── agents/                # AI provider layer and agents (Ingest now; more later)
 ├── template/              # Brain template copied into a new Brain (CC BY 4.0)
 └── docs/                  # Project decisions
 ```
@@ -39,7 +39,7 @@ Requirements: Python 3.11+ with [uv](https://docs.astral.sh/uv/), Node.js 20+.
 ```bash
 # Python workspace (brain-core + server) and tests
 uv sync --all-packages
-uv run pytest packages/brain-core
+uv run pytest packages/brain-core agents
 (cd apps/server && uv run pytest)
 
 # Web UI
@@ -47,7 +47,7 @@ npm run web:install
 npm run web:test
 
 # Run locally against a Brain folder
-export WOOJU_BRAIN_PATH=/absolute/path/to/a/brain
+# The app asks for a Brain folder on first run; WOOJU_BRAIN_PATH overrides it.
 (cd apps/server && uv run uvicorn app.main:app --reload)   # API on :8000
 npm run web:dev                                             # UI on :5173
 # Check a Brain against the rules (errors exit 1)

@@ -39,7 +39,7 @@ def test_health_when_brain_path_not_set(monkeypatch):
     assert data["brain_configured"] is False
     assert data["brain_valid"] is False
     assert data["brain_path"] is None
-    assert "not set" in data["message"]
+    assert "No Brain folder" in data["message"]
 
 
 def test_health_when_brain_path_missing(tmp_path, monkeypatch):

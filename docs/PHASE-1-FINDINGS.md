@@ -30,10 +30,12 @@ validator bug.
 
 ## Tool issues to fix in phase 2
 
-- **UI indexes the Brain's own manuals.** `docs/*.md`, `AGENTS.md`, `README.md`
-  and `index.md` appear as 11 "other" records, and the example wikilinks inside
-  `docs/` show up as unresolved references. The UI index should skip what the
-  validator skips (only content layers, plus inbox).
+- **UI search includes the Brain's own manuals.** `docs/*.md`, `AGENTS.md`,
+  `README.md` and `index.md` are indexed as `other`. This is intentional in the
+  original UI (meta content), and the Attention view already ignores example
+  links inside `docs/`. *Correction:* an earlier draft of this note said those
+  links surfaced as unresolved references; they do not. Remaining issue: they can
+  appear in search results. Low priority.
 - **Ingest needs today's date.** `accessed` and `observed_at` were filled by
   hand; the agent must stamp them, never the model.
 
