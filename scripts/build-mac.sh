@@ -41,6 +41,9 @@ uv run --with "pyinstaller>=6.10" pyinstaller --noconfirm --clean --onefile \
   --collect-submodules keyring \
   "$ROOT/apps/server/app/launcher.py"
 mkdir -p apps/desktop/src-tauri/binaries
+# Replace, never overwrite in place: macOS caches the old code signature for
+# the same file and kills the new binary on launch ("Killed: 9").
+rm -f "apps/desktop/src-tauri/binaries/wooju-server-$TRIPLE"
 cp build/pyinstaller/dist/wooju-server "apps/desktop/src-tauri/binaries/wooju-server-$TRIPLE"
 
 step "3/4 서버 실행 파일 점검"
