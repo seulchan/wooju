@@ -1,7 +1,7 @@
 # Wooju monorepo: uv workspace root (virtual — not a package itself).
 
 [tool.uv.workspace]
-members = ["packages/brain-core", "apps/server"]
+members = ["packages/brain-core", "agents", "apps/server"]
 
 [dependency-groups]
 dev = [
@@ -22,4 +22,4 @@ select = ["E", "F", "I", "UP", "B"]
 "**/tests/**" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["brain_core", "app"]
+known-first-party = ["brain_core", "wooju_agents", "app"]
