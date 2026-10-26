@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="450" viewBox="0 0 1200 450"
+     role="img" aria-labelledby="workflow-title workflow-desc">
+  <title id="workflow-title">The wooju-brain operating loop</title>
+  <desc id="workflow-desc">Capture material in inbox, inspect and classify it, route it to the right layer, and preserve provenance and time in a canonical record.</desc>
+
+  <rect width="1200" height="450" rx="28" fill="#101312"/>
+
+  <text x="56" y="58" fill="#E5A15F"
+        font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+        font-size="16" font-weight="600" letter-spacing="1.8">THE OPERATING LOOP / START WITH A FILE</text>
+  <text x="56" y="108" fill="#F3F0E8"
+        font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+        font-size="40" font-weight="720" letter-spacing="-1">Capture first. Curate what should survive.</text>
+  <text x="56" y="143" fill="#AEB8AF"
+        font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+        font-size="21">A file enters as raw material and leaves with a canonical home.</text>
+
+  <path d="M120 234H1080" stroke="#3A4640" stroke-width="1.5"/>
+  <path d="M356 234L348 228M356 234L348 240M630 234L622 228M630 234L622 240M904 234L896 228M904 234L896 240"
+        fill="none" stroke="#E5A15F" stroke-width="2"/>
+
+  <g id="capture-step">
+    <circle cx="120" cy="234" r="30" fill="#E5A15F"/>
+    <text x="120" y="241" text-anchor="middle" fill="#101312"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="20" font-weight="700">01</text>
+    <text x="56" y="292" fill="#E5A15F"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="15" font-weight="600" letter-spacing="1.4">CAPTURE</text>
+    <text x="56" y="326" fill="#F3F0E8"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="22">inbox/</text>
+    <text x="56" y="355" fill="#AEB8AF"
+          font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+          font-size="19">files · notes · pages</text>
+  </g>
+
+  <g id="inspect-step">
+    <circle cx="394" cy="234" r="30" fill="#9BC4A4"/>
+    <text x="394" y="241" text-anchor="middle" fill="#101312"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="20" font-weight="700">02</text>
+    <text x="330" y="292" fill="#9BC4A4"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="15" font-weight="600" letter-spacing="1.4">INSPECT</text>
+    <text x="330" y="326" fill="#F3F0E8"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="22">AGENTS.md</text>
+    <text x="330" y="355" fill="#AEB8AF"
+          font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+          font-size="19">then docs/INGEST.md</text>
+  </g>
+
+  <g id="route-step">
+    <circle cx="668" cy="234" r="30" fill="#8CB5D1"/>
+    <text x="668" y="241" text-anchor="middle" fill="#101312"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="20" font-weight="700">03</text>
+    <text x="604" y="292" fill="#8CB5D1"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="15" font-weight="600" letter-spacing="1.4">ROUTE</text>
+    <text x="604" y="326" fill="#F3F0E8"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="22">right layer</text>
+    <text x="604" y="355" fill="#AEB8AF"
+          font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+          font-size="19">source · wiki · work</text>
+  </g>
+
+  <g id="preserve-step">
+    <circle cx="942" cy="234" r="30" fill="#D99778"/>
+    <text x="942" y="241" text-anchor="middle" fill="#101312"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="20" font-weight="700">04</text>
+    <text x="878" y="292" fill="#D99778"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="15" font-weight="600" letter-spacing="1.4">PRESERVE</text>
+    <text x="878" y="326" fill="#F3F0E8"
+          font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="22">canonical record</text>
+    <text x="878" y="355" fill="#AEB8AF"
+          font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+          font-size="19">provenance · time</text>
+  </g>
+
+  <path d="M56 407H1144" stroke="#2A332E" stroke-width="1"/>
+  <circle cx="56" cy="407" r="4" fill="#E5A15F"/>
+  <text x="72" y="414" fill="#77847B"
+        font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+        font-size="16">the repository grows from real usage, not from a pre-built topic taxonomy</text>
+</svg>

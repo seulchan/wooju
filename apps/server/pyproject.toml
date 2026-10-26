@@ -1,0 +1,30 @@
+[project]
+name = "wooju-server"
+version = "0.1.0"
+description = "Local-first FastAPI server for Wooju: serves the Brain index and UI API."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = [
+    "brain-core",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pyyaml>=6",
+    "python-dotenv>=1",
+    "watchfiles>=1.0",  # debounced file watching for live Brain refresh (app/watcher.py)
+]
+
+[tool.uv.sources]
+brain-core = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

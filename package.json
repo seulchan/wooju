@@ -1,0 +1,11 @@
+{
+  "name": "wooju",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "web:install": "npm ci --prefix apps/web",
+    "web:dev": "npm run dev --prefix apps/web",
+    "web:build": "npm run build --prefix apps/web",
+    "web:test": "npm test --prefix apps/web"
+  }
+}

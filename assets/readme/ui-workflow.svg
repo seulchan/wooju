@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="360" viewBox="0 0 1200 360"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Wooju Brain UI request flow</title>
+  <desc id="desc">A four-stage read-only pipeline from Brain Markdown files through an in-memory index and explicit projections to the React inspection UI.</desc>
+
+  <rect width="1200" height="360" rx="24" fill="#0f1115"/>
+  <text x="56" y="54" fill="#79c0ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="1.5">FROM FILESYSTEM TO INSPECTION</text>
+  <text x="56" y="102" fill="#e6e9ef" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="31" font-weight="600">One source of truth. Four read-only views.</text>
+  <path d="M56 130H1144" stroke="#2a2f3a"/>
+
+  <g id="flow-lines" fill="none" stroke="#58a6ff" stroke-width="2">
+    <path d="M280 218H326"/>
+    <path d="M574 218H620"/>
+    <path d="M868 218H914"/>
+    <path d="M318 218l-9 -6 2 12zM612 218l-9 -6 2 12zM906 218l-9 -6 2 12z" fill="#58a6ff" stroke="none"/>
+  </g>
+
+  <g id="stage-read" transform="translate(56 160)">
+    <rect width="224" height="116" rx="16" fill="#171a21" stroke="#2a2f3a"/>
+    <circle cx="28" cy="30" r="9" fill="#58a6ff"/>
+    <text x="50" y="36" fill="#79c0ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">01 / READ</text>
+    <text x="22" y="70" fill="#e6e9ef" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24" font-weight="700">Brain/</text>
+    <text x="22" y="96" fill="#9aa4b2" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">Markdown is canonical</text>
+  </g>
+
+  <g id="stage-index" transform="translate(350 160)">
+    <rect width="224" height="116" rx="16" fill="#1f2430" stroke="#58a6ff" stroke-opacity=".55"/>
+    <circle cx="28" cy="30" r="9" fill="#3fb950"/>
+    <text x="50" y="36" fill="#79c0ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">02 / INDEX</text>
+    <text x="22" y="70" fill="#e6e9ef" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="23" font-weight="700">reader + index</text>
+    <text x="22" y="96" fill="#9aa4b2" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">in-memory snapshot</text>
+  </g>
+
+  <g id="stage-project" transform="translate(644 160)">
+    <rect width="224" height="116" rx="16" fill="#171a21" stroke="#2a2f3a"/>
+    <polygon points="28,21 37,30 28,39 19,30" fill="#1f2430" stroke="#d29922" stroke-width="2"/>
+    <text x="50" y="36" fill="#79c0ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">03 / PROJECT</text>
+    <text x="22" y="70" fill="#e6e9ef" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="23" font-weight="700">projections</text>
+    <text x="22" y="96" fill="#9aa4b2" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">changes · graph · review</text>
+  </g>
+
+  <g id="stage-view" transform="translate(938 160)">
+    <rect width="206" height="116" rx="16" fill="#171a21" stroke="#2a2f3a"/>
+    <circle cx="28" cy="30" r="9" fill="#79c0ff"/>
+    <text x="50" y="36" fill="#79c0ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">04 / VIEW</text>
+    <text x="22" y="70" fill="#e6e9ef" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="23" font-weight="700">React UI</text>
+    <text x="22" y="96" fill="#9aa4b2" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">Home · Search · notes</text>
+  </g>
+
+  <path d="M56 316H1144" stroke="#2a2f3a"/>
+  <text x="56" y="340" fill="#9aa4b2" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">No database · no semantic inference · no writes to the Brain</text>
+</svg>

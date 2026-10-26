@@ -1,0 +1,10 @@
+version: 1
+
+knowledge:
+  quality_mode: standard
+
+content:
+  # Language for durable notes. "auto" follows the Mac's language and falls
+  # back to English when it is not supported. Use a BCP 47 tag (e.g. "en",
+  # "ko") to fix it. Structural identifiers always stay in English.
+  language: auto

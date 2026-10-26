@@ -1,0 +1,60 @@
+# ── Operating systems ──────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Trashes
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+# Linux
+*~
+.directory
+.Trash-*
+
+# ── Editors / IDE ──────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# ── Machine-local AI / agent state ─────────────────
+# Shared config is versioned (.claude/settings.json, .claude/skills/,
+# .agents/skills/, skills-lock.json). Ignore only per-machine overrides,
+# caches, and transcripts.
+.claude/settings.local.json
+.claude/cache/
+.claude/logs/
+.claude/projects/
+
+# ── Knowledge-tooling caches ───────────────────────
+# Live search indexes, locks, and disposable artifacts stay machine-local.
+# NOTE: generated KB indexes under index.md and indexes/ ARE versioned and
+# must NOT be ignored. Per AGENTS.md, no temporary extraction dumps or tool
+# caches belong in durable folders.
+*.searchindex
+*.idx
+*.lock.db
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache/
+.trash/
+
+# ── Secrets (defense in depth) ─────────────────────
+# The KB must not store secrets (AGENTS.md rule 8). These only catch files
+# dropped in by accident; never rely on this to make sensitive data safe.
+.env
+.env.local
+*.pem
+*.key
+secrets/
+
+.agents
+.claude
+skills-lock.json
