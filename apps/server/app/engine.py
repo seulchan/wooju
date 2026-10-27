@@ -32,7 +32,7 @@ from brain_core.changes import (
     reject_proposal,
 )
 from brain_core.index import BrainIndex
-from brain_core.markdown import set_frontmatter_value
+from brain_core.markdown import set_frontmatter_value, split_frontmatter
 from brain_core.messages import UserFacingError, render
 from brain_core.retrieve import Retriever, RetrieverCache
 from brain_core.vectors import VectorCache
@@ -41,6 +41,7 @@ from wooju_agents.capture import (
     LINK_SUFFIXES,
     CaptureError,
     classify_text,
+    link_for,
     read_link_file,
     save_link,
     save_memo,
@@ -67,6 +68,7 @@ logger = logging.getLogger("wooju")
 
 JobState = Literal["queued", "working", "waiting", "done", "failed"]
 RETRY_SECONDS = 10.0
+MAX_ATTEMPTS = 3
 
 
 class SetupError(UserFacingError):
@@ -84,6 +86,8 @@ class Job:
     message: str | None = None
     proposal_id: str | None = None
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    attempts: int = 0  # tries that ended because the AI wasn't available
+    title: str | None = None  # what it was saved as (or the existing note, if a duplicate)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -158,6 +162,11 @@ class Engine:
             await self.open(path)
         self._worker = asyncio.create_task(self._work(), name="wooju-ingest")
         await self.start_telegram()
+        if self.brain is not None:
+            # Files left in the inbox (added while closed, or not finished last
+            # time) are picked up again; duplicates of saved links are skipped.
+            with contextlib.suppress(Exception):
+                await self.enqueue_inbox()
         self._retry = asyncio.create_task(self._retry_loop(), name="wooju-retry")
 
     async def stop(self) -> None:
@@ -273,6 +282,25 @@ class Engine:
             )
         return rel
 
+    def saved_source_for(self, *urls: str | None) -> Any:
+        """The source note already saved from one of these addresses, if any."""
+        wanted = {u.rstrip("/") for u in urls if u}
+        for record in self.index.sources():
+            ref = record.metadata.get("canonical_ref")
+            if isinstance(ref, str) and ref.rstrip("/") in wanted:
+                return record
+        return None
+
+    def pending_link_file(self, url: str) -> str | None:
+        """An inbox file already fetched from ``url`` and not organized yet."""
+        brain = self._require_brain()
+        inbox = brain / "inbox"
+        for path in inbox.glob("*") if inbox.is_dir() else []:
+            rel = path.relative_to(brain).as_posix()
+            if path.is_file() and link_for(brain, rel) in (url, url.rstrip("/")):
+                return rel
+        return None
+
     async def receive_text(self, text: str, *, via: str) -> dict[str, Any]:
         """A link or memo from the app, iCloud, or Telegram.
 
@@ -282,6 +310,13 @@ class Engine:
         brain = self._require_brain()
         kind, value = classify_text(text)
         if kind == "link":
+            existing = self.saved_source_for(value)
+            if existing is not None:
+                return {"kind": "link", "url": value, "duplicate": True, "title": existing.title}
+            pending = self.pending_link_file(value)
+            if pending is not None:  # fetched before and not organized yet: try again
+                job = await self.enqueue(pending)
+                return {"kind": "link", "file": pending, "url": value, "job": job.to_dict()}
             rel = await asyncio.to_thread(save_link, brain, value)
             async with self.lock:
                 await asyncio.to_thread(
@@ -339,6 +374,28 @@ class Engine:
             path.unlink(missing_ok=True)
             taken += 1
         return taken
+
+    async def retry_job(self, job_id: str) -> Job:
+        job = self.jobs.get(job_id)
+        if job is None:
+            raise SetupError("job.gone")
+        job.state, job.message, job.attempts = "queued", None, 0
+        await self.queue.put(job)
+        return job
+
+    async def discard_job(self, job_id: str) -> Job:
+        """Remove a failed file from the inbox (recorded, so it can be undone)."""
+        brain = self._require_brain()
+        job = self.jobs.get(job_id)
+        if job is None or job.state in ("queued", "working"):
+            raise SetupError("job.gone")
+        async with self.lock:
+            (brain / job.file).unlink(missing_ok=True)
+            await asyncio.to_thread(
+                history.commit_paths, brain, [job.file], f"Removed {Path(job.file).name}"
+            )
+        del self.jobs[job_id]
+        return job
 
     # ----------------------------------------------------------- telegram
 
@@ -425,6 +482,8 @@ class Engine:
                 self._log_capture("telegram", result["kind"], text[:40])
                 if result["kind"] == "memo":
                     await send("telegram.memo")
+                elif result.get("duplicate"):
+                    await send("job.duplicate", title=result["title"])
                 else:
                     await send("telegram.link")
                     job = self.jobs.get(result["job"]["id"])
@@ -440,16 +499,18 @@ class Engine:
         told_waiting = False
         for _ in range(int(3600 / wait)):
             if job.state == "done":
-                proposal = self.store.get(job.proposal_id) if job.proposal_id else None
-                title = proposal.title if proposal else job.file
-                await asyncio.to_thread(bot.send, chat_id, f"✓ {title}")
+                text = job.message or self._say("telegram.saved", title=job.title or job.file)
+                await asyncio.to_thread(bot.send, chat_id, text)
                 return
             if job.state == "failed":
-                await asyncio.to_thread(bot.send, chat_id, f"✗ {job.message or job.file}")
+                text = self._say("telegram.failed", error=job.message or job.file)
+                await asyncio.to_thread(bot.send, chat_id, text)
                 return
             if job.state == "waiting" and not told_waiting:
                 told_waiting = True
-                await asyncio.to_thread(bot.send, chat_id, self._say("telegram.waiting"))
+                await asyncio.to_thread(
+                    bot.send, chat_id, job.message or self._say("telegram.waiting")
+                )
             await asyncio.sleep(wait)
 
     async def _open_link_file(self, job: Job) -> bool:
@@ -502,11 +563,15 @@ class Engine:
                 logger.exception("Background check failed")
 
     async def enqueue(self, rel: str) -> Job:
-        active = {j.file for j in self.jobs.values() if j.state in ("queued", "working", "waiting")}
-        if rel in active:
-            return next(
-                j for j in self.jobs.values() if j.file == rel and j.state in ("queued", "working")
-            )
+        for job in self.jobs.values():
+            if job.file != rel:
+                continue
+            if job.state in ("queued", "working"):
+                return job
+            if job.state == "waiting":  # asked again: try now instead of waiting
+                job.state, job.message = "queued", None
+                await self.queue.put(job)
+                return job
         job = Job(file=rel)
         self.jobs[job.id] = job
         await self.queue.put(job)
@@ -541,6 +606,21 @@ class Engine:
             return
         if Path(job.file).suffix.lower() in LINK_SUFFIXES and not await self._open_link_file(job):
             return
+        url = link_for(brain, job.file)
+        existing = self.saved_source_for(url) if url else None
+        if existing is not None:
+            # Already in the Brain from the same address: don't save it twice.
+            async with self.lock:
+                (brain / job.file).unlink(missing_ok=True)
+                await asyncio.to_thread(
+                    history.commit_paths,
+                    brain,
+                    [job.file],
+                    f"Removed duplicate {Path(job.file).name}",
+                )
+            job.state, job.title = "done", existing.title
+            job.message = render("job.duplicate", self.language(), title=existing.title)
+            return
         try:
             provider = self.provider()
             proposal = await asyncio.to_thread(
@@ -553,7 +633,13 @@ class Engine:
             )
         except LLMError as exc:
             if exc.retryable:
-                job.state, job.message = "waiting", render("job.waiting", self.language())
+                job.attempts += 1
+                if exc.key == "llm.busy" and job.attempts >= MAX_ATTEMPTS:
+                    job.state, job.message = "failed", render("job.gave_up", self.language())
+                elif exc.key == "llm.busy":
+                    job.state, job.message = "waiting", exc.localized(self.language())
+                else:
+                    job.state, job.message = "waiting", render("job.waiting", self.language())
             else:
                 job.state, job.message = "failed", exc.localized(self.language())
             return
@@ -562,6 +648,9 @@ class Engine:
             return
         self.store.save(proposal)
         job.proposal_id = proposal.id
+        note = next((c for c in proposal.changes if c.path.startswith("sources/")), None)
+        saved_title = split_frontmatter(note.content or "")[0].get("title") if note else None
+        job.title = str(saved_title) if saved_title else proposal.title
         if proposal.approval == "auto":
             proposal = await self.apply(proposal)
             if proposal.status != "applied":
@@ -594,6 +683,8 @@ class Engine:
         """
         if self.brain is None or (self._embedding and not self._embedding.done()):
             return
+        if any(j.state in ("queued", "working") for j in self.jobs.values()):
+            return  # organizing comes first; two models at once can exhaust memory
         embedder = self.embedder()
         if not await asyncio.to_thread(embedder.ready):
             self.search_state = {"state": "off", "done": 0, "total": 0}

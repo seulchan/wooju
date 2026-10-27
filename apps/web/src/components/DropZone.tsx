@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 
-import { ApiError, captureText, fetchJobs, uploadFiles } from '../api'
+import { ApiError, captureText, fetchJobs, removeJob, retryJob, uploadFiles } from '../api'
 import { requestRefresh } from '../lib/freshness'
 import { useT } from '../lib/i18n'
 import type { Job } from '../types'
@@ -23,7 +23,13 @@ export function DropZone() {
     setSaved(null)
     try {
       const result = await captureText(text)
-      setSaved(result.kind === 'memo' ? t('memoSaved') : t('linkSaved'))
+      setSaved(
+        result.kind === 'memo'
+          ? t('memoSaved')
+          : result.duplicate
+            ? `${t('alreadySaved')} ${result.title ?? ''}`
+            : t('linkSaved'),
+      )
       setText('')
       requestRefresh()
     } catch (err) {
@@ -155,6 +161,22 @@ export function DropZone() {
               <span className="job-file">{job.file.replace(/^inbox\//, '')}</span>
               <span className="job-state">{label[job.state]}</span>
               {job.message ? <span className="job-message">{job.message}</span> : null}
+              {job.state === 'failed' ? (
+                <span className="job-actions">
+                  <button
+                    className="btn btn-small"
+                    onClick={() => void retryJob(job.id).then(refresh, () => refresh())}
+                  >
+                    {t('retry')}
+                  </button>
+                  <button
+                    className="btn btn-small btn-quiet"
+                    onClick={() => void removeJob(job.id).then(refresh, () => refresh())}
+                  >
+                    {t('remove')}
+                  </button>
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -176,3 +176,25 @@ def test_title_number_spacing_is_fixed(tmp_path):
         draft, canonical_ref="x", accessed=date(2026, 10, 27), language="en", original_link="y"
     )
     assert "title: 경제상황 평가(2026년 10월)" in note and "# 경제상황 평가(2026년 10월)" in note
+
+
+def test_long_text_is_cut_for_local_models_and_says_so(tmp_path):
+    from brain_core.history import ensure_repo
+    from wooju_agents.ingest import estimate_tokens, fit_tokens
+
+    assert estimate_tokens("가나다") == 3 and estimate_tokens("abcdefgh") == 2
+    cut, truncated = fit_tokens("가" * 9000, 6000)
+    assert truncated and estimate_tokens(cut) <= 6000
+
+    ensure_repo(tmp_path)
+    (tmp_path / "inbox").mkdir()
+    (tmp_path / "inbox" / "long.txt").write_text("한국 증시 분석. " * 3000, encoding="utf-8")
+
+    class Local(FakeProvider):
+        name = "ollama"
+
+    provider = Local(DRAFT)
+    proposal = ingest_file(tmp_path, "inbox/long.txt", provider, language="ko")
+    assert estimate_tokens(provider.calls[0][1]) <= 6100
+    note = next(c for c in proposal.changes if c.path.startswith("sources/")).content
+    assert "앞부분만 읽고" in note

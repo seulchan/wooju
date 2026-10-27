@@ -432,6 +432,24 @@ async def process_inbox(engine: EngineDep) -> dict[str, Any]:
     return {"queued": [j.to_dict() for j in jobs]}
 
 
+@actions_router.post("/jobs/{job_id}/retry", tags=["inbox"])
+async def retry_job(job_id: str, engine: EngineDep) -> dict[str, Any]:
+    try:
+        return (await engine.retry_job(job_id)).to_dict()
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404) from exc
+
+
+@actions_router.post("/jobs/{job_id}/remove", tags=["inbox"])
+async def remove_job(job_id: str, engine: EngineDep) -> dict[str, Any]:
+    """Remove a file that couldn't be organized from the inbox (undoable in History)."""
+    try:
+        job = await engine.discard_job(job_id)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404) from exc
+    return {**job.to_dict(), "message": render("job.removed", engine.language())}
+
+
 @actions_router.get("/jobs", tags=["inbox"])
 def jobs(engine: EngineDep) -> dict[str, Any]:
     items = sorted(engine.jobs.values(), key=lambda j: j.created_at, reverse=True)
@@ -545,6 +563,10 @@ def display_title(title: str, lang: str) -> str:
         return f"되돌림: {display_title(title.removeprefix('Undo: '), lang)}"
     if m := _RECEIVED_MANY.match(title):
         return f"파일 {m.group(1)}개 받음"
+    if title.startswith("Removed duplicate "):
+        return f"중복 자료 지움: {title.removeprefix('Removed duplicate ')}"
+    if title.startswith("Removed "):
+        return f"받은 편지함에서 지움: {title.removeprefix('Removed ')}"
     if title.startswith("Received "):
         return f"받은 파일: {title.removeprefix('Received ')}"
     return title

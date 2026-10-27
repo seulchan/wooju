@@ -1531,3 +1531,13 @@ code {
 .steps li {
   margin: 0.35rem 0;
 }
+.job {
+  flex-wrap: wrap;
+}
+.job-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.job-done .job-message {
+  color: var(--muted);
+}

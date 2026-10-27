@@ -87,3 +87,41 @@ describe('Capture box', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't fetch the page.")
   })
 })
+
+describe('Failed files', () => {
+  it('can be retried or removed', async () => {
+    const { DropZone } = await import('../components/DropZone')
+    const failed = {
+      id: 'j1',
+      file: 'inbox/en-wikipedia-org-kospi.html',
+      state: 'failed',
+      message: 'Tried three times without success.',
+      proposal_id: null,
+      created_at: '',
+    }
+    const fetchMock = mockFetch([
+      { match: /^\/api\/jobs$/, body: { items: [failed] } },
+      { match: /^\/api\/jobs\/j1\/retry$/, body: { ...failed, state: 'queued' } },
+      { match: /^\/api\/jobs\/j1\/remove$/, body: { ...failed, message: 'Removed from the inbox.' } },
+    ])
+    render(<DropZone />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    const posts = (fetchMock.mock.calls as unknown as Call[])
+      .filter(([, init]) => init?.method === 'POST')
+      .map(([u]) => String(u))
+    expect(posts).toEqual(['/api/jobs/j1/retry', '/api/jobs/j1/remove'])
+  })
+
+  it('says when a link is already saved', async () => {
+    const { DropZone } = await import('../components/DropZone')
+    mockFetch([
+      { match: /^\/api\/jobs/, body: { items: [] } },
+      { match: /^\/api\/capture$/, body: { kind: 'link', duplicate: true, title: 'KOSPI' } },
+    ])
+    render(<DropZone />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Link or memo' }), 'https://en.wikipedia.org/wiki/KOSPI')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Already saved: KOSPI')).toBeInTheDocument()
+  })
+})

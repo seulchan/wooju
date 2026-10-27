@@ -67,6 +67,37 @@ class SourceDraft(BaseModel):
 
 _LANGUAGE_NAME = {"ko": "Korean", "en": "English"}
 
+# How much of a long file a model on this Mac reads (about 6K tokens): with the
+# prompt and the answer it stays well inside the 16K context, and memory use
+# stays safe on a 16 GB Mac. Cloud models read up to the 20K-character cap.
+LOCAL_INPUT_TOKENS = 6000
+_TRUNCATED = {
+    "ko": "원문이 길어서 앞부분만 읽고 정리했어요.",
+    "en": "The original is long; only its first part was read.",
+}
+
+
+def estimate_tokens(text: str) -> int:
+    """Rough token count: Hangul is about a token per character, other text ~4 chars."""
+    hangul = sum(1 for ch in text if "가" <= ch <= "힣")
+    return hangul + (len(text) - hangul) // 4
+
+
+def fit_tokens(text: str, budget: int) -> tuple[str, bool]:
+    if estimate_tokens(text) <= budget:
+        return text, False
+    lo, hi = 0, len(text)
+    while lo < hi:  # longest prefix within the budget
+        mid = (lo + hi + 1) // 2
+        if estimate_tokens(text[:mid]) <= budget:
+            lo = mid
+        else:
+            hi = mid - 1
+    cut = text[:lo]
+    para = cut.rfind("\n\n")
+    return (cut[:para] if para > lo * 0.8 else cut).rstrip(), True
+
+
 _SYSTEM = (
     "You write a source note for a personal knowledge base. Record only what the "
     "source text itself says. Do not add outside knowledge, guesses, or advice. "
@@ -191,6 +222,9 @@ def ingest_file(
     if len(text.strip()) < 40:
         raise IngestError("No text", "ingest.no_text")
 
+    truncated = False
+    if provider.name == "ollama":
+        text, truncated = fit_tokens(text, LOCAL_INPUT_TOKENS)
     user = text if not title_hint else f"Title (from file metadata): {title_hint}\n\n{text}"
     system = _SYSTEM.format(language=_LANGUAGE_NAME.get(language, "English"))
     result = provider.generate_json(system, user, SourceDraft.model_json_schema())
@@ -198,6 +232,8 @@ def ingest_file(
         draft = SourceDraft.model_validate(result.data)
     except ValidationError as exc:
         raise IngestError(str(exc), "ingest.bad_shape") from exc
+    if truncated:
+        draft.limitations.append(_TRUNCATED.get(language, _TRUNCATED["en"]))
 
     draft.title = normalize_korean(draft.title.strip())
     stem = (

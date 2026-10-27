@@ -496,3 +496,107 @@ def test_open_links_and_files_from_notes(client, tmp_path, monkeypatch):
     )
     for bad in ("file:///etc/passwd", "javascript:alert(1)", "-a Calculator", "https://x.com/a b"):
         assert client.post("/api/open", json={"url": bad}).status_code == 403, bad
+
+
+# ---------------------------------------------------------- failure handling
+
+
+class BusyProvider:
+    """Ollama out of memory every time."""
+
+    name, model = "ollama", "fake"
+
+    def generate_json(self, system, user, schema):
+        from wooju_agents.llm import LLMError
+
+        raise LLMError("oom", "llm.busy", retryable=True)
+
+
+def test_same_link_is_not_saved_twice(client, tmp_path, monkeypatch):
+    brain = setup_brain(client, tmp_path)
+    _fake_fetch(monkeypatch)
+    client.post("/api/capture", json={"text": "https://example.com/short"})
+    assert wait_jobs(client)[0]["state"] == "done"
+
+    again = client.post("/api/capture", json={"text": "https://news.example.com/value-up"}).json()
+    assert again["duplicate"] and again["title"]
+    assert len(list((brain / "sources").glob("korea-value-up*.md"))) == 1
+    assert not list((brain / "inbox").glob("*.html"))
+
+
+def test_a_waiting_link_is_reused_not_fetched_again(client, tmp_path, monkeypatch):
+    brain = setup_brain(client, tmp_path)
+    _fake_fetch(monkeypatch)
+    engine = client.app.state.engine
+    engine.provider_override = BusyProvider()
+    first = client.post("/api/capture", json={"text": "https://news.example.com/value-up"}).json()
+    deadline = time.time() + 5
+    while (
+        engine.jobs[first["job"]["id"]].state not in ("waiting", "failed")
+        and time.time() < deadline
+    ):
+        time.sleep(0.05)
+    second = client.post("/api/capture", json={"text": "https://news.example.com/value-up"}).json()
+    assert second["file"] == first["file"]
+    assert len(list((brain / "inbox").glob("*.html"))) == 1
+
+
+def test_out_of_memory_waits_then_gives_up_and_can_be_retried_or_removed(client, tmp_path):
+    import anyio
+
+    brain = setup_brain(client, tmp_path)
+    engine = client.app.state.engine
+    engine.provider_override = BusyProvider()
+    client.post("/api/inbox", files=[("files", ("value-up.txt", TEXT, "text/plain"))])
+    deadline = time.time() + 5
+    while not any(j.state == "waiting" for j in engine.jobs.values()) and time.time() < deadline:
+        time.sleep(0.05)
+    job = next(iter(engine.jobs.values()))
+    assert job.state == "waiting" and "메모리" in job.message
+
+    for _ in range(3):  # what the background retry does every few seconds
+        if job.state == "waiting":
+            job.state = "queued"
+            anyio.run(engine._run, job)
+    assert job.state == "failed" and job.attempts >= 3
+
+    engine.provider_override = FakeProvider()
+    assert client.post(f"/api/jobs/{job.id}/retry").status_code == 200
+    assert wait_jobs(client)[0]["state"] == "done"
+
+    # A failed file can also be removed from the inbox, and that is undoable.
+    engine.provider_override = BusyProvider()
+    client.post("/api/inbox", files=[("files", ("other.txt", TEXT, "text/plain"))])
+    other = next(j for j in engine.jobs.values() if j.file.endswith("other.txt"))
+    other.attempts = 3
+    deadline = time.time() + 5
+    while other.state not in ("failed", "waiting") and time.time() < deadline:
+        time.sleep(0.05)
+    other.state = "failed"
+    r = client.post(f"/api/jobs/{other.id}/remove")
+    assert r.status_code == 200 and not (brain / other.file).exists()
+    top = client.get("/api/history").json()["items"][0]
+    assert top["title"].startswith("받은 편지함에서 지움")
+
+
+def test_leftover_inbox_files_are_picked_up_at_start(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.main import app as the_app
+
+    monkeypatch.delenv("WOOJU_BRAIN_PATH", raising=False)
+    with TestClient(the_app) as c:
+        c.app.state.engine.provider_override = FakeProvider()
+        brain = setup_brain(c, tmp_path)
+    (brain / "inbox" / "left.txt").write_bytes(TEXT)
+    with TestClient(the_app) as c:
+        engine = c.app.state.engine
+        engine.provider_override = FakeProvider()
+        # Picked up at start; without a real Ollama here it waits for the AI,
+        # and the background retry organizes it once the AI is there.
+        assert [j.file for j in engine.jobs.values()] == ["inbox/left.txt"]
+        deadline = time.time() + 5
+        while next(iter(engine.jobs.values())).state != "waiting" and time.time() < deadline:
+            time.sleep(0.05)
+        c.portal.call(engine.retry_waiting)  # on the app's own event loop
+        assert wait_jobs(c)[0]["state"] == "done"

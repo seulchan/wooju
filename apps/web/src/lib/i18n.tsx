@@ -210,6 +210,9 @@ const STRINGS = {
   claudeDownload: { ko: 'Claude 받기', en: 'Get Claude' },
   claudeCode: { ko: 'Claude Code에서 쓰려면:', en: 'To use it in Claude Code:' },
   captureLabel: { ko: '링크나 메모', en: 'Link or memo' },
+  alreadySaved: { ko: '이미 저장된 자료예요:', en: 'Already saved:' },
+  retry: { ko: '다시 시도', en: 'Try again' },
+  remove: { ko: '지우기', en: 'Remove' },
   capturePlaceholder: {
     ko: '링크를 붙여 넣거나 메모를 적어 주세요. 링크는 자료로 정리하고, 메모는 쓴 그대로 보관해요.',
     en: 'Paste a link or write a memo. Links become sources; memos are kept as you wrote them.',

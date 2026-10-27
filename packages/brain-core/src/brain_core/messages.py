@@ -65,6 +65,20 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "그 파일이 Brain 폴더에 없어요. 옮겨졌거나 지워졌을 수 있어요.",
         "That file isn't in the Brain folder. It may have been moved or deleted.",
     ),
+    "llm.busy": (
+        "이 Mac의 메모리가 부족해서 AI가 멈췄어요. 잠시 후 자동으로 다시 정리할게요. "
+        "다른 큰 앱을 닫으면 도움이 돼요.",
+        "The AI stopped because this Mac ran low on memory. It will try again shortly; "
+        "closing other large apps helps.",
+    ),
+    "job.gave_up": (
+        "세 번 시도했지만 정리하지 못했어요. 파일은 받은 편지함에 남아 있어요. "
+        "나중에 '다시 시도'를 눌러 주세요.",
+        "Tried three times without success. The file is still in the inbox; "
+        "press 'Try again' later.",
+    ),
+    "job.duplicate": ("이미 저장된 자료예요: {title}", "Already saved: {title}"),
+    "job.removed": ("받은 편지함에서 지웠어요.", "Removed from the inbox."),
     # telegram
     "telegram.paired": (
         "연결됐어요. 이제 링크, 메모, 파일(PDF, 텍스트, HTML)을 보내면 Wooju에 저장해요. "
@@ -85,6 +99,13 @@ MESSAGES: dict[str, tuple[str, str]] = {
     "telegram.link": (
         "링크를 받았어요. 페이지를 정리하는 중이에요.",
         "Link received. Organizing the page.",
+    ),
+    "telegram.saved": ("✓ 저장했어요: {title}", "✓ Saved: {title}"),
+    "telegram.failed": (
+        "✗ 정리하지 못했어요: {error}\n"
+        "파일은 Wooju 받은 편지함에 남아 있어서 Mac에서 다시 시도할 수 있어요.",
+        "✗ Couldn't organize it: {error}\n"
+        "The file stays in Wooju's inbox so you can try again on the Mac.",
     ),
     "telegram.waiting": (
         "AI가 준비되면 정리할게요. Mac에서 Ollama가 켜져 있는지 확인해 주세요.",

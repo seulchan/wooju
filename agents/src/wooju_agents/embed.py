@@ -20,6 +20,7 @@ EMBED_MODEL = "qwen3-embedding:0.6b"
 # Qwen3-Embedding is instruction-aware on the query side only.
 _QUERY = "Instruct: Given a question, retrieve notes and passages that answer it\nQuery: {q}"
 BATCH = 16
+EMBED_CONTEXT = 2048
 
 
 class Embedder:
@@ -47,7 +48,16 @@ class Embedder:
         try:
             resp = self.client.post(
                 f"{self.host}/api/embed",
-                json={"model": self.model, "input": list(texts), "truncate": True},
+                json={
+                    "model": self.model,
+                    "input": list(texts),
+                    "truncate": True,
+                    # Passages are short. Ollama's default context for this model
+                    # reserves ~3.5 GB, which pushed the answer model out of
+                    # memory on a 16 GB Mac; 2K tokens needs a few hundred MB.
+                    "options": {"num_ctx": EMBED_CONTEXT},
+                    "keep_alive": "2m",
+                },
             )
             resp.raise_for_status()
         except httpx.ConnectError as exc:

@@ -88,6 +88,7 @@ class OllamaProvider:
         self.model = model
         self.host = host.rstrip("/")
         self.client = client or httpx.Client(timeout=600)
+        self.retry_pause = 3.0
 
     def status(self) -> dict[str, Any]:
         """Is Ollama running, and is the model downloaded?"""
@@ -139,6 +140,13 @@ class OllamaProvider:
             if resp.status_code == 400 and "think" in resp.text:
                 payload.pop("think")
                 resp = self.client.post(f"{self.host}/api/chat", json=payload)
+            if resp.status_code >= 500:
+                # Usually out of memory: Ollama unloads models after a failure,
+                # so one more try a moment later normally works.
+                time.sleep(self.retry_pause)
+                resp = self.client.post(f"{self.host}/api/chat", json=payload)
+            if resp.status_code >= 500:
+                raise LLMError(resp.text[:300], "llm.busy", retryable=True)
             resp.raise_for_status()
         except httpx.ConnectError as exc:
             raise LLMError(str(exc), "llm.ollama_off", retryable=True) from exc

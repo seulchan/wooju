@@ -77,6 +77,17 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   the keychain, long polling while Wooju is open, one paired chat; others are
   refused). KakaoTalk has no personal bot API. The web demo is deferred.
 
+## Running on a 16 GB Mac (found in testing)
+
+- Ollama's default context for the embedding model reserved ~3.5 GB and,
+  together with the 9B model, ran the Mac's GPU out of memory. Embeddings now
+  use a 2K context, meaning-search indexing pauses while a file is organized,
+  and a local model reads at most ~6K tokens of a long file (the note says so).
+- An out-of-memory reply from Ollama is retried once, then the file waits and
+  is retried automatically (three times) instead of failing; failed files can
+  be retried or removed. A link already saved is never saved twice, and a
+  link already waiting is reused rather than fetched again.
+
 ## Language
 
 - Structural identifiers (frontmatter keys, controlled values, file names) are

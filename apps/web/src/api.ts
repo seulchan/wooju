@@ -338,7 +338,7 @@ export function fetchSearchStatus(signal?: AbortSignal): Promise<SearchStatus> {
 /** A pasted link (fetched and organized) or a memo (kept as written). */
 export function captureText(
   text: string,
-): Promise<{ kind: 'link' | 'memo'; file: string; url?: string; job?: Job }> {
+): Promise<{ kind: 'link' | 'memo'; file?: string; url?: string; job?: Job; duplicate?: boolean; title?: string }> {
   return postJson('/api/capture', { text })
 }
 
@@ -364,4 +364,12 @@ export function connectTelegram(token: string): Promise<CaptureStatus> {
 
 export function disconnectTelegram(): Promise<CaptureStatus> {
   return postJson('/api/capture/telegram/off')
+}
+
+export function retryJob(id: string): Promise<Job> {
+  return postJson(`/api/jobs/${encodeURIComponent(id)}/retry`)
+}
+
+export function removeJob(id: string): Promise<Job & { message: string }> {
+  return postJson(`/api/jobs/${encodeURIComponent(id)}/remove`)
 }

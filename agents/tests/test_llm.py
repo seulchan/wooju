@@ -66,10 +66,30 @@ def test_ollama_errors_have_user_messages():
     assert "qwen3.5:9b" in exc.value.user_message
     assert exc.value.retryable
 
-    server_error = client(lambda r: httpx.Response(500, json={}))
+    # Out of memory (500): tried twice, then the work waits and retries later.
+    calls = []
+
+    def oom(request):
+        calls.append(1)
+        return httpx.Response(500, json={"error": "Insufficient Memory"})
+
+    provider = OllamaProvider("m", client=client(oom))
+    provider.retry_pause = 0
     with pytest.raises(LLMError) as exc:
-        OllamaProvider("m", client=server_error).generate_json("s", "u", SCHEMA)
-    assert not exc.value.retryable
+        provider.generate_json("s", "u", SCHEMA)
+    assert exc.value.retryable and exc.value.key == "llm.busy" and len(calls) == 2
+
+
+def test_ollama_out_of_memory_once_then_works():
+    replies = iter(
+        [
+            httpx.Response(500, json={"error": "Insufficient Memory"}),
+            httpx.Response(200, json={"message": {"content": '{"a": 1}'}}),
+        ]
+    )
+    provider = OllamaProvider("m", client=client(lambda r: next(replies)))
+    provider.retry_pause = 0
+    assert provider.generate_json("s", "u", SCHEMA).data == {"a": 1}
 
 
 def test_ollama_status():
