@@ -1541,3 +1541,32 @@ code {
 .job-done .job-message {
   color: var(--muted);
 }
+
+/* ---------------------------------------------------------------- edits */
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.title-row .page-title {
+  flex: 1;
+}
+.note-editor {
+  margin: 0.5rem 0 1rem;
+}
+.note-editor__text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font: 0.95rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  resize: vertical;
+}
+.note-editor__text:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

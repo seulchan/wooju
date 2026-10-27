@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
-import { ApiError, challengeInsight, fetchRecord, NotFoundError } from '../api'
+import { ApiError, challengeInsight, editNote, fetchRecord, NotFoundError } from '../api'
+import { NoteEditor } from '../components/NoteEditor'
+import { requestRefresh } from '../lib/freshness'
 import type { BrainRecord, Category, ProposalView } from '../types'
 import { titleCase } from '../lib/format'
 import { extractEpistemicSections, stripLeadingH1, type EpistemicKey } from '../lib/sections'
@@ -49,6 +51,8 @@ export function RecordDetailPage({ id }: { id: string }) {
 }
 
 function RecordView({ record }: { record: BrainRecord }) {
+  const t = useT()
+  const [editing, setEditing] = useState(false)
   const isInsight = record.category === 'insight'
   const back = SECTION_ROUTE[record.category] ?? '/'
   const body = stripLeadingH1(record.content, record.title)
@@ -62,7 +66,14 @@ function RecordView({ record }: { record: BrainRecord }) {
           {pick(`← Back to ${titleCase(record.category) ?? 'list'}`, `← ${titleCase(record.category) ?? '목록'}(으)로`)}
         </Link>
       </p>
-      <h1 className="page-title">{record.title}</h1>
+      <div className="title-row">
+        <h1 className="page-title">{record.title}</h1>
+        {!editing && record.category !== 'other' ? (
+          <button className="btn btn-small" onClick={() => setEditing(true)}>
+            {t('edit')}
+          </button>
+        ) : null}
+      </div>
       {record.original_title ? (
         <p className="subtitle original-title">
           {tr('Original title')}: {record.original_title}
@@ -77,7 +88,19 @@ function RecordView({ record }: { record: BrainRecord }) {
 
       <div className="detail-grid">
         <div className="detail-main">
-          {sections ? (
+          {editing ? (
+            <NoteEditor
+              initial={record.content}
+              isSource={record.category === 'source'}
+              onCancel={() => setEditing(false)}
+              onSave={async (body) => {
+                await editNote(record.id, body, record.content)
+                setEditing(false)
+                requestRefresh()
+              }}
+            />
+          ) : null}
+          {!editing && sections ? (
             <div className="callouts">
               {(['evidence', 'challenge', 'boundaries'] as const).map((key) => {
                 const content = sections[key]
@@ -92,7 +115,7 @@ function RecordView({ record }: { record: BrainRecord }) {
             </div>
           ) : null}
 
-          {mainBody.trim() ? (
+          {editing ? null : mainBody.trim() ? (
             <Markdown content={mainBody} links={record.links} path={record.path} />
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>

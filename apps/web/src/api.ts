@@ -373,3 +373,15 @@ export function retryJob(id: string): Promise<Job> {
 export function removeJob(id: string): Promise<Job & { message: string }> {
   return postJson(`/api/jobs/${encodeURIComponent(id)}/remove`)
 }
+
+// ---------------------------------------------------------------- edits
+
+/** Save the user's own edit of a note; `base` is the body they started from. */
+export function editNote(id: string, body: string, base: string): Promise<ProposalView> {
+  return postJson('/api/notes/edit', { id, body, base })
+}
+
+/** Fix the note an agent proposed before approving it. */
+export function editProposal(id: string, body: string): Promise<ProposalView> {
+  return postJson(`/api/proposals/${encodeURIComponent(id)}/edit`, { body })
+}

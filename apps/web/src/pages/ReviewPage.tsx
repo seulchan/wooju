@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-import { ApiError, approveProposal, approveProposals, fetchProposals, rejectProposal } from '../api'
+import { ApiError, approveProposal, approveProposals, editProposal, fetchProposals, rejectProposal } from '../api'
+import { NoteEditor } from '../components/NoteEditor'
 import { Markdown } from '../components/Markdown'
 import { Badge, EmptyState, ErrorState, Spinner } from '../components/ui'
 import { requestRefresh } from '../lib/freshness'
@@ -52,6 +53,7 @@ export function ReviewPage() {
             proposal={p}
             onApprove={() => act(() => approveProposal(p.id))}
             onReject={() => act(() => rejectProposal(p.id))}
+            onEdit={(body) => editProposal(p.id, body).then(() => setNonce((n) => n + 1))}
           />
         ))}
       </ul>
@@ -59,17 +61,24 @@ export function ReviewPage() {
   )
 }
 
+const FRONTMATTER = /^---[\s\S]*?\n---\n/
+
 function ProposalCard({
   proposal,
   onApprove,
   onReject,
+  onEdit,
 }: {
   proposal: ProposalView
   onApprove: () => void
   onReject: () => void
+  onEdit: (body: string) => Promise<unknown>
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const body = (proposal.preview ?? '').replace(FRONTMATTER, '').replace(/^\n+/, '')
+  const editable = proposal.changes.some((c) => c.op === 'write' && c.path.endsWith('.md'))
   return (
     <li className="card proposal-card">
       <div className="card-title">{proposal.title}</div>
@@ -86,13 +95,30 @@ function ProposalCard({
         <button className="btn" onClick={onReject}>
           {t('reject')}
         </button>
+        {editable && !editing ? (
+          <button className="btn" onClick={() => setEditing(true)}>
+            {t('edit')}
+          </button>
+        ) : null}
         {proposal.preview ? (
           <button className="btn-link" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
             {open ? t('hideDetail') : t('showDetail')}
           </button>
         ) : null}
       </div>
-      {open && proposal.preview ? (
+      {editing ? (
+        <NoteEditor
+          initial={body}
+          isSource={proposal.changes.some((c) => c.path.startsWith('sources/'))}
+          onCancel={() => setEditing(false)}
+          onSave={async (next) => {
+            await onEdit(next)
+            setEditing(false)
+            setOpen(true)
+          }}
+        />
+      ) : null}
+      {!editing && open && proposal.preview ? (
         <div className="proposal-preview">
           <ul className="proposal-paths">
             {proposal.changes.map((c) => (
@@ -101,7 +127,7 @@ function ProposalCard({
               </li>
             ))}
           </ul>
-          <Markdown content={proposal.preview.replace(/^---[\s\S]*?\n---\n/, '')} />
+          <Markdown content={body} />
         </div>
       ) : null}
     </li>

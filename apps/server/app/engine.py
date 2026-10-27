@@ -32,7 +32,7 @@ from brain_core.changes import (
     reject_proposal,
 )
 from brain_core.index import BrainIndex
-from brain_core.markdown import set_frontmatter_value, split_frontmatter
+from brain_core.markdown import replace_body, set_frontmatter_value, split_frontmatter
 from brain_core.messages import UserFacingError, render
 from brain_core.retrieve import Retriever, RetrieverCache
 from brain_core.vectors import VectorCache
@@ -778,6 +778,59 @@ class Engine:
                 retriever=retriever,
                 query_vec=query_vec,
             )
+        return self.store.save(proposal)
+
+    # ---------------------------------------------------------------- edits
+
+    async def edit_note(self, record_id: str, body: str, base: str) -> Proposal:
+        """Save the user's own edit of a note's body (frontmatter is kept as is).
+
+        ``base`` is the body the user started from; if the file changed since
+        (in another app, or by an agent), nothing is overwritten. The edit is
+        the user's, so it applies at once, is checked against the Brain's rules,
+        and can be undone in History.
+        """
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        text = (brain / record.path).read_text(encoding="utf-8")
+        current = split_frontmatter(text)[1]
+        if current.strip() != base.strip():
+            raise SetupError("note.changed")
+        if not body.strip():
+            raise SetupError("note.empty")
+        try:
+            updated = replace_body(text, body)
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
+        ko = self.language() == "ko"
+        proposal = Proposal(
+            agent="you",
+            origin=record.path,
+            title=f"직접 고침: {record.title}" if ko else f"Edited: {record.title}",
+            changes=[FileChange(op="write", path=record.path, content=updated)],
+            approval="auto",
+        )
+        self.store.save(proposal)
+        return await self.apply(proposal)
+
+    def edit_proposal(self, proposal_id: str, body: str) -> Proposal:
+        """Fix what an agent proposed before approving it (its main note's body)."""
+        proposal = self.store.get(proposal_id)
+        if proposal is None or proposal.status != "pending":
+            raise SetupError("proposal.not_found")
+        change = next(
+            (c for c in proposal.changes if c.op == "write" and c.path.endswith(".md")), None
+        )
+        if change is None or change.content is None:
+            raise SetupError("proposal.not_found")
+        if not body.strip():
+            raise SetupError("note.empty")
+        try:
+            change.content = replace_body(change.content, body)
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
         return self.store.save(proposal)
 
     # ----------------------------------------------------------- maintainer

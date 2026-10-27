@@ -127,6 +127,21 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "토큰이 맞지 않아요. @BotFather가 준 토큰 전체를 붙여 넣어 주세요.",
         "That token didn't work. Paste the whole token @BotFather gave you.",
     ),
+    # edits
+    "note.changed": (
+        "그사이에 이 노트가 다른 곳에서 바뀌었어요. 덮어쓰지 않았어요. "
+        "새로 불러온 뒤 다시 고쳐 주세요.",
+        "This note changed elsewhere in the meantime, so nothing was overwritten. "
+        "Reload it and edit again.",
+    ),
+    "note.empty": (
+        "본문이 비어 있으면 저장할 수 없어요.",
+        "A note can't be saved with an empty body.",
+    ),
+    "note.invalid": (
+        "저장하면 노트 규칙에 어긋나서 저장하지 않았어요: {error}",
+        "Not saved, because it would break the note rules: {error}",
+    ),
     # maintainer
     "review.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
     "review.unreadable": (

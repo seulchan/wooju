@@ -485,8 +485,42 @@ def _view(p: Proposal) -> ProposalView:
     return ProposalView(
         **p.model_dump(exclude={"changes"}),
         changes=[ChangeView(op=c.op, path=c.path) for c in p.changes],
-        preview=first.content[:6000] if first else None,
+        preview=first.content[:60000] if first else None,
     )
+
+
+class EditBody(BaseModel):
+    body: str
+
+
+@actions_router.post(
+    "/proposals/{proposal_id}/edit", tags=["proposals"], response_model=ProposalView
+)
+def edit_proposal(proposal_id: str, body: EditBody, engine: EngineDep) -> ProposalView:
+    """Fix the note an agent proposed, then approve it as usual."""
+    try:
+        return _view(engine.edit_proposal(proposal_id, body.body))
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "proposal.not_found" else 400) from exc
+
+
+class EditNote(BaseModel):
+    id: str
+    body: str
+    base: str  # the body the user started from
+
+
+@actions_router.post("/notes/edit", tags=["proposals"], response_model=ProposalView)
+async def edit_note(body: EditNote, engine: EngineDep) -> ProposalView:
+    """Save the user's own edit of a note (checked, recorded, undoable)."""
+    try:
+        proposal = await engine.edit_note(body.id, body.body, body.base)
+    except SetupError as exc:
+        status = {"review.not_found": 404, "note.changed": 409}.get(exc.key, 400)
+        raise _fail_from(engine, exc, status) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return _view(proposal)
 
 
 @actions_router.get("/proposals", tags=["proposals"])

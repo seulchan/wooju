@@ -92,6 +92,16 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   be retried or removed. A link already saved is never saved twice, and a
   link already waiting is reused rather than fetched again.
 
+## Fixing notes
+
+- One "Edit" button, in two places: on a note (the user's own edit: applied
+  at once, checked against the rules, recorded, undoable) and on a review card
+  (fix what an agent proposed, then approve). Only the body is edited; the
+  frontmatter is kept byte for byte. An edit never overwrites a note that
+  changed elsewhere in the meantime.
+- A source note records what the source says: the editor asks to fix only
+  what was copied wrong, and to put disagreement under its limitations.
+
 ## Language
 
 - Structural identifiers (frontmatter keys, controlled values, file names) are

@@ -260,3 +260,15 @@ def set_frontmatter_value(text: str, key: str, value: str | None) -> str:
     if line is not None:
         lines.insert(close, line)
     return "\n".join(lines)
+
+
+def replace_body(text: str, body: str) -> str:
+    """Swap a note's body, keeping its frontmatter block byte for byte."""
+    body = body.replace("\r\n", "\n").strip("\n") + "\n"
+    if not text.startswith("---"):
+        return body
+    lines = text.split("\n")
+    close = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if close is None:
+        raise ValueError("Frontmatter never closes")
+    return "\n".join(lines[: close + 1]) + "\n\n" + body

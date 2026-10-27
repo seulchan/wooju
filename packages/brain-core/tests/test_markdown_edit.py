@@ -46,3 +46,12 @@ def test_heading_is_shown_and_original_title_kept(tmp_path):
     assert index.get("sources/b").original_title is None
     # The original title is still searchable.
     assert [r.id for _, r in index.search("Value-up publication")] == ["sources/a"]
+
+
+def test_replace_body_keeps_frontmatter_exactly():
+    from brain_core.markdown import replace_body
+
+    text = "---\ntitle: x  # 메모\ntags: [a]\n---\n# x\n\n옛 본문\n"
+    out = replace_body(text, "# x\r\n\r\n새 본문\n\n\n")
+    assert out == "---\ntitle: x  # 메모\ntags: [a]\n---\n\n# x\n\n새 본문\n"
+    assert replace_body("# 없음\n", "새") == "새\n"

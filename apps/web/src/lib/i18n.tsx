@@ -211,6 +211,17 @@ const STRINGS = {
   claudeCode: { ko: 'Claude Code에서 쓰려면:', en: 'To use it in Claude Code:' },
   captureLabel: { ko: '링크나 메모', en: 'Link or memo' },
   alreadySaved: { ko: '이미 저장된 자료예요:', en: 'Already saved:' },
+  edit: { ko: '수정', en: 'Edit' },
+  save: { ko: '저장', en: 'Save' },
+  cancel: { ko: '취소', en: 'Cancel' },
+  editHint: {
+    ko: '# 는 제목, - 는 목록이에요. 저장하면 변경 기록에 남고 되돌릴 수 있어요.',
+    en: '# marks a heading, - a list item. Saving is recorded in History and can be undone.',
+  },
+  editSourceHint: {
+    ko: '자료 노트는 그 자료가 말한 내용의 기록이에요. 원문을 잘못 옮긴 부분만 고치고, 자료 내용이 틀렸다고 생각하면 "한계와 주의점"에 적어 주세요.',
+    en: 'A source note records what the source says. Fix only what was copied wrong; if you think the source itself is wrong, note it under "Limitations".',
+  },
   retry: { ko: '다시 시도', en: 'Try again' },
   remove: { ko: '지우기', en: 'Remove' },
   capturePlaceholder: {
