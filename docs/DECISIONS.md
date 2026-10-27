@@ -92,6 +92,19 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   be retried or removed. A link already saved is never saved twice, and a
   link already waiting is reused rather than fetched again.
 
+## Conflict check
+
+- When a source is organized, it is compared once with the most related
+  passages from other sources and knowledge notes. The model reports only
+  direct factual contradictions (same thing, same time, different number,
+  date, or rule; different periods are explicitly not conflicts), each
+  pointing at a passage that is checked in code.
+- Findings go into the new note's `## Conflicts` section with links, and
+  Home lists them until marked checked. The existing note is never changed;
+  deciding which is right (edit or retire) is the user's call.
+- The check is best effort: if it fails, the source is saved anyway. It
+  costs one more model call per source and runs in the single AI lane.
+
 ## History and iCloud
 
 - A Brain's git history lives in `.wooju-history.nosync/` with `.git` as a

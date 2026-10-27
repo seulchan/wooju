@@ -77,6 +77,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "Tried three times without success. The file is still in the inbox; "
         "press 'Try again' later.",
     ),
+    "job.conflicts": (
+        "기존 노트와 맞지 않는 내용 {count}건 — 홈에서 확인해 주세요.",
+        "{count} disagreement(s) with existing notes; see Home.",
+    ),
     "job.duplicate": ("이미 저장된 자료예요: {title}", "Already saved: {title}"),
     "job.removed": ("받은 편지함에서 지웠어요.", "Removed from the inbox."),
     # telegram

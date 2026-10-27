@@ -69,6 +69,10 @@ def _acks(brain: Path) -> dict[str, int]:
     return value if isinstance(value, dict) else {}
 
 
+def is_acknowledged(brain: Path, key: str) -> bool:
+    return key in _acks(brain)
+
+
 def acknowledge(brain: Path, record_id: str) -> None:
     """The user checked this note against its changed grounds."""
     path = _ack_file()

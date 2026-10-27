@@ -45,6 +45,7 @@ from ..api.models import AttentionGroup, AttentionGroupKey, AttentionItem, Atten
 # Canonical display order of attention categories.
 _GROUP_ORDER: tuple[AttentionGroupKey, ...] = (
     "review_due",
+    "conflicts",
     "grounds_changed",
     "rule_errors",
     "provisional",
@@ -59,6 +60,7 @@ _GROUP_ORDER: tuple[AttentionGroupKey, ...] = (
 # (state is never color-only).
 _LABELS: dict[AttentionGroupKey, str] = {
     "review_due": "Due for review",
+    "conflicts": "Conflicts with other notes",
     "grounds_changed": "Grounds changed: check again",
     "rule_errors": "Notes that break the Brain's rules",
     "provisional": "Provisional insights",
@@ -144,7 +146,16 @@ def _collect(index: BrainIndex, today: date, brain: Path | None) -> dict[str, li
     groups: dict[str, list[AttentionItem]] = {key: [] for key in _GROUP_ORDER}
 
     if brain is not None and brain.is_dir():
-        from .upstream import changed_grounds
+        from wooju_agents.conflicts import first_conflict
+
+        from .upstream import changed_grounds, is_acknowledged
+
+        for record in sorted(index.all_records(), key=lambda r: r.path):
+            if record.retired:
+                continue
+            line = first_conflict(record.content)
+            if line and not is_acknowledged(brain, f"conflict:{record.id}"):
+                groups["conflicts"].append(_item_from(record, detail=line))
 
         for record, ground in changed_grounds(index, brain):
             if record.retired:

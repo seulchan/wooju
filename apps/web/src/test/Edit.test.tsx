@@ -135,7 +135,7 @@ describe('Grounds changed', () => {
     render(<AttentionSection />)
     expect(await screen.findByText(/자사주 소각 해설/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Checked' }))
-    await waitFor(() => expect(bodies(fetchMock, '/api/checked')).toEqual([{ id: 'wiki/questions/rerating' }]))
+    await waitFor(() => expect(bodies(fetchMock, '/api/checked')).toEqual([{ id: 'wiki/questions/rerating', kind: 'grounds' }]))
   })
 })
 

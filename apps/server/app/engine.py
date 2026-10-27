@@ -48,6 +48,7 @@ from wooju_agents.capture import (
     save_memo,
 )
 from wooju_agents.challenge import challenge_insight, challenge_query
+from wooju_agents.conflicts import add_section, find_conflicts, render_section
 from wooju_agents.embed import EMBED_MODEL, Embedder
 from wooju_agents.ingest import IngestError, inbox_files, ingest_file
 from wooju_agents.llm import (
@@ -88,6 +89,7 @@ class Job:
     proposal_id: str | None = None
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     attempts: int = 0  # tries that ended because the AI wasn't available
+    conflicts: int = 0  # disagreements with existing notes, written into the note
     title: str | None = None  # what it was saved as (or the existing note, if a duplicate)
 
     def to_dict(self) -> dict[str, Any]:
@@ -381,6 +383,30 @@ class Engine:
             taken += 1
         return taken
 
+    async def check_conflicts(self, path: str, content: str, provider: Provider) -> tuple[int, str]:
+        """Compare a new source note with related notes.
+
+        Returns ``(number of conflicts, note content)`` with a Conflicts section
+        added when there are any. Best effort: any failure returns the note as is.
+        """
+        try:
+            body = split_frontmatter(content)[1]
+            retriever = await self.retriever()
+            async with self.ai_lane:
+                query_vec = await self.query_vector(body[:1500])
+                hits = await asyncio.to_thread(retriever.search, body[:1500], 8, 1, query_vec)
+                passages = [p for _, p in hits if p.record.category in ("source", "knowledge")][:6]
+                conflicts = await asyncio.to_thread(
+                    find_conflicts, body, passages, provider, language=self.content_language()
+                )
+        except Exception:  # noqa: BLE001 — the check is extra; saving the source is not
+            logger.exception("Conflict check failed for %s", path)
+            return 0, content
+        if not conflicts:
+            return 0, content
+        section = render_section(conflicts, note_path=path, language=self.content_language())
+        return len(conflicts), add_section(content, section)
+
     async def retry_job(self, job_id: str) -> Job:
         job = self.jobs.get(job_id)
         if job is None:
@@ -505,7 +531,12 @@ class Engine:
         told_waiting = False
         for _ in range(int(3600 / wait)):
             if job.state == "done":
-                text = job.message or self._say("telegram.saved", title=job.title or job.file)
+                if job.proposal_id is None:  # e.g. already saved before
+                    text = job.message or self._say("telegram.saved", title=job.title or job.file)
+                else:
+                    text = self._say("telegram.saved", title=job.title or job.file)
+                    if job.conflicts:
+                        text += "\n" + self._say("job.conflicts", count=job.conflicts)
                 await asyncio.to_thread(bot.send, chat_id, text)
                 return
             if job.state == "failed":
@@ -653,11 +684,16 @@ class Engine:
         except IngestError as exc:
             job.state, job.message = "failed", exc.localized(self.language())
             return
+        note = next((c for c in proposal.changes if c.path.startswith("sources/")), None)
+        if note is not None and note.content:
+            count, note.content = await self.check_conflicts(note.path, note.content, provider)
+            job.conflicts = count
         self.store.save(proposal)
         job.proposal_id = proposal.id
-        note = next((c for c in proposal.changes if c.path.startswith("sources/")), None)
         saved_title = split_frontmatter(note.content or "")[0].get("title") if note else None
         job.title = str(saved_title) if saved_title else proposal.title
+        if job.conflicts:
+            job.message = render("job.conflicts", self.language(), count=job.conflicts)
         if proposal.approval == "auto":
             proposal = await self.apply(proposal)
             if proposal.status != "applied":

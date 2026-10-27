@@ -233,6 +233,11 @@ const STRINGS = {
   memoSaved: { ko: '메모를 저장했어요. 질문하기에서 찾을 수 있어요.', en: 'Memo saved. Ask can find it.' },
   linkSaved: { ko: '링크를 받았어요. 페이지를 정리하는 중이에요.', en: 'Link received. Organizing the page now.' },
   reviewDue: { ko: '검토할 때가 된 노트', en: 'Due for review' },
+  conflictsTitle: { ko: '다른 자료와 맞지 않는 내용', en: 'Disagrees with other notes' },
+  conflictsHint: {
+    ko: '새 자료가 기존 노트와 다른 숫자나 날짜, 규칙을 말해요. 어느 쪽이 맞는지 확인하고, 틀린 쪽을 고치거나 폐기해 주세요. AI가 잘못 짚었다면 확인함을 누르면 돼요.',
+    en: 'A new source states a different number, date, or rule than an existing note. Check which is right, then edit or retire the wrong one. If the AI got it wrong, press Checked.',
+  },
   groundsChanged: { ko: '근거가 바뀐 노트', en: 'Grounds changed: check again' },
   groundsChangedHint: {
     ko: '이 노트들이 기대고 있는 노트가 나중에 바뀌었어요. 자동으로 고치지 않아요. 열어서 확인하고, 인사이트는 반론 검토를 다시 돌려 보세요.',
@@ -362,6 +367,9 @@ const KO: Record<string, string> = {
   'Provisional insights': '잠정 연결',
   'Original title': '원제',
   'Due for review': '검토할 때가 된 노트',
+  'Conflicts with other notes': '다른 자료와 맞지 않는 내용',
+  'Grounds changed: check again': '근거가 바뀐 노트',
+  Conflict: '충돌',
   'Due: review': '검토할 때',
   "Notes that break the Brain's rules": '규칙에 맞지 않는 노트',
   "Note that breaks the Brain's rules": '규칙에 맞지 않는 노트',

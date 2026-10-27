@@ -125,3 +125,36 @@ describe('Failed files', () => {
     expect(await screen.findByText('Already saved: KOSPI')).toBeInTheDocument()
   })
 })
+
+describe('Conflicts on Home', () => {
+  it('lists a disagreement and marks it checked', async () => {
+    const fetchMock = mockFetch([
+      {
+        match: /^\/api\/attention/,
+        body: {
+          total: 1,
+          groups: [
+            {
+              key: 'conflicts',
+              label: 'Conflicts with other notes',
+              count: 1,
+              items: [
+                { id: 'sources/new', path: 'sources/new.md', title: '자사주 소각 기한 정정', category: 'source', detail: '이 자료: 18개월 / 다른 노트 (해설): 1년' },
+              ],
+            },
+          ],
+        },
+      },
+      { match: /^\/api\/checked$/, body: { ok: true } },
+    ])
+    render(<AttentionSection />)
+    expect(await screen.findByText(/이 자료: 18개월/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Checked' }))
+    await waitFor(() => {
+      const bodies = (fetchMock.mock.calls as unknown as Call[])
+        .filter(([u, init]) => String(u) === '/api/checked' && init?.method === 'POST')
+        .map(([, init]) => JSON.parse(String(init?.body)))
+      expect(bodies).toEqual([{ id: 'sources/new', kind: 'conflict' }])
+    })
+  })
+})

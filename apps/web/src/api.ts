@@ -394,8 +394,11 @@ export function editProposal(id: string, body: string): Promise<ProposalView> {
 }
 
 /** The user checked a note against its changed grounds. */
-export function markChecked(id: string): Promise<{ ok: boolean }> {
-  return postJson('/api/checked', { id })
+export function markChecked(
+  id: string,
+  kind: 'grounds' | 'conflict' = 'grounds',
+): Promise<{ ok: boolean }> {
+  return postJson('/api/checked', { id, kind })
 }
 
 /** Notes that rest on this one. */

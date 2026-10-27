@@ -33,6 +33,7 @@ const MAX_REPRESENTATIVE = 5
  *  the backend's group label. */
 const SINGULAR: Record<AttentionGroupKey, string> = {
   review_due: 'Due for review',
+  conflicts: 'Conflicts with other notes',
   grounds_changed: 'Grounds changed: check again',
   rule_errors: "Note that breaks the Brain's rules",
   provisional: 'Provisional insight',
@@ -46,6 +47,7 @@ const SINGULAR: Record<AttentionGroupKey, string> = {
 /** Short tag for a representative item, e.g. "Provisional". */
 const GROUP_TAG: Record<AttentionGroupKey, string> = {
   review_due: 'Due: review',
+  conflicts: 'Conflict',
   grounds_changed: 'Grounds changed',
   rule_errors: 'Rule problem',
   provisional: 'Provisional',
@@ -97,6 +99,39 @@ function DueList({ items }: { items: AttentionItem[] }) {
               </span>
             </div>
             <ReviewButtons id={item.id} compact />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** New sources that disagree with existing notes. */
+function ConflictList({ items }: { items: AttentionItem[] }) {
+  const t = useT()
+  return (
+    <section className="due" aria-label={t('conflictsTitle')}>
+      <h3 className="subsection-title">
+        {t('conflictsTitle')} <span className="due-count">{items.length}</span>
+      </h3>
+      <p className="hint">{t('conflictsHint')}</p>
+      <ul className="due-list">
+        {items.map((item) => (
+          <li key={item.id} className="due-item">
+            <div className="due-main">
+              <Link className="attention-item__title" to={`/record/${encodeId(item.id)}`}>
+                {item.title}
+              </Link>
+              <span className="hint">{item.detail}</span>
+            </div>
+            <button
+              className="btn btn-small"
+              onClick={() =>
+                void markChecked(item.id, 'conflict').then(() => requestRefresh(), () => requestRefresh())
+              }
+            >
+              {t('checked')}
+            </button>
           </li>
         ))}
       </ul>
@@ -157,14 +192,17 @@ export function AttentionSection() {
 
   const due = state.data.groups.find((g) => g.key === 'review_due')
   const changed = state.data.groups.find((g) => g.key === 'grounds_changed')
-  const groups = state.data.groups.filter((g) => g.key !== 'review_due' && g.key !== 'grounds_changed')
-  const total = state.data.total - (due?.count ?? 0) - (changed?.count ?? 0)
+  const conflicts = state.data.groups.find((g) => g.key === 'conflicts')
+  const shownApart = ['review_due', 'grounds_changed', 'conflicts']
+  const groups = state.data.groups.filter((g) => !shownApart.includes(g.key))
+  const total = state.data.total - (due?.count ?? 0) - (changed?.count ?? 0) - (conflicts?.count ?? 0)
   const preview = pickRepresentative(groups)
   const more = Math.max(0, total - preview.length)
 
   return (
     <div className="attention">
       {due ? <DueList items={due.items} /> : null}
+      {conflicts ? <ConflictList items={conflicts.items} /> : null}
       {changed ? <GroundsList items={changed.items} count={changed.count} /> : null}
       <ul className="attention-summary" aria-label="Attention summary">
         {groups.map((group) => (

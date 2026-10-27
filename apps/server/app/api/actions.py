@@ -727,6 +727,7 @@ async def set_review_date(body: ReviewDate, engine: EngineDep) -> ProposalView:
 
 class Acknowledge(BaseModel):
     id: str
+    kind: Literal["grounds", "conflict"] = "grounds"
 
 
 @actions_router.post("/checked", tags=["maintainer"])
@@ -737,7 +738,7 @@ def mark_checked(body: Acknowledge, engine: EngineDep) -> dict[str, bool]:
     brain = engine.brain
     if brain is None or engine.index.get(body.id) is None:
         raise _fail(engine, "review.not_found", 404)
-    upstream.acknowledge(brain, body.id)
+    upstream.acknowledge(brain, body.id if body.kind == "grounds" else f"conflict:{body.id}")
     return {"ok": True}
 
 
