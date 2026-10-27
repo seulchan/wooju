@@ -1,6 +1,7 @@
 # Working on the Wooju codebase
 
-Rules for any agent (or person) changing code in this repository. The Brain
+Rules for any agent (or person) changing code in this repository. How to set
+up, test and build is in `CONTRIBUTING.md`. The Brain
 constitution for agents working *inside a user's Brain* is `template/AGENTS.md`;
 do not confuse the two.
 

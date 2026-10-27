@@ -1,75 +1,54 @@
 # Wooju
 
-> Drop things in. Wooju turns them into knowledge and memory you can trust, and
-> brings them back with their sources when you need them.
+> Drop things in. Wooju turns them into notes you can trust, asks you the questions
+> that make them yours, and brings them back with their sources when you need them.
 
-Wooju is a local-first personal knowledge and memory app. Everything lives in a
-plain folder of Markdown files on your Mac (your **Brain**). Agents sort what you
-add into evidence, world knowledge, personal memory, and work context, but they
-only ever **propose** changes: nothing reaches your Brain without passing
-validation and, where it matters, your approval.
+Wooju is a personal knowledge app for the Mac. You give it articles, PDFs, links
+and quick memos; a local AI organizes each one into a note, and Wooju helps you
+think with what you saved: ask questions of your own notes, write your own ideas
+on top of them, and keep them from fading.
 
-**Status:** early development (phase 4 of 4: review dates, search by meaning, capture from the phone and Telegram). Not ready for everyday use yet.
+**Status:** 0.4.0, a build for testers. There is no public download yet; see
+[CONTRIBUTING.md](CONTRIBUTING.md) to build it yourself.
 
-## Principles
+## What it does
 
-- **No hard parts.** No terminal, no config files, no concepts to learn. If a
-  first-time, non-developer user cannot do it unaided, it is a bug.
-- **Local first.** Your Brain is a folder you own. The default AI runs on your Mac
-  through [Ollama](https://ollama.com); OpenAI or Claude API keys are optional.
-- **Propose, validate, approve.** Agents never write directly. Every change is
-  checked, risk-tiered for approval, committed to git, and can be undone.
+- **Takes things in from anywhere.** Drag in files, paste a link, write a memo, or send
+  one from your phone through an iCloud Drive folder or a Telegram bot.
+- **Organizes them for you.** Each source becomes a short note: a one-line summary, the
+  key points, what it does not cover, and a link to the original. If a new source
+  disagrees with what you already have, Wooju says so.
+- **Answers from your notes, with sources.** Ask a question and every sentence of the
+  answer points to the note it comes from. If your notes don't cover something, it
+  says that instead of guessing.
+- **Asks you to think.** The AI asks questions; you write the answers. One line in your
+  own words, a recall before rereading, and review dates keep what matters from fading.
+- **Keeps ideas honest.** An idea starts as a candidate and is trusted only after it has
+  been challenged: Wooju writes down what could make it wrong.
+- **Works with Claude.** One click lets Claude Desktop search and read your notes.
 
-## Repository layout
+## Your notes stay yours
 
-```text
-wooju/
-├── packages/brain-core/   # Brain domain model: reader, records, index, relationships
-├── apps/server/           # FastAPI server: Brain index + app API (uses brain-core)
-├── apps/web/              # React UI
-├── apps/desktop/          # Tauri shell that runs the server as a sidecar
-├── agents/                # AI providers, embeddings, capture, and agents: Ingest, Ask, Challenger
-├── template/              # Brain template copied into a new Brain (CC BY 4.0)
-├── samples/               # Sample notes a new user can add to look around (CC BY 4.0)
-└── docs/                  # Project decisions
-```
+- **On your Mac.** Your notes are a folder of plain Markdown files (your *Brain*) that
+  any text editor can open. Nothing is locked in a database.
+- **Local AI by default.** Wooju uses [Ollama](https://ollama.com) on your Mac, so your
+  material never leaves it. An OpenAI or Claude API key is optional; with one, the
+  material you organize is sent to that company.
+- **Nothing changes behind your back.** The AI only proposes changes. Every change is
+  checked against the Brain's rules, recorded in history, and can be undone.
 
-## Development
+## Getting started
 
-Requirements: Python 3.11+ with [uv](https://docs.astral.sh/uv/), Node.js 20+.
+1. Open Wooju and choose a folder for your Brain (a new one is created for you).
+2. Install Ollama when Wooju asks; it downloads the AI model it needs (about 6 GB on a
+   16 GB Mac, less on an 8 GB Mac).
+3. Drop in your first file, or press "Look around with sample notes" to explore first.
 
-```bash
-# Python workspace (brain-core + server) and tests
-uv sync --all-packages
-uv run pytest packages/brain-core agents
-(cd apps/server && uv run pytest)
-
-# Web UI
-npm run web:install
-npm run web:test
-
-# Run the app locally (one server for API and UI)
-npm run web:build
-(cd apps/server && uv run uvicorn app.main:app)               # open http://localhost:8000
-# For UI development with hot reload instead: npm run web:dev  (UI on :5173)
-
-# Serve the Brain to Claude over MCP (stdio); the app's Settings adds this to Claude Desktop
-(cd apps/server && uv run wooju-server --mcp)
-
-# Check a Brain against the rules (errors exit 1)
-uv run wooju-validate /path/to/a/brain
-
-# Measure local model quality on a Brain (needs Ollama on this Mac)
-uv run python evals/local_model_quality.py /path/to/a/brain --models qwen3.5:4b qwen3.5:9b
-```
-
-To build the Mac app (Wooju.app and a .dmg): `./scripts/build-mac.sh`.
-
-To try it with an empty Brain, copy `template/` somewhere outside this repository
-and point `WOOJU_BRAIN_PATH` at the copy.
+Wooju needs an Apple Silicon Mac. 16 GB of memory is recommended; 8 GB works with a
+smaller model.
 
 ## License
 
 Code: [Apache License 2.0](LICENSE). Brain template (`template/`) and sample
-notes (`samples/`): [CC BY 4.0](template/LICENSE). See [NOTICE](NOTICE). "Wooju" is the project's
-name and is not licensed for use by derived products.
+notes (`samples/`): [CC BY 4.0](template/LICENSE). See [NOTICE](NOTICE). "Wooju" is
+the project's name and is not licensed for use by derived products.
