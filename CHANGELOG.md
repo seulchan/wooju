@@ -5,6 +5,11 @@ until 1.0, a minor version may change how things work.
 
 ## Unreleased
 
+- Search finds notes by meaning too, grouped into knowledge, ideas and sources.
+- Related notes on every note: what it links to, what links to it, what is close in meaning.
+- A new source that says nearly the same as an existing note is pointed out (never merged).
+- Markdown links between notes count as connections (they were missing from the map).
+
 - Weekly summary on Telegram: Sunday evening, what is waiting on Home.
 - Keyboard shortcuts: ⌘K to search, ⌘N for a new note.
 

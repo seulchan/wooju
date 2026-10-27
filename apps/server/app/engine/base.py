@@ -41,6 +41,8 @@ class Job:
     conflicts: int = 0  # disagreements with existing notes, written into the note
     note_id: str | None = None  # the source note it became (for the user's one line)
     title: str | None = None  # what it was saved as (or the existing note, if a duplicate)
+    # Existing notes that say nearly the same thing ({id, title}); a question, never a merge.
+    similar: list[dict[str, str]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

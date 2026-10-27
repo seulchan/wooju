@@ -13,6 +13,7 @@ import type {
   ListResponse,
   OverviewResponse,
   RecentResponse,
+  RelatedNotes,
   SearchResponse,
   StatsResponse,
   UiState,
@@ -158,6 +159,16 @@ export function searchBrain(
   signal?: AbortSignal,
 ): Promise<SearchResponse> {
   return apiGet<SearchResponse>(`/api/search${qs({ q, ...params })}`, signal)
+}
+
+/** Search page: keyword and meaning together, one hit per note. */
+export function findNotes(q: string, signal?: AbortSignal): Promise<SearchResponse> {
+  return apiGet<SearchResponse>(`/api/find${qs({ q })}`, signal)
+}
+
+/** What a note links to, what links to it, and notes close in meaning. */
+export function fetchRelated(id: string, signal?: AbortSignal): Promise<RelatedNotes> {
+  return apiGet<RelatedNotes>(`/api/related/${encodeId(id)}`, signal)
 }
 
 // ------------------------------------------------------------ app actions

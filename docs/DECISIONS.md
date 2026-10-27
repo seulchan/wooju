@@ -178,6 +178,22 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## Related notes (computed, never written)
+
+- Following *Graph Engineering* (Pavlyshyn, 2026), closeness in meaning is
+  computed from the search vectors, kept out of the Markdown, and only ever
+  suggests: "similar notes" on a note's page, "may say the same thing" above a
+  higher threshold, and a notice when a new source is close to an existing
+  note. Nothing is merged automatically: a false merge gives confident wrong
+  answers, a missed one is merely visible. Thresholds come from
+  evals/near_pairs.py on a real Brain.
+- The search page uses keyword and meaning search together (one hit per
+  note). When the AI is busy organizing a file it waits at most 2 s, then
+  answers with words only and says so.
+- Plain Markdown links between notes ([title](../path.md), which Wooju writes)
+  count as links, like [[wikilinks]]: on the map, in related notes, for
+  changed grounds. Before this, links Wooju wrote itself were invisible.
+
 ## Weekly summary on Telegram
 
 - With the bot paired, Wooju sends one message on Sunday at 18:00 (Mac time),

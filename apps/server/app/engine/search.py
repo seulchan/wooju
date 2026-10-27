@@ -10,8 +10,8 @@ from brain_core.changes import (
     Proposal,
     data_dir,
 )
-from brain_core.retrieve import Retriever
-from brain_core.vectors import VectorCache
+from brain_core.retrieve import DUPLICATE_MIN, Passage, Retriever, is_link_list, passages
+from brain_core.vectors import VectorCache, normalize
 from wooju_agents.ask import Answer, ask
 from wooju_agents.challenge import challenge_insight, challenge_query
 from wooju_agents.embed import EMBED_MODEL, Embedder
@@ -21,6 +21,7 @@ from wooju_agents.llm import (
 
 from .. import settings as app_settings
 from .base import (
+    SetupError,
     logger,
 )
 
@@ -103,6 +104,107 @@ class SearchMixin:
             return await asyncio.to_thread(self.embedder().query, text)
         except LLMError:
             return None
+
+    async def _quick_vector(self, text: str, wait: float = 2.0) -> Any:
+        """The query's embedding if the AI is free within ``wait`` seconds, else None.
+
+        Search must not sit behind a file being organized: when the AI is busy,
+        it answers with keyword search alone.
+        """
+        if self.search_state.get("state") not in ("ready", "indexing"):
+            return None
+        try:
+            await asyncio.wait_for(self.ai_lane.acquire(), wait)
+        except TimeoutError:
+            return None
+        try:
+            return await self.query_vector(text)
+        finally:
+            self.ai_lane.release()
+
+    async def find(self, query: str, limit: int = 40) -> tuple[list[tuple[float, Passage]], bool]:
+        """Notes for the search page, by keyword and (when available) by meaning.
+
+        Returns the best passage of each note and whether meaning search was used.
+        """
+        self._require_brain()
+        retriever = await self.retriever()
+        vec = await self._quick_vector(query)
+        hits = await asyncio.to_thread(retriever.search_notes, query, limit, vec)
+        return hits, vec is not None
+
+    async def related(self, record_id: str) -> dict[str, Any]:
+        """What a note links to, what links to it, and notes close in meaning."""
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+
+        def ref(r: Any, **extra: Any) -> dict[str, Any]:
+            return {
+                "id": r.id,
+                "title": r.title,
+                "category": r.category,
+                "status": r.status,
+                **extra,
+            }
+
+        out_ids = [link.resolved_id for link in record.links if link.resolved_id]
+        out_ids += [d.resolved_id for d in record.derived_from_resolved if d.resolved_id]
+        links_out = [
+            ref(r)
+            for r in (self.index.get(i) for i in dict.fromkeys(out_ids))
+            if r is not None and r.id != record_id and r.category != "other"
+        ]
+        links_in = []
+        for other in self.index.all_records():
+            if other.id == record_id or other.category == "other":
+                continue
+            targets = {link.resolved_id for link in other.links}
+            targets |= {d.resolved_id for d in other.derived_from_resolved}
+            if record_id in targets:
+                links_in.append(ref(other))
+        links_in.sort(key=lambda r: (r["category"], r["title"]))
+        linked = {r["id"] for r in links_out} | {r["id"] for r in links_in}
+        retriever = await self.retriever()
+        near = await asyncio.to_thread(retriever.similar, record_id, 8)
+        similar = [
+            ref(r, score=round(score, 3), duplicate=score >= DUPLICATE_MIN)
+            for score, r in near
+            if r.id not in linked and not r.retired
+        ][:6]
+        return {"links_out": links_out, "links_in": links_in, "similar": similar}
+
+    async def near_duplicates(self, record_id: str) -> list[dict[str, str]]:
+        """Existing notes that say nearly the same as a newly saved one.
+
+        Embeds the new note now (and keeps the vectors, so indexing later skips
+        it). Best effort: empty when meaning search is off or the AI is busy.
+        """
+        if self.search_state.get("state") not in ("ready", "indexing"):
+            return []
+        record = self.index.get(record_id)
+        if record is None:
+            return []
+        texts = [p.embedding_text() for p in passages(record) if not is_link_list(p.text)]
+        if not texts:
+            return []
+        embedder, cache = self.embedder(), self.vector_cache()
+        try:
+            async with self.ai_lane:
+                vectors = await asyncio.to_thread(embedder.documents, texts)
+        except LLMError:
+            return []
+        await asyncio.to_thread(
+            cache.put_many, [(cache.key(t), v) for t, v in zip(texts, vectors, strict=True)]
+        )
+        unit = [list(normalize(v)) for v in vectors]
+        mean = [sum(col) / len(unit) for col in zip(*unit, strict=True)]
+        norm = sum(x * x for x in mean) ** 0.5 or 1.0
+        retriever = await self.retriever()
+        near = await asyncio.to_thread(
+            retriever.similar, record_id, 3, DUPLICATE_MIN, [x / norm for x in mean]
+        )
+        return [{"id": r.id, "title": r.title} for _, r in near if not r.retired]
 
     async def ask_preview(self, question: str) -> list[dict[str, Any]]:
         """Notes likely to be read for ``question``, shown while the answer is written.

@@ -151,6 +151,9 @@ class TelegramBotMixin:
                     text = self._say("telegram.saved", title=job.title or job.file)
                     if job.conflicts:
                         text += "\n" + self._say("job.conflicts", count=job.conflicts)
+                    if job.similar:
+                        titles = ", ".join(s["title"] for s in job.similar)
+                        text += "\n" + self._say("job.similar", titles=titles)
                 await asyncio.to_thread(bot.send, chat_id, text)
                 return
             if job.state == "failed":

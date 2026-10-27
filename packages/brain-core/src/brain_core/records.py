@@ -40,6 +40,8 @@ class Link(BaseModel):
     anchor: str | None = None
     resolved_id: str | None = None  # id of the resolved record, or None if unresolved
     title: str | None = None  # title of the resolved record, shown instead of a path
+    # "wiki" for [[target]], "markdown" for [label](path.md): both are connections.
+    kind: Literal["wiki", "markdown"] = "wiki"
 
 
 class ResolvedRef(BaseModel):

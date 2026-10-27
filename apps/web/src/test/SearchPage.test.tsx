@@ -8,7 +8,7 @@ import type { SearchResponse } from '../types'
 
 describe('SearchPage', () => {
   it('groups hits by semantic category and links to section detail pages', async () => {
-    mockFetch([{ match: /^\/api\/search/, body: searchResponse }])
+    mockFetch([{ match: /^\/api\/find/, body: searchResponse }])
     render(<SearchPage q="memory" />)
 
     expect(await screen.findByRole('heading', { name: /Knowledge/ })).toBeInTheDocument()
@@ -42,20 +42,26 @@ describe('SearchPage', () => {
         },
       ],
     }
-    mockFetch([{ match: /^\/api\/search/, body: memorySearch }])
+    mockFetch([{ match: /^\/api\/find/, body: memorySearch }])
     render(<SearchPage q="note" />)
     expect(await screen.findByRole('heading', { name: /Memory \/ Projects \/ Areas/ })).toBeInTheDocument()
   })
 
   it('shows a prompt before any query is entered', () => {
-    mockFetch([{ match: /^\/api\/search/, body: emptySearch }])
+    mockFetch([{ match: /^\/api\/find/, body: emptySearch }])
     render(<SearchPage q="" />)
     expect(screen.getByText('Search the Brain')).toBeInTheDocument()
   })
 
   it('shows a no-results state', async () => {
-    mockFetch([{ match: /^\/api\/search/, body: emptySearch }])
+    mockFetch([{ match: /^\/api\/find/, body: emptySearch }])
     render(<SearchPage q="zzznope" />)
     expect(await screen.findByText('No results')).toBeInTheDocument()
+  })
+
+  it('says when it could only match words', async () => {
+    mockFetch([{ match: /^\/api\/find/, body: { ...searchResponse, meaning: false } }])
+    render(<SearchPage q="memory" />)
+    expect(await screen.findByText(/Matched by words only right now/)).toBeInTheDocument()
   })
 })

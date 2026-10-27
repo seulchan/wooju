@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
-import { searchBrain } from '../api'
+import { findNotes } from '../api'
 import { encodeId } from '../lib/paths'
 import { titleCase } from '../lib/format'
 import { navigate, Link } from '../lib/router'
@@ -29,7 +29,7 @@ function detailPath(hit: SearchHit): string {
 export function SearchPage({ q }: { q: string }) {
   const [input, setInput] = useState(q)
   const results = useAsync(
-    async (signal) => (q.trim() ? searchBrain(q, {}, signal) : EMPTY),
+    async (signal) => (q.trim() ? findNotes(q, signal) : EMPTY),
     [q],
   )
 
@@ -47,7 +47,7 @@ export function SearchPage({ q }: { q: string }) {
           type="search"
           name="q"
           className="search-input"
-          placeholder={tr('Search titles, aliases, and note text…')}
+          placeholder={tr('Search by words or meaning…')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus
@@ -59,7 +59,7 @@ export function SearchPage({ q }: { q: string }) {
       </form>
 
       {!q.trim() ? (
-        <EmptyState title={tr('Search the Brain')}>{tr('Full-text search across every indexed note.')}</EmptyState>
+        <EmptyState title={tr('Search the Brain')}>{tr('Finds notes by their words and by their meaning, in Korean and English.')}</EmptyState>
       ) : results.kind === 'loading' ? (
         <Spinner label={tr('Searching…')} />
       ) : results.kind === 'error' ? (
@@ -71,9 +71,12 @@ export function SearchPage({ q }: { q: string }) {
       ) : (
         <p className="subtitle">
           {pick(
-            `${results.data.total} match${results.data.total === 1 ? '' : 'es'} for “${q}”`,
-            `“${q}” 검색 결과 ${results.data.total}개`,
+            `${results.data.total} note${results.data.total === 1 ? '' : 's'} about “${q}”`,
+            `“${q}”에 관한 노트 ${results.data.total}개`,
           )}
+          {results.data.meaning === false ? (
+            <span className="hint search-mode"> · {tr('Matched by words only right now.')}</span>
+          ) : null}
         </p>
       )}
 

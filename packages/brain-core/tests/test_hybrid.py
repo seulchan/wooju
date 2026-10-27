@@ -62,3 +62,33 @@ def test_other_model_has_its_own_keys(tmp_path):
     b = VectorCache(tmp_path / "v.sqlite", "model-b")
     a.put_many([(a.key("x"), [1.0, 0.0])])
     assert b.get_many([b.key("x")]) == {}
+
+
+def test_similar_notes_come_from_stored_vectors(tmp_path):
+    index = _brain(tmp_path)
+    (tmp_path / "sources").mkdir()
+    (tmp_path / "sources" / "kospi-pbr.md").write_text(
+        "---\ntitle: Most KOSPI stocks trade below book value\nsource_type: article\ncanonical_ref: x\n---\n"
+        "# Most KOSPI stocks trade below book value\n\n## Key Ideas\n\n- 75% of stocks have a pbr under 1.\n"
+        "\n## Related\n\n- [환율](../wiki/concepts/fx.md)\n",
+        encoding="utf-8",
+    )
+    index.scan(tmp_path)
+    retriever = Retriever(index)
+    assert retriever.similar("wiki/concepts/pbr") == []  # nothing embedded yet
+
+    cache = VectorCache(tmp_path / "v.sqlite", "fake")
+    cache.put_many([(k, fake_embed(t)) for k, t in retriever.load_vectors(cache)])
+    retriever.load_vectors(cache)
+
+    similar = retriever.similar("wiki/concepts/pbr")
+    assert [r.id for _, r in similar] == ["sources/kospi-pbr"]  # the FX note is too far
+    assert similar[0][0] > 0.9
+    # The link list naming the FX note does not pull the source towards FX.
+    assert [r.id for _, r in retriever.similar("wiki/concepts/fx")] == []
+
+
+def test_search_notes_gives_one_entry_per_note(tmp_path):
+    retriever = Retriever(_brain(tmp_path))
+    notes = retriever.search_notes("주가순자산비율 코스피 환율")
+    assert len({p.id for _, p in notes}) == len(notes)

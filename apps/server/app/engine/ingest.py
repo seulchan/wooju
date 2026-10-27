@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 
 from brain_core import history
@@ -231,4 +232,7 @@ class IngestMixin:
             if proposal.status != "applied":
                 job.state, job.message = "failed", render("job.invalid", self.language())
                 return
+            if job.note_id:
+                with contextlib.suppress(Exception):  # a hint; saving already succeeded
+                    job.similar = await self.near_duplicates(job.note_id)
         job.state = "done"

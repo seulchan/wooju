@@ -139,3 +139,20 @@ def test_normalize_target_bare_and_empty():
     assert normalize_target("   ") is None
     assert normalize_target(None) is None  # type: ignore[arg-type]
     assert normalize_target("[[  ]]") is None  # blank inner target
+
+
+def test_markdown_links_to_notes_count_as_links():
+    from brain_core.markdown import extract_note_links
+
+    body = (
+        "See [the spacing effect](../concepts/spacing-effect.md#example), "
+        "[a source](../../sources/forgetting-curve.md), ![img](pic.md), "
+        "[web](https://example.com/x.md), [file](../../library/a.txt), "
+        "[outside](../../../elsewhere.md).\n\n```\n[code](../concepts/nope.md)\n```\n"
+    )
+    links = extract_note_links(body, "wiki/how-tos/review.md")
+    assert [(x["target"], x["anchor"], x["kind"]) for x in links] == [
+        ("wiki/concepts/spacing-effect", "example", "markdown"),
+        ("sources/forgetting-curve", None, "markdown"),
+    ]
+    assert links[0]["label"] == "the spacing effect"

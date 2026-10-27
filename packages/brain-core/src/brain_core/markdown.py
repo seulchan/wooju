@@ -8,9 +8,11 @@ sink the whole Brain. This module never writes anywhere (Invariant 4).
 
 from __future__ import annotations
 
+import posixpath
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import yaml
 
@@ -160,6 +162,49 @@ def extract_wikilinks(body: str) -> list[dict[str, Any]]:
             }
         )
     return links
+
+
+_CODE_FENCE_RE = re.compile(r"^(```|~~~).*?^\1[ \t]*$", re.MULTILINE | re.DOTALL)
+
+# A plain Markdown link to another note: [Label](../wiki/concepts/x.md#part).
+# Images (![..](..)), web addresses and non-Markdown files are left out.
+_MD_NOTE_LINK_RE = re.compile(
+    r"(?<!\!)\[(?P<label>[^\]\n]*)\]\((?P<href>[^)\s]+?\.md)(?:#(?P<anchor>[^)\s]*))?\)"
+)
+
+
+def extract_note_links(body: str, note_path: str) -> list[dict[str, Any]]:
+    """Plain Markdown links to other notes, as Brain-relative targets.
+
+    ``note_path`` is the linking note's Brain-relative path; relative hrefs are
+    resolved against its folder, so ``../sources/x.md`` from ``wiki/concepts/y.md``
+    becomes ``sources/x``. Links that leave the Brain are skipped. Wooju writes
+    links this way (it is what Markdown editors understand), so they count as
+    connections just like ``[[wikilinks]]``.
+    """
+    base = posixpath.dirname(note_path)
+    out: list[dict[str, Any]] = []
+    body = _CODE_FENCE_RE.sub("", body)  # an example inside a code block is not a link
+    for match in _MD_NOTE_LINK_RE.finditer(body):
+        href = unquote(match.group("href"))
+        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", href):
+            continue  # a web or file address, not a note
+        joined = posixpath.normpath(
+            posixpath.join(base, href) if not href.startswith("/") else href[1:]
+        )
+        if joined.startswith(".."):
+            continue
+        label = match.group("label").strip()
+        anchor = match.group("anchor")
+        out.append(
+            {
+                "target": joined[: -len(".md")],
+                "label": label or None,
+                "anchor": anchor.strip() if anchor else None,
+                "kind": "markdown",
+            }
+        )
+    return out
 
 
 # A self-contained ``[[target]]`` reference (optional #/^ anchor, |label).

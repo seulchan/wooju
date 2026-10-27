@@ -27,6 +27,11 @@ _RRF_K = 60
 _CANDIDATES = 50
 # Below this cosine similarity a passage is not a meaning match at all.
 _MIN_COSINE = 0.35
+# Note-to-note similarity: shown as "similar notes" from here up, and treated
+# as a possible duplicate from DUPLICATE_MIN up (a question to the user, never
+# a merge). Calibrated with evals/near_pairs.py on a real Brain.
+SIMILAR_MIN = 0.55
+DUPLICATE_MIN = 0.9
 
 _K1 = 1.4
 _B = 0.75
@@ -242,6 +247,7 @@ class Retriever:
         self._idf = {t: math.log(1 + (n - d + 0.5) / (d + 0.5)) for t, d in df.items()}
         self._vectors = [None] * len(self._passages)
         self._weight = [LINK_LIST_WEIGHT if is_link_list(p.text) else 1.0 for p in self._passages]
+        self._note_vectors: dict[str, list[float]] | None = None  # built on first use
 
     # ---------------------------------------------------------------- vectors
 
@@ -255,6 +261,7 @@ class Retriever:
             if key not in found:
                 missing.setdefault(key, p.embedding_text())
         self.pending = list(missing.items())
+        self._note_vectors = None
         return self.pending
 
     @property
@@ -326,6 +333,65 @@ class Retriever:
             if len(out) >= limit:
                 break
         return out
+
+    # ------------------------------------------------------------------ notes
+
+    def search_notes(
+        self, query: str, limit: int = 30, query_vec: Sequence[float] | None = None
+    ) -> list[tuple[float, Passage]]:
+        """Best notes for ``query`` (one entry per note, with its best passage)."""
+        return self.search(query, limit=limit, per_note=1, query_vec=query_vec)
+
+    def _notes(self) -> dict[str, list[float]]:
+        """One vector per note: the normalized mean of its passages' vectors.
+
+        Link-list sections are left out: they name other notes rather than
+        saying what this one is about.
+        """
+        if self._note_vectors is not None:
+            return self._note_vectors
+        sums: dict[str, list[float]] = {}
+        for i, (p, v) in enumerate(zip(self._passages, self._vectors, strict=True)):
+            if v is None or self._weight[i] < 1.0:
+                continue
+            acc = sums.get(p.id)
+            if acc is None:
+                sums[p.id] = list(v)
+            else:
+                for j, x in enumerate(v):
+                    acc[j] += x
+        out: dict[str, list[float]] = {}
+        for note_id, acc in sums.items():
+            norm = math.sqrt(sum(x * x for x in acc)) or 1.0
+            out[note_id] = [x / norm for x in acc]
+        self._note_vectors = out
+        return out
+
+    def note_vector(self, record_id: str) -> list[float] | None:
+        return self._notes().get(record_id)
+
+    def similar(
+        self,
+        record_id: str,
+        limit: int = 6,
+        min_score: float = SIMILAR_MIN,
+        vector: Sequence[float] | None = None,
+    ) -> list[tuple[float, Record]]:
+        """Notes whose content is closest in meaning to ``record_id`` (or ``vector``).
+
+        Computed from stored vectors only (no model call). Empty when meaning
+        search has not indexed the note yet. A suggestion, never a fact: the
+        caller decides what, if anything, to do with it.
+        """
+        notes = self._notes()
+        target = vector if vector is not None else notes.get(record_id)
+        if target is None:
+            return []
+        records = {p.id: p.record for p in self._passages}
+        scored = [(cosine(target, v), records[nid]) for nid, v in notes.items() if nid != record_id]
+        scored = [s for s in scored if s[0] >= min_score]
+        scored.sort(key=lambda s: (-s[0], s[1].path))
+        return scored[:limit]
 
 
 class RetrieverCache:

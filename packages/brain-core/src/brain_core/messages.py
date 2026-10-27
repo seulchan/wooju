@@ -252,6 +252,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "이 모델은 의미 검색 전용이라 답을 만들 수 없어요. 다른 모델을 골라 주세요.",
         "This model is for meaning search only and can't write answers. Pick another model.",
     ),
+    "job.similar": (
+        "비슷한 노트가 이미 있어요: {titles}",
+        "A similar note is already in your Brain: {titles}",
+    ),
     "digest.title": ("이번 주 Wooju", "Wooju this week"),
     "digest.review_due": ("다시 볼 노트 {n}개: {titles}", "{n} to look at again: {titles}"),
     "digest.conflicts": (

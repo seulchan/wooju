@@ -890,6 +890,43 @@ async def ask_question(body: AskRequest, engine: EngineDep) -> dict[str, Any]:
     return answer.to_dict()
 
 
+@actions_router.get("/find", tags=["brain"])
+async def find_notes(engine: EngineDep, q: str = "", limit: int = 40) -> dict[str, Any]:
+    """Search for the search page: keyword and meaning together, one hit per note."""
+    if engine.brain is None:
+        raise _fail(engine, "setup.brain_first")
+    if not q.strip():
+        return {"query": q, "total": 0, "hits": [], "meaning": False}
+    hits, meaning = await engine.find(q, max(1, min(limit, 100)))
+    out = []
+    for rank, (_, p) in enumerate(hits):
+        text = " ".join(p.text.split())
+        out.append(
+            {
+                "id": p.record.id,
+                "path": p.record.path,
+                "title": p.record.title,
+                "category": p.record.category,
+                "subtype": p.record.subtype,
+                "status": p.record.status,
+                "kind": p.record.kind,
+                "score": len(hits) - rank,
+                "snippet": (p.heading + " · " if p.heading else "")
+                + (text if len(text) <= 220 else text[:219].rstrip() + "…"),
+            }
+        )
+    return {"query": q, "total": len(out), "hits": out, "meaning": meaning}
+
+
+@actions_router.get("/related/{record_id:path}", tags=["brain"])
+async def related_notes(record_id: str, engine: EngineDep) -> dict[str, Any]:
+    """Notes this one links to, notes linking to it, and notes close in meaning."""
+    try:
+        return await engine.related(record_id)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404) from exc
+
+
 @actions_router.post("/ask/stream", tags=["ask"])
 async def ask_question_stream(body: AskRequest, engine: EngineDep) -> StreamingResponse:
     """The answer as it is written: one ``partial`` event per finished sentence,

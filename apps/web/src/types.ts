@@ -56,6 +56,7 @@ export interface BrainLink {
   resolved_id?: string | null
   /** Title of the linked note, shown instead of its path. */
   title?: string | null
+  kind?: 'wiki' | 'markdown'
 }
 
 export interface ResolvedRef {
@@ -104,6 +105,25 @@ export interface SearchResponse {
   query: string
   total: number
   hits: SearchHit[]
+  /** True when meaning search was used too (false: words only). */
+  meaning?: boolean
+}
+
+export interface RelatedNote {
+  id: string
+  title: string
+  category: Category
+  status?: string | null
+  /** How close in meaning (similar notes only), 0–1. */
+  score?: number
+  /** Close enough that it may say the same thing. */
+  duplicate?: boolean
+}
+
+export interface RelatedNotes {
+  links_out: RelatedNote[]
+  links_in: RelatedNote[]
+  similar: RelatedNote[]
 }
 
 export interface StatsResponse {
@@ -291,6 +311,8 @@ export interface Job {
   note_id?: string | null
   conflicts?: number
   title?: string | null
+  /** Existing notes that say nearly the same thing (a question, never a merge). */
+  similar?: { id: string; title: string }[]
 }
 
 export interface ProposalView {

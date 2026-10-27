@@ -13,7 +13,13 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .markdown import extract_title, extract_wikilinks, first_heading, split_frontmatter
+from .markdown import (
+    extract_note_links,
+    extract_title,
+    extract_wikilinks,
+    first_heading,
+    split_frontmatter,
+)
 from .records import Link, Record, classify, coerce_list
 
 logger = logging.getLogger("brain_core")
@@ -76,7 +82,13 @@ def _read_record(root: Path, file_path: Path) -> Record | None:
         subtype=subtype,
         content=body,
         metadata=frontmatter,
-        links=[Link(**link) for link in extract_wikilinks(body)],
+        links=[
+            Link(**link)
+            for link in [
+                *extract_wikilinks(body),
+                *extract_note_links(body, relative_path.as_posix()),
+            ]
+        ],
         modified_at=_modified_at(file_path),
         status=status,
         kind=kind,

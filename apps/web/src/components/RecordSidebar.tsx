@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
-import type { BrainLink, BrainRecord, ResolvedRef } from '../types'
+import { fetchRelated } from '../api'
+import { useAsync } from '../lib/useAsync'
+import type { BrainLink, BrainRecord, Category, RelatedNote, ResolvedRef } from '../types'
 import { encodeId } from '../lib/paths'
 import { formatDate, pluralize, titleCase } from '../lib/format'
 import { Link } from '../lib/router'
@@ -19,7 +21,8 @@ export function RecordSidebar({ record }: { record: BrainRecord }) {
         <Derivation derived={record.derived_from_resolved} />
       ) : null}
       {record.category === 'source' ? <Artifact meta={record.metadata} /> : null}
-      <OutgoingLinks links={record.links} />
+      {record.category !== 'other' ? <RelatedPanel id={record.id} /> : null}
+      <OutgoingLinks links={record.links.filter((l) => !l.resolved_id)} />
     </aside>
   )
 }
@@ -123,6 +126,48 @@ function Derivation({ derived }: { derived: ResolvedRef[] }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+const CATEGORY_LABEL: Partial<Record<Category, string>> = {
+  knowledge: 'Knowledge',
+  insight: 'Insights',
+  source: 'Sources',
+}
+
+/** Notes this one links to, notes linking to it, and notes close in meaning. */
+function RelatedPanel({ id }: { id: string }) {
+  const related = useAsync((signal) => fetchRelated(id, signal), [id])
+  if (related.kind !== 'ready') return null
+  const { links_out: out, links_in: incoming, similar } = related.data
+  if (!out.length && !incoming.length && !similar.length) return null
+  return (
+    <section className="panel meta related" aria-label={tr('Related')}>
+      <h2 className="panel-title">{tr('Related')}</h2>
+      <RelatedGroup title={tr('Links to')} notes={out} />
+      <RelatedGroup title={tr('Linked from')} notes={incoming} />
+      <RelatedGroup title={tr('Similar in meaning')} notes={similar} />
+    </section>
+  )
+}
+
+function RelatedGroup({ title, notes }: { title: string; notes: RelatedNote[] }) {
+  if (!notes.length) return null
+  return (
+    <div className="related-group">
+      <h3 className="related-title">{title}</h3>
+      <ul className="ref-list">
+        {notes.map((n) => (
+          <li key={n.id} className="ref-item">
+            <Link to={`/record/${encodeId(n.id)}`}>{n.title}</Link>{' '}
+            {CATEGORY_LABEL[n.category] ? (
+              <span className="related-kind">{tr(CATEGORY_LABEL[n.category]!)}</span>
+            ) : null}
+            {n.duplicate ? <span className="related-dup">{tr('May say the same thing')}</span> : null}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

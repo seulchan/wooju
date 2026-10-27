@@ -4,6 +4,8 @@ import { ApiError, captureText, fetchJobs, removeJob, retryJob, saveTakeaway, up
 import { requestRefresh } from '../lib/freshness'
 import { useT } from '../lib/i18n'
 import type { Job } from '../types'
+import { Link } from '../lib/router'
+import { encodeId } from '../lib/paths'
 
 /** Drag files in (or pick them). Shows each file's progress until it is saved. */
 export function DropZone() {
@@ -162,6 +164,17 @@ export function DropZone() {
               <span className="job-file">{job.file.replace(/^inbox\//, '')}</span>
               <span className="job-state">{label[job.state]}</span>
               {job.message ? <span className="job-message">{job.message}</span> : null}
+              {job.similar?.length ? (
+                <span className="job-message">
+                  {t('jobSimilar')}{' '}
+                  {job.similar.map((s, i) => (
+                    <span key={s.id}>
+                      {i ? ', ' : ''}
+                      <Link to={`/record/${encodeId(s.id)}`}>{s.title}</Link>
+                    </span>
+                  ))}
+                </span>
+              ) : null}
               {job.state === 'failed' ? (
                 <span className="job-actions">
                   <button

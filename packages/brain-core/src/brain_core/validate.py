@@ -525,6 +525,8 @@ def validate_brain(root: Path) -> Report:
         rec = records.get(rel[:-3])
         if rec is not None:
             for link in rec.links:
+                if link.kind == "markdown":
+                    continue  # checked against the files themselves by _check_md_links
                 if link.resolved_id is None:
                     issues.append(
                         Issue(

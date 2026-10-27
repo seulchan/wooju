@@ -1792,3 +1792,22 @@ code {
   margin-top: 0.5rem;
   cursor: pointer;
 }
+
+.related-group + .related-group {
+  margin-top: 0.75rem;
+}
+.related-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, inherit);
+}
+.related-kind,
+.related-dup {
+  font-size: 0.75rem;
+  color: var(--muted, inherit);
+}
+.related-dup {
+  margin-left: 0.35rem;
+  color: var(--warn, #b7791f);
+}
