@@ -15,7 +15,8 @@
  * list (a few items drawn across the reasons) rather than a full card per group.
  */
 
-import { fetchAttention } from '../api'
+import { fetchAttention, markChecked } from '../api'
+import { requestRefresh } from '../lib/freshness'
 import { encodeId } from '../lib/paths'
 import { useAsync } from '../lib/useAsync'
 import { Link } from '../lib/router'
@@ -32,6 +33,7 @@ const MAX_REPRESENTATIVE = 5
  *  the backend's group label. */
 const SINGULAR: Record<AttentionGroupKey, string> = {
   review_due: 'Due for review',
+  grounds_changed: 'Grounds changed: check again',
   rule_errors: "Note that breaks the Brain's rules",
   provisional: 'Provisional insight',
   candidate: 'Candidate insight',
@@ -44,6 +46,7 @@ const SINGULAR: Record<AttentionGroupKey, string> = {
 /** Short tag for a representative item, e.g. "Provisional". */
 const GROUP_TAG: Record<AttentionGroupKey, string> = {
   review_due: 'Due: review',
+  grounds_changed: 'Grounds changed',
   rule_errors: 'Rule problem',
   provisional: 'Provisional',
   candidate: 'Candidate',
@@ -101,6 +104,39 @@ function DueList({ items }: { items: AttentionItem[] }) {
   )
 }
 
+/** Notes whose grounds changed after them: open to check, or mark checked. */
+function GroundsList({ items, count }: { items: AttentionItem[]; count: number }) {
+  const t = useT()
+  return (
+    <section className="due" aria-label={t('groundsChanged')}>
+      <h3 className="subsection-title">
+        {t('groundsChanged')} <span className="due-count">{count}</span>
+      </h3>
+      <p className="hint">{t('groundsChangedHint')}</p>
+      <ul className="due-list">
+        {items.map((item) => (
+          <li key={item.id} className="due-item">
+            <div className="due-main">
+              <Link className="attention-item__title" to={`/record/${encodeId(item.id)}`}>
+                {item.title}
+              </Link>
+              <span className="hint">
+                {t('changedGround')} {item.detail}
+              </span>
+            </div>
+            <button
+              className="btn btn-small"
+              onClick={() => void markChecked(item.id).then(() => requestRefresh(), () => requestRefresh())}
+            >
+              {t('checked')}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 export function AttentionSection() {
   const state = useAsync((signal) => fetchAttention(signal), [])
 
@@ -118,14 +154,16 @@ export function AttentionSection() {
   }
 
   const due = state.data.groups.find((g) => g.key === 'review_due')
-  const groups = state.data.groups.filter((g) => g.key !== 'review_due')
-  const total = state.data.total - (due?.count ?? 0)
+  const changed = state.data.groups.find((g) => g.key === 'grounds_changed')
+  const groups = state.data.groups.filter((g) => g.key !== 'review_due' && g.key !== 'grounds_changed')
+  const total = state.data.total - (due?.count ?? 0) - (changed?.count ?? 0)
   const preview = pickRepresentative(groups)
   const more = Math.max(0, total - preview.length)
 
   return (
     <div className="attention">
       {due ? <DueList items={due.items} /> : null}
+      {changed ? <GroundsList items={changed.items} count={changed.count} /> : null}
       <ul className="attention-summary" aria-label="Attention summary">
         {groups.map((group) => (
           <li key={group.key} className="attention-summary__item">

@@ -99,6 +99,12 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   (fix what an agent proposed, then approve). Only the body is edited; the
   frontmatter is kept byte for byte. An edit never overwrites a note that
   changed elsewhere in the meantime.
+- When a note changes, what rests on it (insights deriving from it, knowledge
+  linking to it) is never rewritten automatically: a derived judgment may
+  still hold, weaken, or fail. Home lists those notes as "grounds changed"
+  (from history order, so notes added together never show), and the note
+  page names them right after an edit. Challenging, editing, or marking a
+  note as checked clears it.
 - A source note records what the source says: the editor asks to fix only
   what was copied wrong, and to put disagreement under its limitations.
 

@@ -232,6 +232,17 @@ const STRINGS = {
   memoSaved: { ko: '메모를 저장했어요. 질문하기에서 찾을 수 있어요.', en: 'Memo saved. Ask can find it.' },
   linkSaved: { ko: '링크를 받았어요. 페이지를 정리하는 중이에요.', en: 'Link received. Organizing the page now.' },
   reviewDue: { ko: '검토할 때가 된 노트', en: 'Due for review' },
+  groundsChanged: { ko: '근거가 바뀐 노트', en: 'Grounds changed: check again' },
+  groundsChangedHint: {
+    ko: '이 노트들이 기대고 있는 노트가 나중에 바뀌었어요. 자동으로 고치지 않아요. 열어서 확인하고, 인사이트는 반론 검토를 다시 돌려 보세요.',
+    en: 'A note these rest on changed after them. Nothing is rewritten automatically: open them to check, and challenge insights again.',
+  },
+  changedGround: { ko: '바뀐 근거:', en: 'Changed:' },
+  checked: { ko: '확인함', en: 'Checked' },
+  dependentsTitle: {
+    ko: '이 노트를 근거로 쓰는 노트예요. 바뀐 내용에 맞는지 확인해 보세요:',
+    en: 'These notes rest on this one. Check that they still hold:',
+  },
   reviewDueSince: { ko: '검토일', en: 'Review date' },
   reviewNext: { ko: '다음 검토', en: 'Next review' },
   review3m: { ko: '3개월 뒤', en: 'In 3 months' },

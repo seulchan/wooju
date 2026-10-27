@@ -385,3 +385,15 @@ export function editNote(id: string, body: string, base: string): Promise<Propos
 export function editProposal(id: string, body: string): Promise<ProposalView> {
   return postJson(`/api/proposals/${encodeURIComponent(id)}/edit`, { body })
 }
+
+/** The user checked a note against its changed grounds. */
+export function markChecked(id: string): Promise<{ ok: boolean }> {
+  return postJson('/api/checked', { id })
+}
+
+/** Notes that rest on this one. */
+export function fetchDependents(
+  id: string,
+): Promise<{ items: { id: string; title: string; category: string }[] }> {
+  return apiGet(`/api/dependents/${encodeId(id)}`)
+}

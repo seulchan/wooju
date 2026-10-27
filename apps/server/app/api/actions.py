@@ -684,6 +684,30 @@ async def set_review_date(body: ReviewDate, engine: EngineDep) -> ProposalView:
     return _view(proposal)
 
 
+class Acknowledge(BaseModel):
+    id: str
+
+
+@actions_router.post("/checked", tags=["maintainer"])
+def mark_checked(body: Acknowledge, engine: EngineDep) -> dict[str, bool]:
+    """The user checked a note against its changed grounds; stop showing it."""
+    from ..projections import upstream
+
+    brain = engine.brain
+    if brain is None or engine.index.get(body.id) is None:
+        raise _fail(engine, "review.not_found", 404)
+    upstream.acknowledge(brain, body.id)
+    return {"ok": True}
+
+
+@actions_router.get("/dependents/{record_id:path}", tags=["maintainer"])
+def get_dependents(record_id: str, engine: EngineDep) -> dict[str, Any]:
+    """Notes that rest on this one (its insights and the knowledge that cites it)."""
+    from ..projections import upstream
+
+    return {"items": [upstream.summary(r) for r in upstream.dependents(engine.index, record_id)]}
+
+
 # -------------------------------------------------------- Claude connection
 
 

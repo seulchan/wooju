@@ -161,3 +161,37 @@ def undo(brain: Path, commit_id: str) -> str:
     return commit_paths(
         brain, [p for p, _o, _n in changes], f"Undo: {title}\n\nUndoes: {commit_id}"
     )
+
+
+def head_id(brain: Path) -> str | None:
+    if not is_repo(brain):
+        return None
+    repo = Repo(str(brain))
+    try:
+        return repo.head().decode("ascii")
+    except KeyError:
+        return None
+    finally:
+        repo.close()
+
+
+def last_changes(brain: Path) -> dict[str, int]:
+    """For each path, the position (1 = first commit) of the last commit that changed it.
+
+    Positions only grow as history grows (undo adds a commit), so "changed
+    after" comparisons stay valid; equal positions mean the same commit.
+    """
+    if not is_repo(brain):
+        return {}
+    repo = Repo(str(brain))
+    try:
+        commits = [w.commit for w in repo.get_walker()]  # newest first
+        total = len(commits)
+        out: dict[str, int] = {}
+        for i, commit in enumerate(commits):
+            position = total - i
+            for path, _old, _new in _changed_paths(repo, commit):
+                out.setdefault(path, position)
+        return out
+    finally:
+        repo.close()

@@ -92,3 +92,49 @@ describe('Editing notes', () => {
     )
   })
 })
+
+describe('Grounds changed', () => {
+  it('points to dependent notes after an edit', async () => {
+    mockFetch([
+      { match: /^\/api\/records\//, body: note },
+      { match: /^\/api\/notes\/edit$/, body: { status: 'applied' } },
+      {
+        match: /^\/api\/dependents\//,
+        body: { items: [{ id: 'wiki/questions/rerating', title: '자사주 재평가', category: 'insight' }] },
+      },
+    ])
+    render(<RecordDetailPage id={note.id} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Edit' }), ' 추가')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('link', { name: '자사주 재평가' })).toHaveAttribute(
+      'href',
+      '#/record/wiki/questions/rerating',
+    )
+  })
+
+  it('lists notes to check on Home and marks them checked', async () => {
+    const { AttentionSection } = await import('../components/AttentionSection')
+    const fetchMock = mockFetch([
+      {
+        match: /^\/api\/attention/,
+        body: {
+          total: 1,
+          groups: [
+            {
+              key: 'grounds_changed',
+              label: 'Grounds changed: check again',
+              count: 1,
+              items: [{ id: 'wiki/questions/rerating', path: 'wiki/questions/rerating.md', title: '자사주 재평가', category: 'insight', detail: '자사주 소각 해설' }],
+            },
+          ],
+        },
+      },
+      { match: /^\/api\/checked$/, body: { ok: true } },
+    ])
+    render(<AttentionSection />)
+    expect(await screen.findByText(/자사주 소각 해설/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Checked' }))
+    await waitFor(() => expect(bodies(fetchMock, '/api/checked')).toEqual([{ id: 'wiki/questions/rerating' }]))
+  })
+})

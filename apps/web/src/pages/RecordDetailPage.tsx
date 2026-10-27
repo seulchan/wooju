@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-import { ApiError, challengeInsight, editNote, fetchRecord, NotFoundError } from '../api'
+import { ApiError, challengeInsight, editNote, fetchDependents, fetchRecord, NotFoundError } from '../api'
+import { encodeId } from '../lib/paths'
 import { NoteEditor } from '../components/NoteEditor'
 import { requestRefresh } from '../lib/freshness'
 import type { BrainRecord, Category, ProposalView } from '../types'
@@ -53,6 +54,7 @@ export function RecordDetailPage({ id }: { id: string }) {
 function RecordView({ record }: { record: BrainRecord }) {
   const t = useT()
   const [editing, setEditing] = useState(false)
+  const [dependents, setDependents] = useState<{ id: string; title: string }[]>([])
   const isInsight = record.category === 'insight'
   const back = SECTION_ROUTE[record.category] ?? '/'
   const body = stripLeadingH1(record.content, record.title)
@@ -88,6 +90,18 @@ function RecordView({ record }: { record: BrainRecord }) {
 
       <div className="detail-grid">
         <div className="detail-main">
+          {dependents.length ? (
+            <div className="dependents" role="status">
+              <p>{t('dependentsTitle')}</p>
+              <ul>
+                {dependents.map((d) => (
+                  <li key={d.id}>
+                    <Link to={`/record/${encodeId(d.id)}`}>{d.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {editing ? (
             <NoteEditor
               initial={record.content}
@@ -97,6 +111,8 @@ function RecordView({ record }: { record: BrainRecord }) {
                 await editNote(record.id, body, record.content)
                 setEditing(false)
                 requestRefresh()
+                // Point at the notes that rest on this one; they are not rewritten.
+                fetchDependents(record.id).then((r) => setDependents(r.items), () => setDependents([]))
               }}
             />
           ) : null}

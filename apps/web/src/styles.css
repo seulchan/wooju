@@ -1570,3 +1570,14 @@ code {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+.dependents {
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--panel);
+}
+.dependents ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}

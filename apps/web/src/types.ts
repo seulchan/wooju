@@ -210,6 +210,7 @@ export interface GraphResponse {
  */
 export type AttentionGroupKey =
   | 'review_due'
+  | 'grounds_changed'
   | 'rule_errors'
   | 'provisional'
   | 'candidate'

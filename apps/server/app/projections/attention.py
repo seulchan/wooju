@@ -45,6 +45,7 @@ from ..api.models import AttentionGroup, AttentionGroupKey, AttentionItem, Atten
 # Canonical display order of attention categories.
 _GROUP_ORDER: tuple[AttentionGroupKey, ...] = (
     "review_due",
+    "grounds_changed",
     "rule_errors",
     "provisional",
     "candidate",
@@ -58,6 +59,7 @@ _GROUP_ORDER: tuple[AttentionGroupKey, ...] = (
 # (state is never color-only).
 _LABELS: dict[AttentionGroupKey, str] = {
     "review_due": "Due for review",
+    "grounds_changed": "Grounds changed: check again",
     "rule_errors": "Notes that break the Brain's rules",
     "provisional": "Provisional insights",
     "candidate": "Candidate insights",
@@ -142,6 +144,10 @@ def _collect(index: BrainIndex, today: date, brain: Path | None) -> dict[str, li
     groups: dict[str, list[AttentionItem]] = {key: [] for key in _GROUP_ORDER}
 
     if brain is not None and brain.is_dir():
+        from .upstream import changed_grounds
+
+        for record, ground in changed_grounds(index, brain):
+            groups["grounds_changed"].append(_item_from(record, detail=ground.title))
         by_path = {r.path: r for r in index.all_records()}
         for path, message in _rule_errors(brain, index.indexed_at):
             record = by_path.get(path)
@@ -204,7 +210,12 @@ def compute_attention(
         total += len(items)
         # Unresolved groups can grow large; trim the returned examples while the
         # count still reports the true total found (small + actionable).
-        is_unresolved = key in ("unresolved_derived_from", "unresolved_links", "rule_errors")
+        is_unresolved = key in (
+            "unresolved_derived_from",
+            "unresolved_links",
+            "rule_errors",
+            "grounds_changed",
+        )
         shown = items[:_MAX_UNRESOLVED_ITEMS] if is_unresolved else items
         response_groups.append(
             AttentionGroup(

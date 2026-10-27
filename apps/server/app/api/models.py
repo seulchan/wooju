@@ -226,6 +226,7 @@ class UiStateUpdate(BaseModel):
 # conflict (see app.projections.attention).
 AttentionGroupKey = Literal[
     "review_due",
+    "grounds_changed",
     "rule_errors",
     "provisional",
     "candidate",
