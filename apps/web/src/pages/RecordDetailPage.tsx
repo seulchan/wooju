@@ -17,6 +17,7 @@ import {
 import { encodeId } from '../lib/paths'
 import { NoteEditor } from '../components/NoteEditor'
 import { ThinkPanel } from '../components/ThinkPanel'
+import { TopicMembers } from '../components/Topics'
 import { requestRefresh } from '../lib/freshness'
 import type { BrainRecord, Category, ProposalView, RelatedNote } from '../types'
 import { titleCase } from '../lib/format'
@@ -183,6 +184,9 @@ function RecordView({ record }: { record: BrainRecord }) {
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>
           )}
+          {!editing && record.path.startsWith('wiki/overviews/') && !record.retired ? (
+            <TopicMembers id={record.id} />
+          ) : null}
           {!editing && !record.retired && record.category !== 'other' ? (
             <section className="think-box" aria-labelledby="think-box-heading">
               <h2 id="think-box-heading" className="section-title">

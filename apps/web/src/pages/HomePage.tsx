@@ -9,6 +9,7 @@ import { AttentionSection } from '../components/AttentionSection'
 import { HomeChanges } from '../components/HomeChanges'
 import { DropZone } from '../components/DropZone'
 import { RecentMemos } from '../components/RecentMemos'
+import { TopicRow, TopicSuggestions } from '../components/Topics'
 import { tr, useT } from '../lib/i18n'
 import { requestRefresh } from '../lib/freshness'
 
@@ -128,6 +129,7 @@ export function HomePage() {
         </h2>
         <AttentionSection />
       </section>
+      <TopicSuggestions />
 
       <section className="section section-first" aria-labelledby="know-heading">
         <h2 id="know-heading" className="section-title">
@@ -141,6 +143,7 @@ export function HomePage() {
             </Link>
           ))}
         </div>
+        <TopicRow />
         {mainAreas.length > 0 ? (
           <p className="main-areas">
             <span className="main-areas__label">{tr('Main areas')}</span>

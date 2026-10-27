@@ -11,6 +11,9 @@ until 1.0, a minor version may change how things work.
 - Markdown links between notes count as connections (they were missing from the map).
 - Notes record which AI agent and model wrote to them, shown under Details.
 - Retiring a note can name the note that replaces it.
+- Topics: overview notes gather the notes about one subject. The topics agent
+  files new notes into them, suggests new topics when notes cluster, and a tap
+  creates one with an AI-written name and summary.
 
 - Weekly summary on Telegram: Sunday evening, what is waiting on Home.
 - Keyboard shortcuts: ⌘K to search, ⌘N for a new note.

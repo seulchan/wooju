@@ -35,3 +35,9 @@ def test_compose_lists_a_few_titles_and_says_nothing_when_quiet():
     assert "• 다시 볼 노트 5개: A, B, C 외 2개" in text
     assert "• 다른 노트와 어긋나는 자료 1개: X" in text
     assert "Provisional" not in text and "잠정" not in text
+
+
+def test_possible_topics_are_mentioned():
+    quiet = AttentionResponse(groups=[], total=0)
+    text = digest.compose(quiet, "en", topic_suggestions=2)
+    assert "• 2 groups of notes could become topics" in text

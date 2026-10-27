@@ -166,6 +166,47 @@ export function findNotes(q: string, signal?: AbortSignal): Promise<SearchRespon
   return apiGet<SearchResponse>(`/api/find${qs({ q })}`, signal)
 }
 
+export interface TopicSummary {
+  id: string
+  title: string
+  count: number
+}
+
+export interface TopicSuggestion {
+  key: string
+  label: string
+  members: { id: string; title: string; category: string }[]
+}
+
+export interface TopicView {
+  id: string
+  title: string
+  members: { id: string; title: string; category: string; status?: string | null; retired?: boolean; by_agent: boolean }[]
+  candidates: { id: string; title: string; category: string; score: number }[]
+}
+
+export function fetchTopics(signal?: AbortSignal): Promise<{ items: TopicSummary[] }> {
+  return apiGet('/api/topics', signal)
+}
+export function fetchTopicSuggestions(signal?: AbortSignal): Promise<{ items: TopicSuggestion[] }> {
+  return apiGet('/api/topics/suggestions', signal)
+}
+export function fetchTopicView(id: string, signal?: AbortSignal): Promise<TopicView> {
+  return apiGet(`/api/topics/view/${encodeId(id)}`, signal)
+}
+export function createTopic(members: string[]): Promise<ProposalView> {
+  return postJson('/api/topics/create', { members })
+}
+export function dismissTopic(members: string[]): Promise<{ ok: boolean }> {
+  return postJson('/api/topics/dismiss', { members })
+}
+export function removeFromTopic(topic: string, member: string): Promise<ProposalView> {
+  return postJson('/api/topics/remove', { topic, member })
+}
+export function addToTopic(topic: string, member: string): Promise<{ added: boolean }> {
+  return postJson('/api/topics/add', { topic, member })
+}
+
 /** What a note links to, what links to it, and notes close in meaning. */
 export function fetchRelated(id: string, signal?: AbortSignal): Promise<RelatedNotes> {
   return apiGet<RelatedNotes>(`/api/related/${encodeId(id)}`, signal)

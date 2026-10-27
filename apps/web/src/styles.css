@@ -1825,3 +1825,22 @@ code {
   font-size: 0.85rem;
   padding: 0 0.25rem;
 }
+
+.topic-members {
+  margin-top: 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.topic-members > .section-title {
+  margin-top: 0;
+}
+.topic-group + .topic-group {
+  margin-top: 0.75rem;
+}
+.topic-card + .topic-card {
+  margin-top: 0.75rem;
+}
+.topic-row .main-areas__area {
+  text-decoration: none;
+}

@@ -313,6 +313,8 @@ export interface Job {
   title?: string | null
   /** Existing notes that say nearly the same thing (a question, never a merge). */
   similar?: { id: string; title: string }[]
+  /** Topics the note was filed under. */
+  topics?: string[]
 }
 
 export interface ProposalView {

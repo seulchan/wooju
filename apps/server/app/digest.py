@@ -37,7 +37,7 @@ def is_due(now: datetime, last_sent: datetime | None) -> bool:
     return last_sent < last_send_time(now)
 
 
-def compose(attention: AttentionResponse, language: str) -> str | None:
+def compose(attention: AttentionResponse, language: str, topic_suggestions: int = 0) -> str | None:
     """The message text, or None when nothing is waiting."""
     by_key = {g.key: g for g in attention.groups}
     lines: list[str] = []
@@ -50,6 +50,8 @@ def compose(attention: AttentionResponse, language: str) -> str | None:
         if more > 0:
             titles += render("digest.more", language, n=more)
         lines.append(render(f"digest.{key}", language, n=group.count, titles=titles))
+    if topic_suggestions:
+        lines.append(render("digest.topics", language, n=topic_suggestions))
     if not lines:
         return None
     head = render("digest.title", language)

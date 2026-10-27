@@ -178,6 +178,26 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## Topics
+
+- A topic is an overview note (`wiki/overviews/`), the template's "broad map
+  of a topic". Its body is the user's and is never rewritten by an agent.
+- The topics agent files notes automatically: a note joins a topic it is
+  clearly close to (vectors only, at most two topics, thresholds from
+  evals/topic_links.py against the links overviews already have). It only
+  adds links in the topic's own last section ("Notes on this topic") and
+  records them in `topic_notes`. A link the user removes (button or editor)
+  moves to `topic_excluded` and is never added again. It runs after a file
+  is organized and after each indexing pass.
+- New topics are suggested, not made: four or more close notes outside every
+  topic appear on Home and in the weekly summary; one tap makes the topic and
+  the AI writes its name and a sourced summary; "Not now" is remembered.
+  The reason (from the book and from Mem/Recall user reports): naming a new
+  subject is a judgment about the future, and duplicate or vague topics
+  spread into the map, search and Ask without anyone noticing.
+- topics.json keeps counts (auto links, removals, acceptances, dismissals);
+  many removals or dismissals mean the thresholds are too loose.
+
 ## What the AI wrote, and what replaced what
 
 - Every note an AI agent writes to carries `made_by` in its frontmatter: a

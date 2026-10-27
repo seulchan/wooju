@@ -77,7 +77,11 @@ class TelegramBotMixin:
         if not digest.is_due(now, last_sent):
             return False
         attention = compute_attention(self.index, brain=self.brain, today=now.date())
-        text = digest.compose(attention, self.language())
+        try:
+            suggestions = len(await self.topic_suggestions())
+        except Exception:  # noqa: BLE001 — the summary goes out without it
+            suggestions = 0
+        text = digest.compose(attention, self.language(), suggestions)
         if text:
             await asyncio.to_thread(bot.send, chat_id, text)
         telegram.update_state(digest_sent_at=now.isoformat())

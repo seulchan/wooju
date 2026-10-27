@@ -164,6 +164,11 @@ export function DropZone() {
               <span className="job-file">{job.file.replace(/^inbox\//, '')}</span>
               <span className="job-state">{label[job.state]}</span>
               {job.message ? <span className="job-message">{job.message}</span> : null}
+              {job.topics?.length ? (
+                <span className="job-message">
+                  {t('jobTopics')} {job.topics.join(', ')}
+                </span>
+              ) : null}
               {job.similar?.length ? (
                 <span className="job-message">
                   {t('jobSimilar')}{' '}
