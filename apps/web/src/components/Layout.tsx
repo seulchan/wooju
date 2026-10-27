@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 
 import { fetchHealth } from '../api'
 import type { HealthResponse } from '../types'
@@ -28,6 +28,8 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
   ]
   const health = useAsync((signal) => fetchHealth(signal), [])
   const [query, setQuery] = useState('')
+  const searchBox = useRef<HTMLInputElement>(null)
+  useShortcuts(searchBox)
 
   function onSearch(e: FormEvent) {
     e.preventDefault()
@@ -58,8 +60,10 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
           </nav>
           <form className="search" role="search" onSubmit={onSearch}>
             <input
+              ref={searchBox}
               type="search"
               name="q"
+              title="⌘K"
               className="search-input"
               placeholder={tr('Search the Brain…')}
               value={query}
@@ -70,7 +74,7 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
               {tr('Search')}
             </button>
           </form>
-          <Link to="/new" className="btn btn-small new-note-btn">
+          <Link to="/new" className="btn btn-small new-note-btn" title="⌘N">
             {t('newNote')}
           </Link>
           <HealthChip health={health} />
@@ -85,6 +89,35 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
       </footer>
     </div>
   )
+}
+
+/**
+ * ⌘K (Ctrl+K) jumps to search; ⌘N (Ctrl+N) starts a new note. ⌘N is ignored
+ * while typing in a text box, so a half-written note is never left behind.
+ */
+export function useShortcuts(searchBox: { current: HTMLInputElement | null }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return
+      const key = e.key.toLowerCase()
+      if (key === 'k') {
+        e.preventDefault()
+        searchBox.current?.focus()
+        searchBox.current?.select()
+      } else if (key === 'n') {
+        const el = document.activeElement
+        const typing =
+          el instanceof HTMLTextAreaElement ||
+          (el instanceof HTMLInputElement && el !== searchBox.current) ||
+          (el instanceof HTMLElement && el.isContentEditable)
+        if (typing) return
+        e.preventDefault()
+        navigate('/new')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [searchBox])
 }
 
 function HealthChip({ health }: { health: HealthState }) {
