@@ -105,8 +105,8 @@ const STRINGS = {
   },
   askButton: { ko: '질문하기', en: 'Ask' },
   askThinking: {
-    ko: '노트를 찾아 읽는 중… 이 Mac의 모델은 1분쯤 걸릴 수 있어요.',
-    en: 'Finding and reading your notes… a model on this Mac can take about a minute.',
+    ko: '노트를 찾아 읽는 중… 이 Mac의 모델은 1분쯤 걸려요. 정리 중인 자료가 있으면 그 단계가 끝난 뒤에 답해요.',
+    en: 'Finding and reading your notes… a model on this Mac takes about a minute, and waits for any file being organized to finish its step.',
   },
   askNothing: {
     ko: 'Brain에서 이 질문에 답할 자료를 찾지 못했어요. 관련 자료를 넣으면 답할 수 있어요.',

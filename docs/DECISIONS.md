@@ -83,6 +83,10 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   together with the 9B model, ran the Mac's GPU out of memory. Embeddings now
   use a 2K context, meaning-search indexing pauses while a file is organized,
   and a local model reads at most ~6K tokens of a long file (the note says so).
+- All AI work goes through one lane, one task at a time: organizing a file,
+  each small batch of meaning-search indexing, answering a question, and
+  challenging an insight. Files are organized in arrival order; a question
+  waits only for the current step. Saving a memo needs no AI and is instant.
 - An out-of-memory reply from Ollama is retried once, then the file waits and
   is retried automatically (three times) instead of failing; failed files can
   be retried or removed. A link already saved is never saved twice, and a

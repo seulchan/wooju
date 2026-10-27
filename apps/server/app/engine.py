@@ -137,6 +137,11 @@ class Engine:
         self.jobs: dict[str, Job] = {}
         self.queue: asyncio.Queue[Job] = asyncio.Queue()
         self.lock = asyncio.Lock()
+        # One AI task at a time (organizing a file, indexing a batch, answering,
+        # challenging). Two models at once can exhaust a 16 GB Mac's memory,
+        # and one at a time is also faster than two competing for the GPU.
+        # Saving a memo or a link file needs no AI and never waits here.
+        self.ai_lane = asyncio.Lock()
         self._worker: asyncio.Task[None] | None = None
         self._watcher: asyncio.Task[None] | None = None
         self._retry: asyncio.Task[None] | None = None
@@ -623,14 +628,15 @@ class Engine:
             return
         try:
             provider = self.provider()
-            proposal = await asyncio.to_thread(
-                ingest_file,
-                brain,
-                job.file,
-                provider,
-                language=self.content_language(),
-                ui_language=self.language(),
-            )
+            async with self.ai_lane:
+                proposal = await asyncio.to_thread(
+                    ingest_file,
+                    brain,
+                    job.file,
+                    provider,
+                    language=self.content_language(),
+                    ui_language=self.language(),
+                )
         except LLMError as exc:
             if exc.retryable:
                 job.attempts += 1
@@ -702,11 +708,14 @@ class Engine:
         async def run() -> None:
             cache = self.vector_cache()
             try:
-                for start in range(0, len(missing), 64):
-                    chunk = missing[start : start + 64]
-                    vectors = await asyncio.to_thread(
-                        embedder.documents, [text for _, text in chunk]
-                    )
+                for start in range(0, len(missing), 32):
+                    chunk = missing[start : start + 32]
+                    # Small batches, each taking its turn, so a file or a
+                    # question never waits long behind indexing.
+                    async with self.ai_lane:
+                        vectors = await asyncio.to_thread(
+                            embedder.documents, [text for _, text in chunk]
+                        )
                     await asyncio.to_thread(
                         cache.put_many, [(k, v) for (k, _), v in zip(chunk, vectors, strict=True)]
                     )
@@ -722,7 +731,10 @@ class Engine:
         self._embedding = asyncio.create_task(run(), name="wooju-embed")
 
     async def query_vector(self, text: str) -> Any:
-        """The query's embedding, or None (keyword search) if meaning search is off."""
+        """The query's embedding, or None (keyword search) if meaning search is off.
+
+        Call it while holding ``ai_lane``.
+        """
         if self.search_state.get("state") not in ("ready", "indexing"):
             return None
         try:
@@ -735,16 +747,17 @@ class Engine:
         self._require_brain()
         provider = self.provider()
         retriever = await self.retriever()
-        query_vec = await self.query_vector(question)
-        return await asyncio.to_thread(
-            ask,
-            self.index,
-            question,
-            provider,
-            language=self.language(),
-            retriever=retriever,
-            query_vec=query_vec,
-        )
+        async with self.ai_lane:  # waits for the current step of other AI work
+            query_vec = await self.query_vector(question)
+            return await asyncio.to_thread(
+                ask,
+                self.index,
+                question,
+                provider,
+                language=self.language(),
+                retriever=retriever,
+                query_vec=query_vec,
+            )
 
     async def challenge(self, insight_id: str) -> Proposal:
         """Propose a Challenge section for an insight; the user approves it in Review."""
@@ -752,18 +765,19 @@ class Engine:
         provider = self.provider()
         retriever = await self.retriever()
         record = self.index.get(insight_id)
-        query_vec = await self.query_vector(challenge_query(record)) if record else None
-        proposal = await asyncio.to_thread(
-            challenge_insight,
-            brain,
-            self.index,
-            insight_id,
-            provider,
-            language=self.content_language(),
-            ui_language=self.language(),
-            retriever=retriever,
-            query_vec=query_vec,
-        )
+        async with self.ai_lane:
+            query_vec = await self.query_vector(challenge_query(record)) if record else None
+            proposal = await asyncio.to_thread(
+                challenge_insight,
+                brain,
+                self.index,
+                insight_id,
+                provider,
+                language=self.content_language(),
+                ui_language=self.language(),
+                retriever=retriever,
+                query_vec=query_vec,
+            )
         return self.store.save(proposal)
 
     # ----------------------------------------------------------- maintainer
