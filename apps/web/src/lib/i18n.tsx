@@ -407,6 +407,7 @@ const STRINGS = {
   aiDidChallenge: { ko: '반론 검토', en: 'Challenge' },
   aiDidConflicts: { ko: '충돌 확인', en: 'Conflict check' },
   aiDidEdited: { ko: '수정 제안', en: 'Suggested edit' },
+  aiDidTopicLink: { ko: '이 주제에 노트 연결', en: 'Filed notes here' },
   retiredBanner: { ko: '폐기된 노트예요', en: 'This note is retired' },
   restore: { ko: '되살리기', en: 'Restore' },
   retiredGround: { ko: '폐기된 근거:', en: 'Retired:' },

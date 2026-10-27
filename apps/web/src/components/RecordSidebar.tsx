@@ -130,11 +130,15 @@ function Derivation({ derived }: { derived: ResolvedRef[] }) {
   )
 }
 
-const AI_DID: Record<string, 'aiDidCreated' | 'aiDidChallenge' | 'aiDidConflicts' | 'aiDidEdited'> = {
+const AI_DID: Record<
+  string,
+  'aiDidCreated' | 'aiDidChallenge' | 'aiDidConflicts' | 'aiDidEdited' | 'aiDidTopicLink'
+> = {
   created: 'aiDidCreated',
   challenge: 'aiDidChallenge',
   conflicts: 'aiDidConflicts',
   edited: 'aiDidEdited',
+  'topic link': 'aiDidTopicLink',
 }
 
 /** What an AI wrote into this note: which agent, which model, when. Absent on the user's own notes. */
