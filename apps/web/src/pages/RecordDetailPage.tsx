@@ -5,6 +5,7 @@ import {
   challengeInsight,
   editNote,
   fetchDependents,
+  saveTakeaway,
   fetchRecord,
   NotFoundError,
   restoreNote,
@@ -86,12 +87,20 @@ function RecordView({ record }: { record: BrainRecord }) {
           </button>
         ) : null}
         {!editing && !record.retired && record.category !== 'other' ? (
+          <Link className="btn btn-small" to={`/new?kind=thought&ground=${encodeURIComponent(record.id)}`}>
+            {t('writeThought')}
+          </Link>
+        ) : null}
+        {!editing && !record.retired && record.category !== 'other' ? (
           <button className="btn btn-small btn-quiet" onClick={() => setRetiring(true)}>
             {t('retire')}
           </button>
         ) : null}
       </div>
       {record.retired ? <RetiredBanner record={record} /> : null}
+      {!editing && record.category === 'source' && !record.retired && !/^##\s+(내 생각|My Takeaway)\s*$/m.test(record.content) ? (
+        <TakeawayInline id={record.id} />
+      ) : null}
       {retiring ? (
         <RetireForm
           onCancel={() => setRetiring(false)}
@@ -297,6 +306,42 @@ function RetireForm({
           {t('cancel')}
         </button>
       </div>
+    </form>
+  )
+}
+
+/** A source without the user's own line yet: a quiet place to add one. */
+function TakeawayInline({ id }: { id: string }) {
+  const t = useT()
+  const [text, setText] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <form
+      className="takeaway takeaway-inline"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!text.trim()) return
+        saveTakeaway(id, text).then(
+          () => requestRefresh(),
+          (err: unknown) => setError(err instanceof ApiError ? err.message : String(err)),
+        )
+      }}
+    >
+      <input
+        className="text-input"
+        aria-label={t('takeawayLabel')}
+        placeholder={t('takeawayLabel')}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <button className="btn btn-small" type="submit" disabled={!text.trim()}>
+        {t('save')}
+      </button>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </form>
   )
 }

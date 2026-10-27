@@ -94,6 +94,23 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   be retried or removed. A link already saved is never saved twice, and a
   link already waiting is reused rather than fetched again.
 
+## Thinking (writing in your own words)
+
+- Principle: the AI does not write the user's thinking. It may ask, check,
+  connect, and bring things back; the user writes. Research behind this:
+  fully AI-written notes lowered understanding versus notes the learner had
+  to integrate (Chen et al. 2025), and self-explanation, elaborative
+  questions, retrieval, and spacing outperform summaries and rereading.
+- Step 1: "New note" writes concepts, overviews, questions, how-tos, mental
+  models, and thoughts. Wooju supplies only the folder, frontmatter, and
+  headings in the Brain's language. A thought is an insight (candidate) and
+  must name at least one note it rests on.
+- Step 1: after a source is saved, an optional one-line takeaway in the
+  user's words goes into its "내 생각 / My Takeaway" section (searchable).
+- Next: recall before review (review dates), the AI asking questions on a
+  note, growing memos into notes, typed connections. Testers check steps 1–2
+  before the AI-assisted steps are built.
+
 ## Conflict check
 
 - When a source is organized, it is compared once with the most related

@@ -61,7 +61,7 @@ from wooju_agents.llm import (
 )
 from wooju_agents.text import ACCEPTED_SUFFIXES, resolve_language
 
-from . import icloud, telegram
+from . import icloud, notes, telegram
 from . import settings as app_settings
 from .config import resolve_brain_path, watch_enabled
 from .watcher import watch_and_refresh
@@ -90,6 +90,7 @@ class Job:
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     attempts: int = 0  # tries that ended because the AI wasn't available
     conflicts: int = 0  # disagreements with existing notes, written into the note
+    note_id: str | None = None  # the source note it became (for the user's one line)
     title: str | None = None  # what it was saved as (or the existing note, if a duplicate)
 
     def to_dict(self) -> dict[str, Any]:
@@ -688,6 +689,7 @@ class Engine:
         if note is not None and note.content:
             count, note.content = await self.check_conflicts(note.path, note.content, provider)
             job.conflicts = count
+            job.note_id = note.path.removesuffix(".md")
         self.store.save(proposal)
         job.proposal_id = proposal.id
         saved_title = split_frontmatter(note.content or "")[0].get("title") if note else None
@@ -931,6 +933,53 @@ class Engine:
         )
         self.store.save(proposal)
         return await self.apply(proposal)
+
+    async def create_note(
+        self,
+        kind: str,
+        title: str,
+        body: str,
+        grounds: list[str],
+        insight_kind: str = "hypothesis",
+    ) -> tuple[str, Proposal]:
+        """Save a note the user wrote. A thought must rest on at least one note."""
+        brain = self._require_brain()
+        if not title.strip():
+            raise SetupError("note.title")
+        records = [r for r in (self.index.get(g) for g in grounds) if r is not None]
+        if kind == "thought" and not records:
+            raise SetupError("note.grounds")
+        path = notes.note_path(brain, kind, title)
+        content = notes.build(
+            path=path,
+            kind=kind,
+            title=title,
+            body=body,
+            grounds=records,
+            insight_kind=insight_kind,
+        )
+        ko = self.language() == "ko"
+        proposal = await self._apply_own(
+            path, content, f"새 노트: {title.strip()}" if ko else f"New note: {title.strip()}"
+        )
+        return path.removesuffix(".md"), proposal
+
+    async def set_takeaway(self, record_id: str, text: str) -> Proposal:
+        """The user's one line about a note, in their own words."""
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        if not text.strip():
+            raise SetupError("note.empty")
+        current = (brain / record.path).read_text(encoding="utf-8")
+        updated = notes.set_takeaway(current, text, self.content_language())
+        ko = self.language() == "ko"
+        return await self._apply_own(
+            record.path,
+            updated,
+            f"내 생각: {record.title}" if ko else f"My takeaway: {record.title}",
+        )
 
     def edit_proposal(self, proposal_id: str, body: str) -> Proposal:
         """Fix what an agent proposed before approving it (its main note's body)."""

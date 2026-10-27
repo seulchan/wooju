@@ -70,6 +70,9 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
               {tr('Search')}
             </button>
           </form>
+          <Link to="/new" className="btn btn-small new-note-btn">
+            {t('newNote')}
+          </Link>
           <HealthChip health={health} />
         </div>
         {banner ? <div className={`banner banner-${banner.tone}`}>{banner.text}</div> : null}

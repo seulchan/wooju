@@ -523,6 +523,57 @@ async def edit_note(body: EditNote, engine: EngineDep) -> ProposalView:
     return _view(proposal)
 
 
+class NewNote(BaseModel):
+    kind: Literal["concept", "overview", "question", "how-to", "mental-model", "thought"]
+    title: str
+    body: str = ""
+    grounds: list[str] = []
+    insight_kind: Literal["hypothesis", "connection", "pattern", "implication", "tension"] = (
+        "hypothesis"
+    )
+
+
+@actions_router.get("/notes/skeleton", tags=["proposals"])
+def note_skeleton(kind: str, engine: EngineDep) -> dict[str, str]:
+    """The headings a new note of this kind starts with, in the Brain's language."""
+    from .. import notes
+
+    if kind not in notes.FOLDERS:
+        raise _fail(engine, "review.not_found", 404)
+    return {"body": notes.skeleton(kind, engine.content_language())}
+
+
+@actions_router.post("/notes/new", tags=["proposals"])
+async def new_note(body: NewNote, engine: EngineDep) -> dict[str, Any]:
+    """Save a note the user wrote (checked, recorded, undoable)."""
+    try:
+        note_id, proposal = await engine.create_note(
+            body.kind, body.title, body.body, body.grounds, body.insight_kind
+        )
+    except SetupError as exc:
+        raise _fail_from(engine, exc) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return {"id": note_id}
+
+
+class Takeaway(BaseModel):
+    id: str
+    text: str
+
+
+@actions_router.post("/notes/takeaway", tags=["proposals"])
+async def takeaway(body: Takeaway, engine: EngineDep) -> dict[str, bool]:
+    """Save the user's one line about a note, in their own words."""
+    try:
+        proposal = await engine.set_takeaway(body.id, body.text)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return {"ok": True}
+
+
 class RetireNote(BaseModel):
     id: str
     reason: str

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 
-import { ApiError, captureText, fetchJobs, removeJob, retryJob, uploadFiles } from '../api'
+import { ApiError, captureText, fetchJobs, removeJob, retryJob, saveTakeaway, uploadFiles } from '../api'
 import { requestRefresh } from '../lib/freshness'
 import { useT } from '../lib/i18n'
 import type { Job } from '../types'
@@ -154,6 +154,7 @@ export function DropZone() {
           {n}
         </p>
       ))}
+      <TakeawayBox jobs={jobs} />
       {jobs.length ? (
         <ul className="job-list">
           {jobs.slice(0, 8).map((job) => (
@@ -182,5 +183,66 @@ export function DropZone() {
         </ul>
       ) : null}
     </section>
+  )
+}
+
+/** After a source is saved: one sentence in the user's own words (optional). */
+function TakeawayBox({ jobs }: { jobs: Job[] }) {
+  const t = useT()
+  const [done, setDone] = useState<Set<string>>(new Set())
+  const [text, setText] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const job = jobs.find((j) => j.state === 'done' && j.note_id && !done.has(j.id))
+  if (saved && !job) {
+    return (
+      <p className="form-ok" role="status">
+        {t('takeawaySaved')}
+      </p>
+    )
+  }
+  if (!job || !job.note_id) return null
+  const noteId = job.note_id
+  const close = () => {
+    setDone((d) => new Set(d).add(job.id))
+    setText('')
+  }
+  return (
+    <form
+      className="takeaway"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!text.trim()) return
+        saveTakeaway(noteId, text).then(
+          () => {
+            setSaved(true)
+            close()
+          },
+          (err: unknown) => setError(err instanceof ApiError ? err.message : String(err)),
+        )
+      }}
+    >
+      <p>{t('takeawayPrompt')}</p>
+      <p className="hint">{job.title ?? job.file}</p>
+      <input
+        className="text-input"
+        aria-label={t('takeawayLabel')}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="card-actions">
+        <button className="btn btn-primary" type="submit" disabled={!text.trim()}>
+          {t('save')}
+        </button>
+        <button className="btn btn-quiet" type="button" onClick={close}>
+          {t('skip')}
+        </button>
+      </div>
+    </form>
   )
 }

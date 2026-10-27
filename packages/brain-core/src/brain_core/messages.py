@@ -138,6 +138,11 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "This note changed elsewhere in the meantime, so nothing was overwritten. "
         "Reload it and edit again.",
     ),
+    "note.title": ("제목을 적어 주세요.", "Give the note a title."),
+    "note.grounds": (
+        "생각의 근거가 된 노트를 하나 이상 골라 주세요.",
+        "Pick at least one note this thought rests on.",
+    ),
     "note.empty": (
         "본문이 비어 있으면 저장할 수 없어요.",
         "A note can't be saved with an empty body.",

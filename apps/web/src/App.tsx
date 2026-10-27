@@ -15,6 +15,7 @@ import { ReviewPage } from './pages/ReviewPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AskPage } from './pages/AskPage'
+import { NewNotePage } from './pages/NewNotePage'
 
 export default function App() {
   const route = useRoute()
@@ -54,6 +55,9 @@ export default function App() {
       break
     case 'ask':
       page = <AskPage initial={route.q} />
+      break
+    case 'newNote':
+      page = <NewNotePage kind={route.kind} ground={route.ground} />
       break
     case 'knowledgeDetail':
     case 'insightDetail':

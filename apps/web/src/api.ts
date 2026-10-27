@@ -416,3 +416,26 @@ export function retireNote(id: string, reason: string): Promise<ProposalView> {
 export function restoreNote(id: string): Promise<ProposalView> {
   return postJson('/api/notes/restore', { id })
 }
+
+// ------------------------------------------------------------- writing
+
+export type NoteKind = 'concept' | 'overview' | 'question' | 'how-to' | 'mental-model' | 'thought'
+
+export function fetchSkeleton(kind: NoteKind): Promise<{ body: string }> {
+  return apiGet(`/api/notes/skeleton${qs({ kind })}`)
+}
+
+export function createNote(note: {
+  kind: NoteKind
+  title: string
+  body: string
+  grounds?: string[]
+  insight_kind?: string
+}): Promise<{ id: string }> {
+  return postJson('/api/notes/new', note)
+}
+
+/** The user's one line about a note, in their own words. */
+export function saveTakeaway(id: string, text: string): Promise<{ ok: boolean }> {
+  return postJson('/api/notes/takeaway', { id, text })
+}

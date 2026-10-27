@@ -14,6 +14,7 @@ import { decodeId } from './paths'
 export type Route =
   | { name: 'home' }
   | { name: 'ask'; q: string }
+  | { name: 'newNote'; kind: string; ground: string }
   | { name: 'knowledge' }
   | { name: 'knowledgeDetail'; id: string }
   | { name: 'insights' }
@@ -59,6 +60,10 @@ export function parseHash(hash: string): Route {
       return { name: 'search', q }
     case 'ask':
       return { name: 'ask', q }
+    case 'new': {
+      const params = new URLSearchParams(queryPart)
+      return { name: 'newNote', kind: params.get('kind') ?? '', ground: params.get('ground') ?? '' }
+    }
     case 'review':
       return { name: 'review' }
     case 'history':
@@ -74,6 +79,7 @@ export function parseHash(hash: string): Route {
 export function routeKey(route: Route): string {
   if (route.name === 'search') return `search::${route.q}`
   if (route.name === 'ask') return 'ask'
+  if (route.name === 'newNote') return `new::${route.kind}::${route.ground}`
   if ('id' in route) return `${route.name}::${route.id}`
   return route.name
 }

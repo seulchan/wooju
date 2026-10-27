@@ -276,6 +276,10 @@ export interface Job {
   message: string | null
   proposal_id: string | null
   created_at: string
+  /** The source note it became, once saved. */
+  note_id?: string | null
+  conflicts?: number
+  title?: string | null
 }
 
 export interface ProposalView {
