@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from . import __version__
 from .api.actions import actions_router
 from .api.routes import api_router
 from .engine import Engine
@@ -46,7 +47,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wooju API",
     description="Local-first API for the Wooju app. Agents propose; the user approves.",
-    version="0.3.0",
+    version=__version__,
     lifespan=lifespan,
 )
 

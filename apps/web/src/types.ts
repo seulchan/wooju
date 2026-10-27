@@ -271,6 +271,8 @@ export interface SetupStatus {
   language_setting?: LanguageChoice
   /** Sample notes still in the Brain; 0 when none. */
   sample_notes?: number
+  /** The app's version, e.g. "0.4.0". */
+  version?: string
   ai: AiStatus
 }
 

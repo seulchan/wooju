@@ -1,6 +1,6 @@
 [project]
 name = "wooju-agents"
-version = "0.1.0"
+version = "0.4.0"
 description = "Wooju agents: AI provider layer and the Ingest agent. Agents only create proposals."
 requires-python = ">=3.11"
 license = "Apache-2.0"

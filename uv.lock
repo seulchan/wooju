@@ -72,7 +72,7 @@ wheels = [
 
 [[package]]
 name = "brain-core"
-version = "0.1.0"
+version = "0.4.0"
 source = { editable = "packages/brain-core" }
 dependencies = [
     { name = "dulwich" },
@@ -1571,7 +1571,7 @@ wheels = [
 
 [[package]]
 name = "wooju-agents"
-version = "0.1.0"
+version = "0.4.0"
 source = { editable = "agents" }
 dependencies = [
     { name = "brain-core" },
@@ -1588,7 +1588,7 @@ requires-dist = [
 
 [[package]]
 name = "wooju-server"
-version = "0.1.0"
+version = "0.4.0"
 source = { editable = "apps/server" }
 dependencies = [
     { name = "brain-core" },

@@ -37,7 +37,7 @@ from wooju_agents.llm import (
     recommended_ollama_model,
 )
 
-from .. import claude_link
+from .. import __version__, claude_link
 from .. import settings as app_settings
 from ..engine import Engine, SetupError
 
@@ -79,6 +79,7 @@ class SetupStatus(BaseModel):
     language: str  # resolved: "ko" or "en"
     language_setting: str = "auto"  # what the user chose: auto / ko / en
     sample_notes: int = 0  # sample notes still in the Brain (0 = none)
+    version: str = __version__
     ai: AiStatus
 
 
