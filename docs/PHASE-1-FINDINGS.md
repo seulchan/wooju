@@ -84,3 +84,17 @@ What this means:
 Decision: keep the hardware mapping (8 GB → 4B, 16 GB+ → 9B). Phase 2 ingest
 uses origin-based routing, rule fixes for cases #2–#4, and the spacing
 normalizer, then re-runs this eval.
+
+## Ask quality (2026-10-27, dev Brain, 20 questions, M1 16 GB)
+
+`evals/ask_quality.py` with `evals/ask_questions.json` (12 Korean, 8 English).
+
+| Search | hit@8 | MRR | Korean MRR | English MRR |
+|---|---|---|---|---|
+| Keyword (BM25) | 95% | 0.69 | 0.90 | 0.38 |
+| Keyword + meaning (qwen3-embedding:0.6b) | 100% | 0.79 | 0.92 | 0.60 |
+
+Answers with qwen3.5:9b: cites an expected note 90%, cites anything 95%,
+answers in the question's language 100%, median 39 s per answer (16–67 s).
+One answer cited nothing (BOK rate-hike reason); one cited a related but
+unexpected note. Speed, not accuracy, is now the weakest part of Ask.
