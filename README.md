@@ -8,8 +8,10 @@ and quick memos; a local AI organizes each one into a note, and Wooju helps you
 think with what you saved: ask questions of your own notes, write your own ideas
 on top of them, and keep them from fading.
 
-**Status:** 0.4.0, a build for testers. There is no public download yet; see
-[CONTRIBUTING.md](CONTRIBUTING.md) to build it yourself.
+**Status:** 0.4.0, the first public version. [Download it](https://github.com/seulchan/wooju/releases/latest)
+for an Apple Silicon Mac, or see [CONTRIBUTING.md](CONTRIBUTING.md) to build it yourself.
+
+![Wooju's Home: add material, what needs attention, what you know](assets/readme/screen-home.png)
 
 ## What it does
 
@@ -27,6 +29,11 @@ on top of them, and keep them from fading.
   been challenged: Wooju writes down what could make it wrong.
 - **Works with Claude.** One click lets Claude Desktop search and read your notes.
 
+<p>
+  <img src="assets/readme/screen-note.png" width="49%" alt="A note with its details and related notes">
+  <img src="assets/readme/screen-insights.png" width="49%" alt="Insights move from candidate to provisional to established">
+</p>
+
 ## Your notes stay yours
 
 - **On your Mac.** Your notes are a folder of plain Markdown files (your *Brain*) that
@@ -39,13 +46,25 @@ on top of them, and keep them from fading.
 
 ## Getting started
 
-1. Open Wooju and choose a folder for your Brain (a new one is created for you).
-2. Install Ollama when Wooju asks; it downloads the AI model it needs (about 7 GB on a
+1. Download `Wooju_0.4.0_aarch64.dmg` from the
+   [latest release](https://github.com/seulchan/wooju/releases/latest), open it and drag
+   Wooju into Applications.
+2. Open Wooju. The first time, macOS says it can't check the app, because Wooju is not
+   yet signed by an Apple developer account. Choose **Done**, open **System Settings →
+   Privacy & Security**, scroll down and choose **Open Anyway** next to Wooju. You only
+   do this once.
+3. Choose a folder for your Brain (a new one is created for you).
+4. Install Ollama when Wooju asks; it downloads the AI model it needs (about 7 GB on a
    16 GB Mac, less on an 8 GB Mac).
-3. Drop in your first file, or press "Look around with sample notes" to explore first.
+5. Drop in your first file, or press "Look around with sample notes" to explore first.
 
 Wooju needs an Apple Silicon Mac. 16 GB of memory is recommended; 8 GB works with a
 smaller model.
+
+## Feedback
+
+Found a problem or have an idea? [Open an issue](https://github.com/seulchan/wooju/issues/new/choose).
+Security problems: see [SECURITY.md](SECURITY.md).
 
 ## License
 

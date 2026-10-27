@@ -3,8 +3,11 @@
 All notable changes to Wooju. Versions follow [Semantic Versioning](https://semver.org);
 until 1.0, a minor version may change how things work.
 
-## Unreleased
+## 0.4.0 — 2026-10-28
 
+The first public version. Everything below is new since the start of the project.
+
+### Finding and connecting
 - Search finds notes by meaning too, grouped into knowledge, ideas and sources.
 - Related notes on every note: what it links to, what links to it, what is close in meaning.
 - A new source that says nearly the same as an existing note is pointed out (never merged).
@@ -14,14 +17,9 @@ until 1.0, a minor version may change how things work.
 - Topics: overview notes gather the notes about one subject. The topics agent
   files new notes into them, suggests new topics when notes cluster, and a tap
   creates one with an AI-written name and summary.
-
 - Weekly summary on Telegram: Sunday evening, what is waiting on Home.
 - Keyboard shortcuts: ⌘K to search, ⌘N for a new note.
-
-## 0.4.0 — 2026-10-27
-
-The first version meant for testers. Everything below is new since the start of
-the project.
+- Search previews show link names instead of Markdown.
 
 ### Taking things in
 - Drop PDF, text, Markdown or HTML files; paste a link or write a memo.
