@@ -24,6 +24,7 @@ from brain_core.retrieve import Passage, Retriever
 
 from .conflicts import first_conflict
 from .llm import Provider
+from .text import normalize_korean
 
 # Measured on an M1 with qwen3.5:9b (evals/ask_quality.py): reading time grows
 # with the passages sent, so send fewer, shorter ones. Override per call.
@@ -48,8 +49,15 @@ class SearchTerms(BaseModel):
 
 class Statement(BaseModel):
     text: str = Field(description="One sentence of the answer.")
-    sources: Annotated[list[int], Field(min_length=1)] = Field(
-        description="Numbers of the passages this sentence comes from."
+    # Not required: a sentence saying the notes do not cover something has no
+    # source, and forcing one made small models cite every passage instead.
+    sources: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Numbers of the passages this sentence comes from. Required for every sentence "
+            "that states something from the notes; empty only for a sentence saying the "
+            "notes do not cover something."
+        ),
     )
 
 
@@ -280,7 +288,13 @@ def finished_statements(raw: str) -> list[dict[str, Any]]:
     return out
 
 
-def _lines(statements: Sequence[Any]) -> str:
+def _lines(statements: Sequence[Any], passages: int = 0, language: str = "") -> str:
+    """The answer as text with [n] markers.
+
+    A sentence that cites every passage (four or more) is treated as citing
+    none: that is a model listing what it read, not where a claim comes from.
+    Korean number spacing ("2026 년") is fixed, as everywhere else in the app.
+    """
     lines = []
     for i, s in enumerate(statements):
         sources = s.get("sources") if isinstance(s, dict) else s.sources
@@ -288,7 +302,11 @@ def _lines(statements: Sequence[Any]) -> str:
         text = text.strip()
         if not text:
             continue
+        if language == "ko":
+            text = normalize_korean(text)
         nums = [n for n in (sources or []) if isinstance(n, int)]
+        if passages >= 4 and len(set(nums)) >= passages:
+            nums = []
         marks = "".join(f"[{n}]" for n in dict.fromkeys(nums))
         lines.append(f"{'' if i == 0 else '- '}{text} {marks}".rstrip())
     return "\n".join(lines)
@@ -330,7 +348,7 @@ def ask(
         done = finished_statements(raw)
         if len(done) > shown and on_partial is not None:
             shown = len(done)
-            text, citations = _cite(_lines(done), found)
+            text, citations = _cite(_lines(done, len(found), language), found)
             on_partial(Answer(question, text, found=True, citations=citations, partial=True))
 
     # Only a caller that wants sentences early asks the provider to stream.
@@ -342,7 +360,7 @@ def ask(
         draft = AnswerDraft.model_validate(result.data)
     except ValidationError as exc:
         raise AskError(str(exc), "ask.bad_shape") from exc
-    text, citations = _cite(_lines(draft.statements), found)
+    text, citations = _cite(_lines(draft.statements, len(found), language), found)
     if not citations:
         # The model cited nothing usable: show what it read, so the user can check.
         citations = [

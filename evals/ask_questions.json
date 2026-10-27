@@ -161,7 +161,7 @@
    ]
   },
   {
-   "q": "KB금융 밸류업 계획의 목표는 뭐였고 실제로 달성했어?",
+   "q": "KB금융 밸류업 계획의 목표는 뭐였고, 발표 뒤 KB금융 주가는 얼마나 올랐어?",
    "type": "partial",
    "expect": [
     "sources/kedglobal-kb-financial-value-up-plan-2024-10"

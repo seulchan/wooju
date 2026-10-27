@@ -218,3 +218,25 @@ def test_the_model_is_told_what_each_passage_is(tmp_path):
         in prompt
     )
     assert "(unchallenged idea)" in prompt
+
+
+def test_saying_the_notes_do_not_cover_it_needs_no_citation(index):
+    provider = ScriptedProvider(
+        answer=say(("기록에는 연준 금리 인하 횟수가 없어요.", [])),
+    )
+    # Retrieval finds something on the subject, but nothing that answers it.
+    result = ask(index, "밸류업 지수 때문에 연준이 금리를 몇 번 내렸어?", provider, language="ko")
+    assert provider.calls  # the model was asked
+    assert result.found is False and result.related_only
+    assert "[" not in result.answer
+
+
+def test_citing_every_passage_counts_as_citing_none(index, tmp_path):
+    from wooju_agents.ask import _lines
+
+    assert _lines([{"text": "없어요.", "sources": [1, 2, 3, 4]}], passages=4) == "없어요."
+    assert _lines([{"text": "있어요.", "sources": [1, 2]}], passages=4) == "있어요. [1][2]"
+    assert (
+        _lines([{"text": "2026 년 7 월이에요.", "sources": [1]}], passages=4, language="ko")
+        == "2026년 7월이에요. [1]"
+    )
