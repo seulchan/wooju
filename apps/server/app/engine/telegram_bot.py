@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from datetime import datetime
 from typing import Any
 
 from brain_core.messages import UserFacingError, render
 
+from .. import digest, telegram
 from .. import settings as app_settings
-from .. import telegram
+from ..projections.attention import compute_attention
 from .base import (
     Job,
     logger,
@@ -41,6 +43,8 @@ class TelegramBotMixin:
             with contextlib.suppress(telegram.TelegramError):
                 self.telegram_bot_name = (await asyncio.to_thread(bot.me)).get("username")
         while True:
+            with contextlib.suppress(Exception):  # a summary must never stop the bot
+                await self._send_weekly_digest(bot)
             try:
                 updates = await asyncio.to_thread(bot.updates, offset)
             except telegram.TelegramError as exc:
@@ -49,13 +53,35 @@ class TelegramBotMixin:
                 continue
             for update in updates:
                 offset = update["update_id"] + 1
-                telegram.save_state({"offset": offset})
+                telegram.update_state(offset=offset)
                 message = update.get("message")
                 if message:
                     try:
                         await self._telegram_message(bot, message)
                     except Exception:  # noqa: BLE001 — one message must not stop the bot
                         logger.exception("Telegram message failed")
+
+    async def _send_weekly_digest(self, bot: Any, now: datetime | None = None) -> bool:
+        """Send the weekly summary when it is due. Returns True if one was sent."""
+        settings = app_settings.load()
+        chat_id = settings.capture.telegram_chat_id
+        if self.brain is None or chat_id is None or not settings.capture.telegram_weekly:
+            return False
+        now = now or datetime.now().astimezone()
+        state = telegram.load_state()
+        last = state.get("digest_sent_at")
+        last_sent = datetime.fromisoformat(last) if isinstance(last, str) else None
+        if last_sent is None:
+            telegram.update_state(digest_sent_at=now.isoformat())  # start counting
+            return False
+        if not digest.is_due(now, last_sent):
+            return False
+        attention = compute_attention(self.index, brain=self.brain, today=now.date())
+        text = digest.compose(attention, self.language())
+        if text:
+            await asyncio.to_thread(bot.send, chat_id, text)
+        telegram.update_state(digest_sent_at=now.isoformat())
+        return text is not None
 
     def _say(self, key: str, **params: Any) -> str:
         return render(key, self.language(), **params)

@@ -402,6 +402,7 @@ def _capture_status(engine: Engine) -> dict[str, Any]:
             "enabled": cap.telegram,
             "bot": bot,
             "paired": paired,
+            "weekly": cap.telegram_weekly,
             "pair_link": (
                 f"https://t.me/{bot}?start={engine.telegram_pair_code}"
                 if cap.telegram and bot and not paired
@@ -431,6 +432,15 @@ def set_icloud(body: Toggle, engine: EngineDep) -> dict[str, Any]:
         icloud.ensure_folder()
     current = app_settings.load()
     current.capture.icloud = body.enabled
+    app_settings.save(current)
+    return _capture_status(engine)
+
+
+@actions_router.post("/capture/telegram/weekly", tags=["inbox"])
+def set_telegram_weekly(body: Toggle, engine: EngineDep) -> dict[str, Any]:
+    """Turn the Sunday-evening summary on or off."""
+    current = app_settings.load()
+    current.capture.telegram_weekly = body.enabled
     app_settings.save(current)
     return _capture_status(engine)
 

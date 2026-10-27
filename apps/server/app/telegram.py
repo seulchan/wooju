@@ -104,6 +104,13 @@ def save_state(state: dict[str, Any]) -> None:
     path.write_text(json.dumps(state), encoding="utf-8")
 
 
+def update_state(**changes: Any) -> None:
+    """Change some keys of the saved state, keeping the others."""
+    state = load_state()
+    state.update(changes)
+    save_state(state)
+
+
 def new_pairing_code() -> str:
     return secrets.token_urlsafe(8).replace("-", "a").replace("_", "b")
 

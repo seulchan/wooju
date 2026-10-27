@@ -182,3 +182,49 @@ def test_telegram_links_can_be_opened(client, monkeypatch):
     )
     assert c.post("/api/open", json={"url": "https://t.me/BotFather"}).status_code == 200
     assert c.post("/api/open", json={"url": "tg://resolve?domain=x"}).status_code == 403
+
+
+def test_weekly_digest_is_sent_once_on_sunday_evening(client):
+    import asyncio
+    from datetime import datetime, timedelta, timezone
+
+    from app import telegram as tg
+
+    c, brain, _ = client
+    pair(c)
+    engine = c.app.state.engine
+    (brain / "wiki/questions").mkdir(parents=True, exist_ok=True)
+    (brain / "wiki/questions/why-rates.md").write_text(
+        "---\ntitle: Why did rates rise?\nreview_after: 2026-01-01\n---\n# Why did rates rise?\n\n## Question\n\nWhy?\n",
+        encoding="utf-8",
+    )
+    engine.index.scan(brain)
+    bot = FakeBot(TOKEN)
+    tz = timezone(timedelta(hours=7))
+    send = lambda now: asyncio.run(engine._send_weekly_digest(bot, now))  # noqa: E731
+
+    FakeBot.sent.clear()
+    tg.update_state(digest_sent_at=None)
+    wed = datetime(2026, 10, 28, 9, 0, tzinfo=tz)
+    assert send(wed) is False  # the first check only starts counting
+    assert send(datetime(2026, 11, 1, 17, 0, tzinfo=tz)) is False  # Sunday, before 18:00
+    assert send(datetime(2026, 11, 1, 18, 5, tzinfo=tz)) is True
+    chat, text = FakeBot.sent[-1]
+    assert chat == 42 and text.startswith("Wooju this week")
+    assert "Why did rates rise?" in text and "to look at again" in text
+    assert send(datetime(2026, 11, 1, 21, 0, tzinfo=tz)) is False  # once a week
+    # Asleep all Sunday: sent at the first chance after.
+    assert send(datetime(2026, 11, 9, 8, 0, tzinfo=tz)) is True
+
+    status = c.post("/api/capture/telegram/weekly", json={"enabled": False}).json()
+    assert status["telegram"]["weekly"] is False
+    assert send(datetime(2026, 11, 15, 19, 0, tzinfo=tz)) is False
+
+
+def test_offset_and_digest_time_live_side_by_side():
+    from app import telegram as tg
+
+    tg.save_state({"offset": 5})
+    tg.update_state(digest_sent_at="2026-11-01T18:00:00+07:00")
+    tg.update_state(offset=6)
+    assert tg.load_state() == {"offset": 6, "digest_sent_at": "2026-11-01T18:00:00+07:00"}

@@ -32,6 +32,7 @@ class CaptureSettings(BaseModel):
     icloud: bool = False  # pick up files from iCloud Drive/Wooju Inbox
     telegram: bool = False  # the bot token itself is in the keychain
     telegram_chat_id: int | None = None  # the one chat allowed to send
+    telegram_weekly: bool = True  # Sunday-evening summary of what is waiting
 
 
 LanguageSetting = Literal["auto", "ko", "en"]

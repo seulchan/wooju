@@ -94,6 +94,10 @@ const STRINGS = {
     en: 'Used for screens, messages and Telegram replies. Notes keep the language of their material: English material becomes an English note, Korean material a Korean one.',
   },
   languageApp: { ko: '앱 언어', en: 'App language' },
+  telegramWeekly: {
+    ko: '일요일 저녁에 다시 볼 노트와 확인할 것을 텔레그램으로 받기',
+    en: 'Get a Sunday-evening summary of notes to look at again on Telegram',
+  },
   samplesIntro: {
     ko: '먼저 둘러보고 싶다면 예시 노트를 넣어 보세요. 자료 3개, 지식 노트 3개, 생각 2개, 메모 1개가 들어가고 언제든 설정에서 지울 수 있어요.',
     en: 'Want to look around first? Add the sample notes: 3 sources, 3 knowledge notes, 2 ideas and a memo. You can remove them any time in Settings.',

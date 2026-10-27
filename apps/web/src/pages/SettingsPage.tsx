@@ -9,6 +9,7 @@ import {
   fetchSearchStatus,
   fetchCaptureStatus,
   setIcloud,
+  setTelegramWeekly,
   connectTelegram,
   disconnectTelegram,
   type CaptureStatus,
@@ -629,6 +630,7 @@ function PhoneCapture() {
       <div className="settings-block">
         <h3 className="subsection-title">{t('telegramTitle')}</h3>
         {telegram.enabled && telegram.paired ? (
+          <>
           <p className="claude-row">
             <Badge tone="tone-ok">{t('telegramPaired')}</Badge>
             {telegram.bot ? <span>@{telegram.bot}</span> : null}
@@ -636,6 +638,19 @@ function PhoneCapture() {
               {t('telegramOff')}
             </button>
           </p>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={telegram.weekly ?? true}
+              disabled={busy}
+              onChange={(e) => {
+                const on = e.target.checked
+                void run(() => setTelegramWeekly(on))
+              }}
+            />{' '}
+            {t('telegramWeekly')}
+          </label>
+          </>
         ) : telegram.enabled ? (
           <>
             <p>{t('telegramPair')}</p>

@@ -252,6 +252,26 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "이 모델은 의미 검색 전용이라 답을 만들 수 없어요. 다른 모델을 골라 주세요.",
         "This model is for meaning search only and can't write answers. Pick another model.",
     ),
+    "digest.title": ("이번 주 Wooju", "Wooju this week"),
+    "digest.review_due": ("다시 볼 노트 {n}개: {titles}", "{n} to look at again: {titles}"),
+    "digest.conflicts": (
+        "다른 노트와 어긋나는 자료 {n}개: {titles}",
+        "{n} disagreeing with other notes: {titles}",
+    ),
+    "digest.grounds_changed": (
+        "근거가 바뀐 노트 {n}개: {titles}",
+        "{n} whose grounds changed: {titles}",
+    ),
+    "digest.candidate": (
+        "아직 검토 전인 생각 {n}개: {titles}",
+        "{n} ideas not yet challenged: {titles}",
+    ),
+    "digest.open_questions": ("열린 질문 {n}개: {titles}", "{n} open questions: {titles}"),
+    "digest.more": (" 외 {n}개", " and {n} more"),
+    "digest.open_app": (
+        "Wooju 홈 화면에서 확인할 수 있어요.",
+        "You'll find them on Wooju's Home screen.",
+    ),
     "samples.present": (
         "예시 노트가 이미 들어 있어요.",
         "The sample notes are already in your Brain.",

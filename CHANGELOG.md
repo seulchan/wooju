@@ -3,6 +3,11 @@
 All notable changes to Wooju. Versions follow [Semantic Versioning](https://semver.org);
 until 1.0, a minor version may change how things work.
 
+## Unreleased
+
+- Weekly summary on Telegram: Sunday evening, what is waiting on Home.
+- Keyboard shortcuts: ⌘K to search, ⌘N for a new note.
+
 ## 0.4.0 — 2026-10-27
 
 The first version meant for testers. Everything below is new since the start of

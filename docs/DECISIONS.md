@@ -178,6 +178,16 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## Weekly summary on Telegram
+
+- With the bot paired, Wooju sends one message on Sunday at 18:00 (Mac time),
+  or at the first chance after it when the Mac was asleep: notes due for a
+  look, conflicts, notes whose grounds changed, unchallenged ideas and open
+  questions, a few titles each. Built only from "What needs attention?"; when
+  nothing is waiting, nothing is sent. On by default, off in Settings.
+- The first check after pairing only starts the clock, so pairing never
+  triggers a message by itself.
+
 ## Ask shows sentences as they are written
 
 - The answer keeps its shape (sentences, each with its sources) but no longer
