@@ -44,8 +44,8 @@ export function InsightsPage() {
       <h1 className="page-title">{tr('Insights')}</h1>
       <p className="subtitle">
         {pick(
-          'Derived notes (marked origin: synthesis). Status is read verbatim — established is never inferred.',
-          '여러 노트를 엮어 Wooju가 찾아낸 연결이에요. 상태는 노트에 적힌 그대로 보여 줘요.',
+          'Ideas that connect several notes. Candidate → provisional → established: you move each one up when it has held up.',
+          '여러 노트를 엮은 생각이에요. 후보 → 잠정 → 확립 순서로, 버텨 낸 만큼 직접 올려요.',
         )}
       </p>
 
