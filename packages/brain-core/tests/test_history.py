@@ -61,3 +61,50 @@ def test_no_empty_commits(make_brain):
     head = history.log(brain)[0].id
     assert history.commit_paths(brain, ["a.md"], "Nothing changed") == head
     assert len(history.log(brain)) == 1
+
+
+def test_history_lives_outside_icloud_sync(tmp_path):
+    """New Brains keep git objects in a .nosync folder; old .git folders are moved."""
+    import subprocess
+
+    from brain_core.history import HISTORY_DIR, commit_paths, ensure_repo, is_repo, log
+
+    (tmp_path / "a.md").write_text("x", encoding="utf-8")
+    ensure_repo(tmp_path)
+    assert (tmp_path / ".git").is_file() and (tmp_path / HISTORY_DIR).is_dir()
+    assert (tmp_path / ".git").read_text() == f"gitdir: {HISTORY_DIR}\n"
+    (tmp_path / "b.md").write_text("y", encoding="utf-8")
+    commit_paths(tmp_path, ["b.md"], "Add b")
+    assert [e.title for e in log(tmp_path)][:2] == ["Add b", "Start this Brain"]
+    # Plain git agrees, and the history folder itself is not reported as untracked.
+    status = subprocess.run(
+        ["git", "-C", str(tmp_path), "status", "--short"], capture_output=True, text=True
+    ).stdout
+    assert status.strip() == ""
+
+    # An existing Brain with a .git folder (made by an earlier version) is converted
+    # in place, keeping its history.
+    old = tmp_path / "old"
+    old.mkdir()
+    (old / "n.md").write_text("n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(old), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(old), "add", "."], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(old),
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "commit",
+            "-qm",
+            "first",
+        ],
+        check=True,
+    )
+    assert is_repo(old)
+    ensure_repo(old)
+    assert (old / ".git").is_file() and (old / HISTORY_DIR).is_dir()
+    assert [e.title for e in log(old)] == ["first"]

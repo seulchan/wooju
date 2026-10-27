@@ -70,7 +70,7 @@ def test_first_run_creates_brain_from_template(client, tmp_path):
 
     brain = setup_brain(client, tmp_path)
     assert (brain / "AGENTS.md").is_file() and (brain / "wiki/concepts").is_dir()
-    assert (brain / ".git").is_dir()
+    assert (brain / ".git").is_file() and (brain / ".wooju-history.nosync").is_dir()
     assert app_settings.load().brain_path == str(brain.resolve())
     assert client.get("/api/setup").json()["brain_ready"] is True
     assert client.get("/api/history").json()["items"][0]["title"] == "Brain 시작"

@@ -43,6 +43,15 @@ DEBOUNCE_SECONDS = 0.4
 RESTART_BACKOFF_SECONDS = 2.0
 
 
+def _is_note_path(root: Path, path: str) -> bool:
+    """Ignore hidden folders (history, .obsidian, …): only notes trigger a rescan."""
+    try:
+        parts = Path(path).relative_to(root).parts
+    except ValueError:
+        return False
+    return not any(part.startswith(".") for part in parts)
+
+
 async def watch_and_refresh(
     index: BrainIndex,
     root: Path,
@@ -61,7 +70,7 @@ async def watch_and_refresh(
     logger.info("Watching Brain for changes: %s", root)
     while True:
         try:
-            async for changes in awatch(root):
+            async for changes in awatch(root, watch_filter=lambda _c, p: _is_note_path(root, p)):
                 if not changes:
                     continue
                 # Coalesce a burst: wait out the debounce window, then rescan

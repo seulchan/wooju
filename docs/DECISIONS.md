@@ -92,6 +92,14 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   be retried or removed. A link already saved is never saved twice, and a
   link already waiting is reused rather than fetched again.
 
+## History and iCloud
+
+- A Brain's git history lives in `.wooju-history.nosync/` with `.git` as a
+  pointer file. iCloud Drive never syncs `.nosync` folders, so a Brain under
+  Documents or Desktop with iCloud sync on can't have its history corrupted.
+  Brains made by earlier versions are converted in place when opened; plain
+  `git` keeps working on the folder.
+
 ## Fixing notes
 
 - One "Edit" button, in two places: on a note (the user's own edit: applied

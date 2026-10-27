@@ -41,17 +41,54 @@ class Entry:
     undoes: str | None = None
 
 
+# History lives in a folder iCloud Drive never syncs (names ending in .nosync),
+# with ``.git`` as a small file pointing at it. A Brain under Documents or
+# Desktop with iCloud sync on would otherwise have its git objects synced and
+# corrupted. The folder is hidden, so note readers skip it, and the Brain stays
+# self-contained: move the folder and the history moves with it.
+HISTORY_DIR = ".wooju-history.nosync"
+
+
 def is_repo(brain: Path) -> bool:
-    return (brain / ".git").is_dir()
+    git = brain / ".git"
+    return git.is_dir() or (git.is_file() and (brain / HISTORY_DIR).is_dir())
+
+
+def _exclude_history(brain: Path) -> None:
+    """Keep the history folder out of ``git status`` without touching the Brain's files."""
+    exclude = brain / HISTORY_DIR / "info" / "exclude"
+    exclude.parent.mkdir(parents=True, exist_ok=True)
+    line = f"/{HISTORY_DIR}/"
+    current = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+    if line not in current.splitlines():
+        exclude.write_text(current.rstrip("\n") + f"\n{line}\n", encoding="utf-8")
+
+
+def move_history_out_of_sync(brain: Path) -> bool:
+    """Turn a ``.git`` folder into ``.git`` file + ``HISTORY_DIR``. Returns True if moved."""
+    git = brain / ".git"
+    if not git.is_dir():
+        return False
+    target = brain / HISTORY_DIR
+    if target.exists():
+        return False  # something is already there; leave both for the user to look at
+    git.rename(target)
+    git.write_text(f"gitdir: {HISTORY_DIR}\n", encoding="utf-8")
+    _exclude_history(brain)
+    return True
 
 
 def ensure_repo(brain: Path) -> None:
     """Make ``brain`` a git repository with an initial commit if it is not one."""
     if is_repo(brain):
+        move_history_out_of_sync(brain)
         return
     porcelain.init(str(brain))
+    move_history_out_of_sync(brain)
     files = [
-        p for p in brain.rglob("*") if p.is_file() and ".git" not in p.relative_to(brain).parts
+        p
+        for p in brain.rglob("*")
+        if p.is_file() and not {".git", HISTORY_DIR} & set(p.relative_to(brain).parts)
     ]
     if files:
         porcelain.add(str(brain), paths=[str(p) for p in files])
