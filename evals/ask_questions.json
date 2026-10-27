@@ -1,26 +1,216 @@
 {
-  "brain": "wooju-brain-dev",
-  "note": "Each question lists the notes a good answer should rest on (any one counts as found).",
-  "questions": [
-    {"q": "밸류업 지수에는 몇 개 종목이 들어가?", "expect": ["sources/joongang-value-up-index-launch-2024-09"]},
-    {"q": "자사주는 언제까지 소각해야 해?", "expect": ["sources/atlaw-treasury-share-cancellation-2026", "sources/kimchang-third-commercial-act-amendment-2026", "wiki/concepts/treasury-share-cancellation"]},
-    {"q": "코스피 종목 중 PBR 1배 미만은 얼마나 돼?", "expect": ["sources/sedaily-kospi-below-book-2026-07"]},
-    {"q": "한국은행이 기준금리를 올린 이유는?", "expect": ["sources/focus-economics-bok-hike-2026-07", "sources/fnnews-bok-hike-2026-08", "wiki/overviews/bank-of-korea-rate-path-2026"]},
-    {"q": "이사의 주주 충실의무는 언제 도입됐어?", "expect": ["wiki/concepts/directors-duty-to-shareholders", "sources/legal500-kimchang-commercial-act-amendments-2025"]},
-    {"q": "배당소득 분리과세는 어떻게 바뀌었어?", "expect": ["sources/kyunghyang-dividend-tax-reform-2025-12"]},
-    {"q": "KB금융의 밸류업 계획 내용은?", "expect": ["sources/kedglobal-kb-financial-value-up-plan-2024-10"]},
-    {"q": "은행주는 왜 아직 PBR 1배 미만이야?", "expect": ["sources/koryomacro-value-up-banks-2026-07"]},
-    {"q": "코리아 디스카운트가 해소되고 있어?", "expect": ["wiki/questions/is-the-korea-discount-closing", "wiki/concepts/korea-discount"]},
-    {"q": "저PBR 재평가 후보는 어떻게 골라?", "expect": ["wiki/how-tos/screen-low-pbr-rerating-candidates"]},
-    {"q": "내 투자 원칙이 뭐야?", "expect": ["memory/records/investing-approach", "areas/investing"]},
-    {"q": "지수가 올랐는데 왜 재평가라고 보기 어려워?", "expect": ["wiki/questions/index-rally-without-broad-rerating"]},
-    {"q": "What does the third Commercial Act amendment require for treasury shares?", "expect": ["sources/atlaw-treasury-share-cancellation-2026", "sources/kimchang-third-commercial-act-amendment-2026", "wiki/concepts/treasury-share-cancellation"]},
-    {"q": "Why are Korean stocks valued lower than their peers?", "expect": ["wiki/concepts/korea-discount", "wiki/questions/is-the-korea-discount-closing"]},
-    {"q": "When did the Value-up Index start being published?", "expect": ["sources/joongang-value-up-index-launch-2024-09"]},
-    {"q": "What did the FSC guidelines ask listed companies to disclose?", "expect": ["sources/fsc-value-up-guidelines-2024-05", "wiki/overviews/korea-corporate-value-up-program"]},
-    {"q": "Why did the Korean stock market boom in 2026?", "expect": ["sources/keia-korea-stock-market-boom-2026-07"]},
-    {"q": "What is the price-to-book ratio?", "expect": ["wiki/concepts/price-to-book-ratio"]},
-    {"q": "What do I need for a re-rating besides a discount?", "expect": ["wiki/mental-models/rerating-needs-discount-and-catalyst"]},
-    {"q": "Which companies could be re-rated because of treasury share cancellation?", "expect": ["wiki/questions/treasury-cancellation-and-holding-company-rerating"]}
-  ]
+ "brain": "wooju-brain-dev",
+ "note": "Each question lists the notes a good answer should rest on (any one counts as found). Questions with a type test how the answer behaves: 'none' — the Brain does not cover it, so the answer should say so; 'partial' — part is covered, so the answer should cite it and name what is missing; 'date' — sources disagree or the date matters, so the answer must contain one of answer_any; 'alias' — the question uses a different name than the notes.",
+ "questions": [
+  {
+   "q": "밸류업 지수에는 몇 개 종목이 들어가?",
+   "expect": [
+    "sources/joongang-value-up-index-launch-2024-09"
+   ]
+  },
+  {
+   "q": "자사주는 언제까지 소각해야 해?",
+   "expect": [
+    "sources/atlaw-treasury-share-cancellation-2026",
+    "sources/kimchang-third-commercial-act-amendment-2026",
+    "wiki/concepts/treasury-share-cancellation"
+   ]
+  },
+  {
+   "q": "코스피 종목 중 PBR 1배 미만은 얼마나 돼?",
+   "expect": [
+    "sources/sedaily-kospi-below-book-2026-07"
+   ]
+  },
+  {
+   "q": "한국은행이 기준금리를 올린 이유는?",
+   "expect": [
+    "sources/focus-economics-bok-hike-2026-07",
+    "sources/fnnews-bok-hike-2026-08",
+    "wiki/overviews/bank-of-korea-rate-path-2026"
+   ]
+  },
+  {
+   "q": "이사의 주주 충실의무는 언제 도입됐어?",
+   "expect": [
+    "wiki/concepts/directors-duty-to-shareholders",
+    "sources/legal500-kimchang-commercial-act-amendments-2025"
+   ]
+  },
+  {
+   "q": "배당소득 분리과세는 어떻게 바뀌었어?",
+   "expect": [
+    "sources/kyunghyang-dividend-tax-reform-2025-12"
+   ]
+  },
+  {
+   "q": "KB금융의 밸류업 계획 내용은?",
+   "expect": [
+    "sources/kedglobal-kb-financial-value-up-plan-2024-10"
+   ]
+  },
+  {
+   "q": "은행주는 왜 아직 PBR 1배 미만이야?",
+   "expect": [
+    "sources/koryomacro-value-up-banks-2026-07"
+   ]
+  },
+  {
+   "q": "코리아 디스카운트가 해소되고 있어?",
+   "expect": [
+    "wiki/questions/is-the-korea-discount-closing",
+    "wiki/concepts/korea-discount"
+   ]
+  },
+  {
+   "q": "저PBR 재평가 후보는 어떻게 골라?",
+   "expect": [
+    "wiki/how-tos/screen-low-pbr-rerating-candidates"
+   ]
+  },
+  {
+   "q": "내 투자 원칙이 뭐야?",
+   "expect": [
+    "memory/records/investing-approach",
+    "areas/investing"
+   ]
+  },
+  {
+   "q": "지수가 올랐는데 왜 재평가라고 보기 어려워?",
+   "expect": [
+    "wiki/questions/index-rally-without-broad-rerating"
+   ]
+  },
+  {
+   "q": "What does the third Commercial Act amendment require for treasury shares?",
+   "expect": [
+    "sources/atlaw-treasury-share-cancellation-2026",
+    "sources/kimchang-third-commercial-act-amendment-2026",
+    "wiki/concepts/treasury-share-cancellation"
+   ]
+  },
+  {
+   "q": "Why are Korean stocks valued lower than their peers?",
+   "expect": [
+    "wiki/concepts/korea-discount",
+    "wiki/questions/is-the-korea-discount-closing"
+   ]
+  },
+  {
+   "q": "When did the Value-up Index start being published?",
+   "expect": [
+    "sources/joongang-value-up-index-launch-2024-09"
+   ]
+  },
+  {
+   "q": "What did the FSC guidelines ask listed companies to disclose?",
+   "expect": [
+    "sources/fsc-value-up-guidelines-2024-05",
+    "wiki/overviews/korea-corporate-value-up-program"
+   ]
+  },
+  {
+   "q": "Why did the Korean stock market boom in 2026?",
+   "expect": [
+    "sources/keia-korea-stock-market-boom-2026-07"
+   ]
+  },
+  {
+   "q": "What is the price-to-book ratio?",
+   "expect": [
+    "wiki/concepts/price-to-book-ratio"
+   ]
+  },
+  {
+   "q": "What do I need for a re-rating besides a discount?",
+   "expect": [
+    "wiki/mental-models/rerating-needs-discount-and-catalyst"
+   ]
+  },
+  {
+   "q": "Which companies could be re-rated because of treasury share cancellation?",
+   "expect": [
+    "wiki/questions/treasury-cancellation-and-holding-company-rerating"
+   ]
+  },
+  {
+   "q": "미국 연준은 2026년에 금리를 몇 번 내렸어?",
+   "type": "none",
+   "expect": []
+  },
+  {
+   "q": "테슬라 주가가 오른 이유는?",
+   "type": "none",
+   "expect": []
+  },
+  {
+   "q": "What is Nvidia's share of the AI chip market?",
+   "type": "none",
+   "expect": []
+  },
+  {
+   "q": "Who is the CEO of KB Financial Group?",
+   "type": "none",
+   "expect": []
+  },
+  {
+   "q": "밸류업 지수는 몇 종목이고, 출시 후 수익률은 어땠어?",
+   "type": "partial",
+   "expect": [
+    "sources/joongang-value-up-index-launch-2024-09"
+   ]
+  },
+  {
+   "q": "KB금융 밸류업 계획의 목표는 뭐였고 실제로 달성했어?",
+   "type": "partial",
+   "expect": [
+    "sources/kedglobal-kb-financial-value-up-plan-2024-10"
+   ]
+  },
+  {
+   "q": "기준금리가 2.75%가 된 건 언제야?",
+   "type": "date",
+   "expect": [
+    "sources/focus-economics-bok-hike-2026-07",
+    "wiki/overviews/bank-of-korea-rate-path-2026"
+   ],
+   "answer_any": [
+    "2026년 7월",
+    "2026-07",
+    "July 2026"
+   ]
+  },
+  {
+   "q": "한국은행은 2026년에 금리를 몇 번 올렸어?",
+   "type": "date",
+   "expect": [
+    "sources/fnnews-bok-hike-2026-08",
+    "wiki/overviews/bank-of-korea-rate-path-2026"
+   ],
+   "answer_any": [
+    "두 번",
+    "2번",
+    "2차례",
+    "두 차례",
+    "twice"
+   ]
+  },
+  {
+   "q": "기업가치 제고 계획 공시 가이드라인은 누가 냈어?",
+   "type": "alias",
+   "expect": [
+    "sources/fsc-value-up-guidelines-2024-05",
+    "wiki/overviews/korea-corporate-value-up-program"
+   ]
+  },
+  {
+   "q": "How did the BoK base rate move in 2026?",
+   "type": "alias",
+   "expect": [
+    "wiki/overviews/bank-of-korea-rate-path-2026",
+    "sources/fnnews-bok-hike-2026-08",
+    "sources/focus-economics-bok-hike-2026-07"
+   ]
+  }
+ ]
 }
