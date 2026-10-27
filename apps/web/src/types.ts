@@ -269,6 +269,8 @@ export interface SetupStatus {
   language: string
   /** What the user chose: "auto" follows the Mac. */
   language_setting?: LanguageChoice
+  /** Sample notes still in the Brain; 0 when none. */
+  sample_notes?: number
   ai: AiStatus
 }
 

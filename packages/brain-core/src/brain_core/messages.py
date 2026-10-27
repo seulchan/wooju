@@ -252,6 +252,15 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "이 모델은 의미 검색 전용이라 답을 만들 수 없어요. 다른 모델을 골라 주세요.",
         "This model is for meaning search only and can't write answers. Pick another model.",
     ),
+    "samples.present": (
+        "예시 노트가 이미 들어 있어요.",
+        "The sample notes are already in your Brain.",
+    ),
+    "samples.none": ("지울 예시 노트가 없어요.", "There are no sample notes to remove."),
+    "samples.failed": (
+        "예시 노트를 넣지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+        "The sample notes couldn't be added. Please try again in a moment.",
+    ),
     "setup.bad_model": ("모델 이름이 올바르지 않아요.", "That model name isn't valid."),
     "setup.choose_folder": ("폴더를 골라 주세요.", "Please choose a folder."),
     "setup.not_folder": (

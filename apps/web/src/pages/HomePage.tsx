@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
-import { fetchChanges, fetchOverview, fetchUiState, updateUiState } from '../api'
+import { ApiError, addSamples, fetchChanges, fetchOverview, fetchUiState, updateUiState } from '../api'
 import { useAsync } from '../lib/useAsync'
 import { Link } from '../lib/router'
 import { changesSince, isFirstVisit, type PeriodId } from '../lib/periods'
@@ -9,13 +9,45 @@ import { AttentionSection } from '../components/AttentionSection'
 import { HomeChanges } from '../components/HomeChanges'
 import { DropZone } from '../components/DropZone'
 import { RecentMemos } from '../components/RecentMemos'
-import { tr } from '../lib/i18n'
+import { tr, useT } from '../lib/i18n'
+import { requestRefresh } from '../lib/freshness'
 
 const BrainMap = lazy(() =>
   import('../components/BrainMap').then(({ BrainMap: BrainMapComponent }) => ({
     default: BrainMapComponent,
   })),
 )
+
+/** Nothing in the Brain yet: offer a few sample notes to look around with. */
+function SampleOffer() {
+  const t = useT()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  async function add() {
+    setBusy(true)
+    setError(null)
+    try {
+      await addSamples()
+      requestRefresh()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+      setBusy(false)
+    }
+  }
+  return (
+    <section className="sample-offer">
+      <p>{t('samplesIntro')}</p>
+      <button className="btn" disabled={busy} onClick={() => void add()}>
+        {busy ? t('samplesAdding') : t('samplesAdd')}
+      </button>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  )
+}
 
 export function HomePage() {
   const overview = useAsync((signal) => fetchOverview(signal), [])
@@ -57,14 +89,17 @@ export function HomePage() {
   if (overview.kind === 'loading') return <Spinner label={tr('Loading Brain summary…')} />
   if (overview.kind === 'error') return <ErrorState message={overview.message} onRetry={overview.retry} />
 
-  const { knowledge, insight, source, total, main_areas: mainAreas } = overview.data
-  if (total === 0) {
+  const { knowledge, insight, source, main_areas: mainAreas } = overview.data
+  // The template's own docs count in `total`; what matters is the user's notes.
+  if (knowledge + insight + source === 0) {
     return (
       <>
         <DropZone />
+        <RecentMemos />
         <EmptyState title={tr('Your Brain is empty')}>
           {tr('Drop a file above to add your first note.')}
         </EmptyState>
+        <SampleOffer />
       </>
     )
   }

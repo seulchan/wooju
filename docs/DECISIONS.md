@@ -178,6 +178,17 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## Sample notes
+
+- An empty Brain offers "Look around with sample notes": nine notes about
+  remembering what you read (3 sources, 3 knowledge notes, a provisional and
+  a candidate insight, a memo), in the app's language, from `samples/<lang>`.
+  They are tagged `sample`, added as one undoable change, never overwrite a
+  user's file, and Settings removes them again. The topic is deliberately not
+  a specialist domain: the app is for anyone's knowledge.
+- "Empty" means no knowledge, insight or source notes; the template's own docs
+  do not count (they used to, so the empty state never showed).
+
 ## Local server safety
 
 - The server listens on 127.0.0.1 only and answers only requests whose Host

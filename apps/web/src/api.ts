@@ -178,6 +178,14 @@ export function chooseBrain(path: string): Promise<{ brain_path: string; created
   return postJson('/api/setup/brain', { path })
 }
 
+/** A small set of sample notes to look around with, and taking them out again. */
+export function addSamples(): Promise<SetupStatus> {
+  return postJson('/api/setup/samples')
+}
+export function removeSamples(): Promise<SetupStatus> {
+  return postJson('/api/setup/samples/remove')
+}
+
 /** The app's language; notes keep the language of their material. */
 export function chooseLanguage(choice: { app: LanguageChoice }): Promise<SetupStatus> {
   return postJson('/api/setup/language', choice)

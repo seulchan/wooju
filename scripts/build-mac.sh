@@ -35,6 +35,7 @@ uv run --with "pyinstaller>=6.10" pyinstaller --noconfirm --clean --onefile \
   --paths "$ROOT/apps/server" --paths "$ROOT/packages/brain-core/src" --paths "$ROOT/agents/src" \
   --add-data "$ROOT/apps/web/dist:web" \
   --add-data "$ROOT/template:template" \
+  --add-data "$ROOT/samples:samples" \
   --hidden-import app.main \
   --collect-submodules app \
   --collect-submodules uvicorn \

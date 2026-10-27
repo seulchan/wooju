@@ -278,7 +278,7 @@ def test_launcher_uses_bundle_paths(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
     # setenv first so monkeypatch restores both variables after the test;
     # the launcher writes os.environ directly.
-    for name in ("WOOJU_WEB_DIST", "WOOJU_TEMPLATE_DIR"):
+    for name in ("WOOJU_WEB_DIST", "WOOJU_TEMPLATE_DIR", "WOOJU_SAMPLES_DIR"):
         monkeypatch.setenv(name, "unset")
         monkeypatch.delenv(name)
     monkeypatch.setattr("uvicorn.run", lambda app, **kw: calls.update(kw))
@@ -648,3 +648,34 @@ def test_notes_keep_their_own_language(client, tmp_path):
         == "en"
     )
     assert engine.content_language("") == "en"  # nothing to go by: the app's language
+
+
+def test_sample_notes_come_and_go(client, tmp_path):
+    brain = setup_brain(client, tmp_path)
+    assert client.get("/api/setup").json()["sample_notes"] == 0
+    before = client.get("/api/overview").json()["total"]
+
+    status = client.post("/api/setup/samples").json()
+    assert status["sample_notes"] == 9, status
+    assert (brain / "wiki/concepts/spacing-effect.md").is_file()
+    assert (brain / "library/a-week-of-recalling-notes.txt").is_file()
+    # Korean app (the client fixture): the Korean set, validated and committed.
+    assert "간격 효과" in (brain / "wiki/concepts/spacing-effect.md").read_text("utf-8")
+    overview = client.get("/api/overview").json()
+    assert overview["insight"] == 2 and overview["source"] == 3
+    attention = client.get("/api/attention").json()
+    keys = {g["key"] for g in attention["groups"] if g["items"]}
+    assert {"provisional", "candidate", "open_questions"} <= keys
+    history = client.get("/api/history").json()["items"]
+    assert any("예시 노트" in h["title"] for h in history)
+
+    r = client.post("/api/setup/samples")
+    assert r.status_code == 400 and "이미" in r.json()["detail"]
+
+    status = client.post("/api/setup/samples/remove").json()
+    assert status["sample_notes"] == 0
+    assert not (brain / "wiki/concepts/spacing-effect.md").exists()
+    assert not (brain / "library/a-week-of-recalling-notes.txt").exists()
+    assert client.get("/api/overview").json()["total"] == before
+    r = client.post("/api/setup/samples/remove")
+    assert r.status_code == 400

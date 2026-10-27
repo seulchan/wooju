@@ -1774,3 +1774,13 @@ code {
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--border);
 }
+
+.sample-offer {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.sample-offer p {
+  margin-top: 0;
+}

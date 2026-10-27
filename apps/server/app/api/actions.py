@@ -75,6 +75,7 @@ class SetupStatus(BaseModel):
     brain_ready: bool
     language: str  # resolved: "ko" or "en"
     language_setting: str = "auto"  # what the user chose: auto / ko / en
+    sample_notes: int = 0  # sample notes still in the Brain (0 = none)
     ai: AiStatus
 
 
@@ -123,8 +124,37 @@ def setup_status(engine: EngineDep) -> SetupStatus:
         brain_ready=engine.brain is not None,
         language=engine.language(),
         language_setting=app_settings.load().language,
+        sample_notes=len(engine.sample_notes()) if engine.brain else 0,
         ai=_ai_status(engine),
     )
+
+
+@actions_router.post("/setup/samples", tags=["setup"], response_model=SetupStatus)
+async def add_samples(engine: EngineDep) -> SetupStatus:
+    """Add a small set of sample notes to look around with."""
+    if engine.brain is None:
+        raise _fail(engine, "setup.brain_first")
+    try:
+        result = await engine.add_samples()
+    except UserFacingError as exc:
+        raise _fail_from(engine, exc) from exc
+    if result.status != "applied":
+        raise _fail(engine, "samples.failed", 500)
+    return setup_status(engine)
+
+
+@actions_router.post("/setup/samples/remove", tags=["setup"], response_model=SetupStatus)
+async def remove_samples(engine: EngineDep) -> SetupStatus:
+    """Take the sample notes out again."""
+    if engine.brain is None:
+        raise _fail(engine, "setup.brain_first")
+    try:
+        result = await engine.remove_samples()
+    except UserFacingError as exc:
+        raise _fail_from(engine, exc) from exc
+    if result.status != "applied":
+        raise _fail(engine, "samples.failed", 500)
+    return setup_status(engine)
 
 
 class ChooseLanguage(BaseModel):

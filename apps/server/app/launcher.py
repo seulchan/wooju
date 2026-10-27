@@ -33,6 +33,7 @@ def main(argv: list[str] | None = None) -> None:
     if bundle:
         os.environ.setdefault("WOOJU_WEB_DIST", str(Path(bundle) / "web"))
         os.environ.setdefault("WOOJU_TEMPLATE_DIR", str(Path(bundle) / "template"))
+        os.environ.setdefault("WOOJU_SAMPLES_DIR", str(Path(bundle) / "samples"))
 
     import uvicorn
 

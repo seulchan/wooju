@@ -135,6 +135,24 @@ describe('HomePage', () => {
     expect(screen.queryByRole('link', { name: /Knowledge/ })).not.toBeInTheDocument()
   })
 
+  it('offers sample notes on an empty Brain and adds them on click', async () => {
+    const fetchMock = mockFetch([
+      { match: /^\/api\/overview/, body: emptyOverview },
+      { match: /^\/api\/ui-state/, body: firstRunUiState },
+      { match: /^\/api\/changes/, body: changes },
+      { match: /^\/api\/memos/, body: { items: [] } },
+      { match: /^\/api\/setup\/samples$/, body: { sample_notes: 9 } },
+    ])
+    render(<HomePage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Look around with sample notes' }))
+    await waitFor(() => {
+      const posted = (fetchMock.mock.calls as unknown as Array<[string, RequestInit | undefined]>).filter(
+        ([u, init]) => String(u) === '/api/setup/samples' && init?.method === 'POST',
+      )
+      expect(posted).toHaveLength(1)
+    })
+  })
+
   it('keeps the Home change preview to five semantic records and excludes Other', async () => {
     mockFetch([
       { match: /^\/api\/overview/, body: overview },

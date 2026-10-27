@@ -90,7 +90,7 @@ export const emptyOverview: OverviewResponse = {
   insight: 0,
   source: 0,
   provisional_insights: 0,
-  total: 0,
+  total: 11, // the template's own docs count here; the user's notes are the three above
   main_areas: [],
 }
 

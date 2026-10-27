@@ -30,6 +30,7 @@ wooju/
 ├── apps/desktop/          # Tauri shell that runs the server as a sidecar
 ├── agents/                # AI providers, embeddings, capture, and agents: Ingest, Ask, Challenger
 ├── template/              # Brain template copied into a new Brain (CC BY 4.0)
+├── samples/               # Sample notes a new user can add to look around (CC BY 4.0)
 └── docs/                  # Project decisions
 ```
 
@@ -69,6 +70,6 @@ and point `WOOJU_BRAIN_PATH` at the copy.
 
 ## License
 
-Code: [Apache License 2.0](LICENSE). Brain template (`template/`):
-[CC BY 4.0](template/LICENSE). See [NOTICE](NOTICE). "Wooju" is the project's
+Code: [Apache License 2.0](LICENSE). Brain template (`template/`) and sample
+notes (`samples/`): [CC BY 4.0](template/LICENSE). See [NOTICE](NOTICE). "Wooju" is the project's
 name and is not licensed for use by derived products.

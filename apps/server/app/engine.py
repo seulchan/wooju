@@ -105,6 +105,17 @@ def template_dir() -> Path:
     return Path(__file__).resolve().parents[3] / "template"
 
 
+def samples_dir() -> Path:
+    """Sample notes to look around with, one folder per language (``samples/<lang>``)."""
+    override = os.environ.get("WOOJU_SAMPLES_DIR", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return Path(__file__).resolve().parents[3] / "samples"
+
+
+SAMPLE_TAG = "sample"
+
+
 def looks_like_brain(path: Path) -> bool:
     return (path / "wooju-brain.yaml").is_file() or (
         (path / "AGENTS.md").is_file() and (path / "wiki").is_dir()
@@ -1161,6 +1172,65 @@ class Engine:
         return await self.apply(proposal)
 
     # -------------------------------------------------------------- writes
+
+    # ------------------------------------------------------------- samples
+
+    def sample_notes(self) -> list[Any]:
+        """Notes that came with the app (tagged ``sample``), still in the Brain."""
+        out = []
+        for record in self.index.all_records():
+            tags = record.metadata.get("tags")
+            if isinstance(tags, list) and SAMPLE_TAG in tags:
+                out.append(record)
+        return out
+
+    async def add_samples(self) -> Proposal:
+        """Put the sample notes into the Brain so there is something to look around."""
+        brain = self._require_brain()
+        folder = samples_dir() / self.language()
+        if not folder.is_dir():
+            folder = samples_dir() / "en"
+        if not folder.is_dir():
+            raise SetupError("setup.broken_install")
+        changes = []
+        for path in sorted(p for p in folder.rglob("*") if p.is_file()):
+            rel = path.relative_to(folder).as_posix()
+            if (brain / rel).exists():
+                continue  # already there: never overwrite the user's files
+            changes.append(FileChange(op="write", path=rel, content=path.read_text("utf-8")))
+        if not changes:
+            raise SetupError("samples.present")
+        ko = self.language() == "ko"
+        proposal = Proposal(
+            agent="you",
+            origin="samples",
+            title="예시 노트 추가" if ko else "Added sample notes",
+            changes=changes,
+            approval="auto",
+        )
+        self.store.save(proposal)
+        return await self.apply(proposal)
+
+    async def remove_samples(self) -> Proposal:
+        """Take the sample notes out again (only files still tagged ``sample``)."""
+        brain = self._require_brain()
+        changes = [FileChange(op="delete", path=r.path) for r in self.sample_notes()]
+        for record in self.sample_notes():
+            ref = record.metadata.get("canonical_ref")
+            if isinstance(ref, str) and ref.startswith("library/") and (brain / ref).is_file():
+                changes.append(FileChange(op="delete", path=ref))
+        if not changes:
+            raise SetupError("samples.none")
+        ko = self.language() == "ko"
+        proposal = Proposal(
+            agent="you",
+            origin="samples",
+            title="예시 노트 삭제" if ko else "Removed sample notes",
+            changes=changes,
+            approval="auto",
+        )
+        self.store.save(proposal)
+        return await self.apply(proposal)
 
     async def apply(self, proposal: Proposal) -> Proposal:
         brain = self._require_brain()

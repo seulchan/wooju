@@ -21,6 +21,7 @@ import {
   openExternal,
   pickFolder,
   pullModel,
+  removeSamples,
   type ModelsResponse,
 } from '../api'
 import { Badge, ErrorState, Spinner } from '../components/ui'
@@ -368,6 +369,25 @@ function FolderSettings({ setup, onChange }: { setup: SetupStatus; onChange: () 
       <button className="btn" onClick={() => void change()}>
         {t('changeFolder')}
       </button>
+      {setup.sample_notes ? (
+        <p className="hint">
+          {t('samplesInBrain')}{' '}
+          <button
+            className="btn-link"
+            onClick={() =>
+              void removeSamples().then(
+                () => {
+                  requestRefresh()
+                  onChange()
+                },
+                (err: unknown) => setError(err instanceof ApiError ? err.message : String(err)),
+              )
+            }
+          >
+            {t('samplesRemove')}
+          </button>
+        </p>
+      ) : null}
       {error ? (
         <p className="form-error" role="alert">
           {error}
