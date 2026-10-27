@@ -178,8 +178,8 @@ export function chooseBrain(path: string): Promise<{ brain_path: string; created
   return postJson('/api/setup/brain', { path })
 }
 
-/** Screen language and/or the language new notes are written in. */
-export function chooseLanguage(choice: { app?: LanguageChoice; content?: LanguageChoice }): Promise<SetupStatus> {
+/** The app's language; notes keep the language of their material. */
+export function chooseLanguage(choice: { app: LanguageChoice }): Promise<SetupStatus> {
   return postJson('/api/setup/language', choice)
 }
 

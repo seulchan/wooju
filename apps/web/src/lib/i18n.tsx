@@ -90,17 +90,11 @@ const STRINGS = {
   changeFolder: { ko: '다른 폴더 열기…', en: 'Open another folder…' },
   language: { ko: '언어', en: 'Language' },
   languageNote: {
-    ko: '화면, 안내 메시지, 텔레그램 답장에 쓰는 언어예요.',
-    en: 'Used for screens, messages and Telegram replies.',
+    ko: '화면, 안내 메시지, 텔레그램 답장에 쓰는 언어예요. 노트는 자료의 언어를 그대로 따라요. 영어 자료는 영어로, 한국어 자료는 한국어로 정리돼요.',
+    en: 'Used for screens, messages and Telegram replies. Notes keep the language of their material: English material becomes an English note, Korean material a Korean one.',
   },
   languageApp: { ko: '앱 언어', en: 'App language' },
   languageAuto: { ko: 'Mac 설정 따르기', en: 'Same as Mac' },
-  languageContent: { ko: '노트 작성 언어', en: 'Note language' },
-  languageSameAsApp: { ko: '앱 언어와 같게', en: 'Same as app' },
-  languageContentNote: {
-    ko: 'AI가 새로 정리하는 노트와 새 노트의 제목 틀에 쓰는 언어예요. 이미 있는 노트는 바뀌지 않아요.',
-    en: 'Used when the AI organizes new material and for new-note headings. Existing notes stay as they are.',
-  },
   ask: { ko: '질문하기', en: 'Ask' },
   askTitle: { ko: '내 자료에 질문하기', en: 'Ask your Brain' },
   askIntro: {

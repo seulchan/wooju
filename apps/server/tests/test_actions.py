@@ -111,7 +111,8 @@ def test_drop_a_file_and_it_is_saved_as_a_source(client, tmp_path):
     note = brain / "sources/korea-value-up-index-launch.md"
     assert note.is_file()
     text = note.read_text()
-    assert "2024년 9월 30일" in text and "67개" in text
+    # The material is English, so the note is too (headings follow it).
+    assert "## One-line Summary" in text and "67" in text
     assert not list((brain / "inbox").glob("*.txt"))
     assert (brain / "library/korea-value-up-index-launch.txt").is_file()
 
@@ -620,25 +621,22 @@ def test_search_only_models_are_not_answer_models(client, monkeypatch):
 
 
 def test_language_can_be_chosen_in_the_app(client, tmp_path):
-    brain = setup_brain(client, tmp_path)
+    setup_brain(client, tmp_path)
     status = client.get("/api/setup").json()
     assert status["language"] == "ko" and status["language_setting"] == "auto"
-    assert status["content_language_setting"] == "auto"
 
     status = client.post("/api/setup/language", json={"app": "en"}).json()
     assert status["language"] == "en" and status["language_setting"] == "en"
     assert app_settings.load().language == "en"
-    # Notes follow the app's language while the Brain says "auto".
-    assert client.app.state.engine.content_language() == "en"
-    # Messages follow too.
     r = client.post("/api/setup/ai", json={"provider": "ollama", "model": "bad model!"})
     assert "valid" in r.json()["detail"]
+    assert client.post("/api/setup/language", json={"app": "fr"}).status_code == 422
 
-    status = client.post("/api/setup/language", json={"content": "ko"}).json()
-    assert status["content_language_setting"] == "ko"
-    text = (brain / "wooju-brain.yaml").read_text("utf-8")
-    assert "  language: ko" in text and "# Language for durable notes" in text
-    assert client.app.state.engine.content_language() == "ko"
 
-    r = client.post("/api/setup/language", json={"app": "fr"})
-    assert r.status_code == 422
+def test_notes_keep_their_own_language(client, tmp_path):
+    setup_brain(client, tmp_path)
+    engine = client.app.state.engine
+    client.post("/api/setup/language", json={"app": "en"})
+    assert engine.content_language("자사주 소각 의무화가 저PBR 기업의 재평가로 이어질 수 있다는 가설이다.") == "ko"
+    assert engine.content_language("The index rose sharply while most small companies stayed cheap.") == "en"
+    assert engine.content_language("") == "en"  # nothing to go by: the app's language

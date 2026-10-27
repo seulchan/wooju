@@ -31,7 +31,14 @@ from brain_core.schema import SourceFrontmatter, SourceType
 
 from .capture import link_for
 from .llm import Provider
-from .text import ACCEPTED_SUFFIXES, UnsupportedFile, extract_text, first_url, normalize_korean
+from .text import (
+    ACCEPTED_SUFFIXES,
+    UnsupportedFile,
+    detect_language,
+    extract_text,
+    first_url,
+    normalize_korean,
+)
 
 AGENT = "ingest"
 
@@ -202,14 +209,15 @@ def ingest_file(
     rel: str,
     provider: Provider,
     *,
-    language: str,
+    language: str | None,
     today: date | None = None,
     ui_language: str | None = None,
 ) -> Proposal:
     """Read ``rel`` (a path under ``inbox/``) and return a pending proposal.
 
-    ``language`` is the note's language; ``ui_language`` (default: the same)
-    is the language of the review card shown in the app.
+    ``language`` is the note's language; None writes the note in the
+    material's own language. ``ui_language`` (default: the note's) is the
+    language of the review card shown in the app.
     """
     rel_path = PurePosixPath(rel)
     if rel_path.parts[:1] != ("inbox",) or ".." in rel_path.parts:
@@ -221,6 +229,8 @@ def ingest_file(
         raise IngestError(str(exc), "ingest.unsupported") from exc
     if len(text.strip()) < 40:
         raise IngestError("No text", "ingest.no_text")
+    if language is None:
+        language = detect_language(text) or ui_language or "en"
 
     truncated = False
     if provider.name == "ollama":

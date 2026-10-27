@@ -198,3 +198,11 @@ def test_long_text_is_cut_for_local_models_and_says_so(tmp_path):
     assert estimate_tokens(provider.calls[0][1]) <= 6100
     note = next(c for c in proposal.changes if c.path.startswith("sources/")).content
     assert "앞부분만 읽고" in note
+
+
+def test_without_a_fixed_language_the_note_follows_the_material(brain):
+    # ARTICLE is English, so the note is English even if the app is Korean.
+    provider = FakeProvider(DRAFT)
+    p = ingest_file(brain, "inbox/clip.txt", provider, language=None, ui_language="ko")
+    assert "English" in provider.calls[0][0]
+    assert "## One-line Summary" in p.changes[0].content

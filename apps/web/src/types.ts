@@ -269,8 +269,6 @@ export interface SetupStatus {
   language: string
   /** What the user chose: "auto" follows the Mac. */
   language_setting?: LanguageChoice
-  /** The Brain's content.language: "auto" follows the app's language. */
-  content_language_setting?: LanguageChoice
   ai: AiStatus
 }
 

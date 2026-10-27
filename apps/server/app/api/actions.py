@@ -75,7 +75,6 @@ class SetupStatus(BaseModel):
     brain_ready: bool
     language: str  # resolved: "ko" or "en"
     language_setting: str = "auto"  # what the user chose: auto / ko / en
-    content_language_setting: str = "auto"  # the Brain's content.language
     ai: AiStatus
 
 
@@ -124,28 +123,20 @@ def setup_status(engine: EngineDep) -> SetupStatus:
         brain_ready=engine.brain is not None,
         language=engine.language(),
         language_setting=app_settings.load().language,
-        content_language_setting=engine.content_language_setting(),
         ai=_ai_status(engine),
     )
 
 
 class ChooseLanguage(BaseModel):
-    app: Literal["auto", "ko", "en"] | None = None
-    content: Literal["auto", "ko", "en"] | None = None
+    app: Literal["auto", "ko", "en"]
 
 
 @actions_router.post("/setup/language", tags=["setup"], response_model=SetupStatus)
 async def choose_language(body: ChooseLanguage, engine: EngineDep) -> SetupStatus:
-    """App language (screens, messages) and, separately, the language of new notes."""
-    if body.app is not None:
-        current = app_settings.load()
-        current.language = body.app
-        app_settings.save(current)
-    if body.content is not None and body.content != engine.content_language_setting():
-        try:
-            engine.set_content_language(body.content)
-        except UserFacingError as exc:
-            raise _fail_from(engine, exc) from exc
+    """The app's language (screens, messages, bot replies). Notes keep their own."""
+    current = app_settings.load()
+    current.language = body.app
+    app_settings.save(current)
     return setup_status(engine)
 
 

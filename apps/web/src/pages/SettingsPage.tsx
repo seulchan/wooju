@@ -81,15 +81,14 @@ const LANGUAGE_CHOICES: ReadonlyArray<{ value: LanguageChoice; label: string }> 
   { value: 'en', label: 'English' },
 ]
 
-/** Screen language, and separately the language new notes are written in. */
+/** Screen language. Notes keep the language of what they are about. */
 function LanguageSettings({ setup }: { setup: SetupStatus }) {
   const t = useT()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const app = setup.language_setting ?? 'auto'
-  const content = setup.content_language_setting ?? 'auto'
 
-  async function choose(choice: { app?: LanguageChoice; content?: LanguageChoice }) {
+  async function choose(choice: { app: LanguageChoice }) {
     setBusy(true)
     setError(null)
     try {
@@ -127,12 +126,8 @@ function LanguageSettings({ setup }: { setup: SetupStatus }) {
   return (
     <section className="section" aria-label={t('language')}>
       <h2 className="section-title">{t('language')}</h2>
-      <h3 className="think-sub">{t('languageApp')}</h3>
       {group(t('languageApp'), app, t('languageAuto'), (v) => void choose({ app: v }))}
       <p className="hint">{t('languageNote')}</p>
-      <h3 className="think-sub">{t('languageContent')}</h3>
-      {group(t('languageContent'), content, t('languageSameAsApp'), (v) => void choose({ content: v }))}
-      <p className="hint">{t('languageContentNote')}</p>
       {error ? (
         <p className="form-error" role="alert">
           {error}

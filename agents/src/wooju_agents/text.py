@@ -91,6 +91,26 @@ def extract_text(path: Path, max_chars: int = 20000) -> tuple[str, str | None]:
     return text[:max_chars], title
 
 
+_HANGUL = re.compile(r"[\uac00-\ud7a3]")
+_LATIN = re.compile(r"[A-Za-z]")
+
+
+def detect_language(text: str) -> str | None:
+    """The language a piece of text is written in (``ko``/``en``), or None if unclear.
+
+    Counts Hangul syllables against Latin letters; Korean text full of English
+    terms still reads as Korean because a syllable carries more than a letter.
+    """
+    sample = text[:20000]
+    hangul = len(_HANGUL.findall(sample))
+    latin = len(_LATIN.findall(sample))
+    if hangul >= 20 and hangul >= 0.3 * (hangul + latin):
+        return "ko"
+    if latin >= 60:
+        return "en"
+    return None
+
+
 def resolve_language(setting: str | None) -> str:
     """Turn ``content.language`` (``auto`` or a tag) into a supported language."""
     value = (setting or "auto").strip().lower()

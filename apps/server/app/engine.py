@@ -60,7 +60,7 @@ from wooju_agents.llm import (
     recommended_ollama_model,
 )
 from wooju_agents.questions import Question, make_questions
-from wooju_agents.text import ACCEPTED_SUFFIXES, resolve_language
+from wooju_agents.text import ACCEPTED_SUFFIXES, detect_language, resolve_language
 
 from . import icloud, notes, telegram
 from . import settings as app_settings
@@ -215,55 +215,28 @@ class Engine:
         """
         return resolve_language(app_settings.load().language)
 
-    def content_language_setting(self) -> str:
-        """The Brain's ``content.language`` as written ("auto" when unset)."""
+    def fixed_content_language(self) -> str | None:
+        """A language the Brain pins notes to (``content.language``), if any.
+
+        Not shown in the app: by default ("auto") each note keeps the language
+        of what it is about.
+        """
         if self.brain is not None:
             try:
                 data = yaml.safe_load((self.brain / "wooju-brain.yaml").read_text("utf-8")) or {}
-                value = (data.get("content") or {}).get("language", "auto")
-                return str(value or "auto").strip().lower() or "auto"
+                value = str((data.get("content") or {}).get("language") or "auto").strip()
+                if value.lower() != "auto":
+                    return resolve_language(value)
             except (OSError, yaml.YAMLError, AttributeError):
                 pass
-        return "auto"
+        return None
 
-    def content_language(self) -> str:
-        """The language notes are written in; "auto" means the app's language."""
-        setting = self.content_language_setting()
-        return self.language() if setting == "auto" else resolve_language(setting)
-
-    def set_content_language(self, value: str) -> None:
-        """Fix the language new notes are written in (or "auto" for the app's)."""
-        brain = self._require_brain()
-        path = brain / "wooju-brain.yaml"
-        try:
-            text = path.read_text("utf-8")
-        except OSError as exc:
-            raise SetupError("review.unreadable") from exc
-        lines = text.splitlines()
-        in_content, done = False, False
-        for i, line in enumerate(lines):
-            if re.match(r"^\S", line):
-                in_content = line.rstrip() == "content:"
-            elif in_content and re.match(r"^\s+language\s*:", line):
-                indent = line[: len(line) - len(line.lstrip())]
-                lines[i] = f"{indent}language: {value}"
-                done = True
-                break
-        if not done:
-            if any(line.rstrip() == "content:" for line in lines):
-                at = next(i for i, line in enumerate(lines) if line.rstrip() == "content:")
-                lines.insert(at + 1, f"  language: {value}")
-            else:
-                lines += ["", "content:", f"  language: {value}"]
-        updated = "\n".join(lines) + "\n"
-        # Brain settings are not note content, so this skips the proposal flow
-        # (agents may never write here) but is still recorded in history.
-        try:
-            path.write_text(updated, encoding="utf-8")
-        except OSError as exc:
-            raise SetupError("review.unreadable") from exc
-        with contextlib.suppress(Exception):
-            history.commit_paths(brain, ["wooju-brain.yaml"], f"Note language: {value}")
+    def content_language(self, text: str | None = None) -> str:
+        """The language to write in: the note's own (``text``), else the app's."""
+        fixed = self.fixed_content_language()
+        if fixed:
+            return fixed
+        return (detect_language(text) if text else None) or self.language()
 
     def provider(self) -> Provider:
         if self.provider_override is not None:
@@ -441,14 +414,14 @@ class Engine:
                 hits = await asyncio.to_thread(retriever.search, body[:1500], 8, 1, query_vec)
                 passages = [p for _, p in hits if p.record.category in ("source", "knowledge")][:6]
                 conflicts = await asyncio.to_thread(
-                    find_conflicts, body, passages, provider, language=self.content_language()
+                    find_conflicts, body, passages, provider, language=self.content_language(body)
                 )
         except Exception:  # noqa: BLE001 — the check is extra; saving the source is not
             logger.exception("Conflict check failed for %s", path)
             return 0, content
         if not conflicts:
             return 0, content
-        section = render_section(conflicts, note_path=path, language=self.content_language())
+        section = render_section(conflicts, note_path=path, language=self.content_language(body))
         return len(conflicts), add_section(content, section)
 
     async def retry_job(self, job_id: str) -> Job:
@@ -710,7 +683,7 @@ class Engine:
                     brain,
                     job.file,
                     provider,
-                    language=self.content_language(),
+                    language=self.fixed_content_language(),  # None: the material's own
                     ui_language=self.language(),
                 )
         except LLMError as exc:
@@ -870,7 +843,7 @@ class Engine:
                 self.index,
                 insight_id,
                 provider,
-                language=self.content_language(),
+                language=self.content_language(record.content if record else None),
                 ui_language=self.language(),
                 retriever=retriever,
                 query_vec=query_vec,
@@ -1090,7 +1063,7 @@ class Engine:
                 record,
                 list(others.values())[:4],
                 provider,
-                language=self.content_language(),
+                language=self.content_language(record.content),
             )
 
     async def reflect(self, record_id: str, question: str, answer: str) -> Proposal:
@@ -1103,7 +1076,7 @@ class Engine:
             raise SetupError("note.empty")
         current = (brain / record.path).read_text(encoding="utf-8")
         updated = notes.add_reflection(
-            current, question, answer, self.content_language(), date.today()
+            current, question, answer, self.content_language(current), date.today()
         )
         ko = self.language() == "ko"
         return await self._apply_own(
@@ -1121,7 +1094,7 @@ class Engine:
         if not text.strip():
             raise SetupError("note.empty")
         current = (brain / record.path).read_text(encoding="utf-8")
-        updated = notes.set_takeaway(current, text, self.content_language())
+        updated = notes.set_takeaway(current, text, self.content_language(current))
         ko = self.language() == "ko"
         return await self._apply_own(
             record.path,

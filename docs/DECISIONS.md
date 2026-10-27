@@ -168,11 +168,13 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 
 - Structural identifiers (frontmatter keys, controlled values, file names) are
   always English.
-- Two language settings, both in Settings > Language. The app language
-  (screens, messages, Telegram replies; stored in the app's settings.json)
-  defaults to the Mac's, falling back to English. The note language
-  (`content.language` in the Brain) defaults to `auto` = the app language;
-  changing it affects only new notes.
+- One language setting, in Settings > Language: the app language (screens,
+  messages, Telegram replies; stored in the app's settings.json), defaulting to
+  the Mac's and falling back to English. Notes are not tied to it: a new source
+  note is written in its material's language, and anything added to an
+  existing note (questions, takeaway, reflections, challenge, conflicts)
+  follows that note's language. `content.language` in the Brain can still pin
+  one language for every note; it is not shown in the app.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
