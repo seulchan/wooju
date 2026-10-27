@@ -40,7 +40,7 @@ on top of them, and keep them from fading.
 ## Getting started
 
 1. Open Wooju and choose a folder for your Brain (a new one is created for you).
-2. Install Ollama when Wooju asks; it downloads the AI model it needs (about 6 GB on a
+2. Install Ollama when Wooju asks; it downloads the AI model it needs (about 7 GB on a
    16 GB Mac, less on an 8 GB Mac).
 3. Drop in your first file, or press "Look around with sample notes" to explore first.
 
