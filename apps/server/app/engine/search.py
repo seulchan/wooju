@@ -97,13 +97,16 @@ class SearchMixin:
 
     async def _sweep_if_changed(self) -> None:
         """Let the topics agent file new notes, once per index version."""
-        if self._swept_at == self.index.indexed_at:
+        if self._swept_at == self.index.indexed_at or self._sweeping:
             return
-        self._swept_at = self.index.indexed_at
+        self._sweeping = True
         try:
             await self.sweep_topics()
         except Exception:  # noqa: BLE001 — filing is a convenience; search still works
             logger.exception("Filing notes into topics failed")
+        finally:
+            self._sweeping = False
+        # Marked done only now, after any change the pass made has been applied.
         self._swept_at = self.index.indexed_at
 
     async def query_vector(self, text: str) -> Any:

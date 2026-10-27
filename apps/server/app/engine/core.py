@@ -91,6 +91,7 @@ class Engine(
         self.provider_override: Provider | None = None  # tests
         self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
         self._swept_at: str | None = None  # index version the topics agent last filed
+        self._sweeping = False
 
     # ------------------------------------------------------------ lifecycle
 
