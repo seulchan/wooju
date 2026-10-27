@@ -30,7 +30,7 @@ RESCAN_SECONDS = 5.0
 _PROPOSABLE = ("sources", "wiki", "memory", "projects", "areas")
 
 INSTRUCTIONS = """\
-Wooju is the user's personal investment-research Brain: Markdown notes on their Mac.
+Wooju is the user's personal knowledge Brain: Markdown notes on their Mac.
 
 Layers: sources/ (what one source says), wiki/ (durable knowledge: concepts,
 overviews, questions), insights (origin: synthesis; derived hypotheses with a

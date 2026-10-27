@@ -65,7 +65,7 @@ class ChallengeDraft(BaseModel):
 
 
 _SYSTEM = (
-    "You are a skeptical reviewer of investment-research hypotheses in a personal notebook. "
+    "You are a skeptical reviewer of the ideas and conclusions in a personal notebook. "
     "Try to break the insight. Use only the numbered passages and general reasoning about "
     "logic and scope; do not invent facts, figures, or events. Cite passages as [n]. "
     "Verdicts: reject = unsupported, wrong, or redundant; refine = worth keeping but the claim "

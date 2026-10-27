@@ -9,7 +9,9 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   attention is shown quietly when the user opens the app.
 - Top priority: no hard parts for a first-time, non-developer user. When this
   conflicts with another decision, this wins.
-- Phase 1 validation domain: investment research.
+- Wooju is for personal knowledge management, for anyone. Investment research
+  is only the domain used to validate phase 1 (the dev Brain and evals); AI
+  prompts, examples, and screens stay domain-neutral.
 
 ## Architecture
 

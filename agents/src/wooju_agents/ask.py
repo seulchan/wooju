@@ -68,19 +68,18 @@ class AnswerDraft(BaseModel):
 
 
 _TERMS_SYSTEM = (
-    "You help search a personal investment-research notebook written mostly in Korean "
-    "and English. Given a question, write up to 4 short keyword searches that would match "
-    "notes answering it: include Korean and English forms, synonyms, tickers, and company "
-    "or person names. Keywords only, no full sentences."
+    "You help search a personal knowledge notebook written in Korean and English. "
+    "Given a question, write up to 4 short keyword searches that would match notes "
+    "answering it: include Korean and English forms, synonyms, abbreviations, and names "
+    "of people, organizations, or things. Keywords only, no full sentences."
 )
 
 _ANSWER_SYSTEM = (
     "You answer questions using only the numbered passages from the user's own notes. "
     "Rules: use no outside knowledge; give each sentence the numbers of the passages it "
     "comes from; if passages disagree, say so; if they do not answer the question, say "
-    "what is missing in the missing field (otherwise leave it empty); give no investment "
-    "advice or price predictions of your own. Write every sentence in {language}, "
-    "concisely: the direct "
+    "what is missing in the missing field (otherwise leave it empty); add no advice or "
+    "predictions of your own. Write every sentence in {language}, concisely: the direct "
     "answer first, then at most four supporting points."
 )
 _HANGUL = re.compile(r"[가-힣]")

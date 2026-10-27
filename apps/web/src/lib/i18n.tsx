@@ -100,8 +100,8 @@ const STRINGS = {
     en: 'Answers come only from your saved material and notes, with the notes each answer is based on.',
   },
   askPlaceholder: {
-    ko: '예: 밸류업 지수에는 어떤 기업이 들어갔어?',
-    en: 'e.g. Which companies are in the Value-up Index?',
+    ko: '예: 내 노트에서 ○○에 대해 뭐라고 해?',
+    en: 'e.g. What do my notes say about …?',
   },
   askButton: { ko: '질문하기', en: 'Ask' },
   askThinking: {
@@ -201,8 +201,8 @@ const STRINGS = {
     en: 'Claude points to Wooju in another location. If you moved the app, reconnect.',
   },
   claudeRestart: {
-    ko: 'Claude 앱을 완전히 종료했다가 다시 열면 적용돼요. 그 다음 Claude에게 “내 Wooju에서 밸류업 관련 자료 찾아줘”처럼 물어보세요.',
-    en: 'Quit Claude completely and open it again to finish. Then ask Claude something like “Search my Wooju for value-up notes.”',
+    ko: 'Claude 앱을 완전히 종료했다가 다시 열면 적용돼요. 그 다음 Claude에게 “내 Wooju에서 ○○ 관련 자료 찾아줘”처럼 물어보세요.',
+    en: 'Quit Claude completely and open it again to finish. Then ask Claude something like “Search my Wooju for notes on …”',
   },
   claudeMissing: {
     ko: 'Claude 데스크톱 앱이 설치돼 있지 않아요.',
