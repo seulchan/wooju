@@ -278,6 +278,11 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   command fixes. Ad-hoc signed, a tester opens it once through System
   Settings → Privacy & Security → Open Anyway. Notarization replaces this
   when there is an account.
+- Hardened runtime stays off with ad-hoc signing (`hardenedRuntime: false`).
+  It only matters for notarization, and with it on, library validation stops
+  the server: PyInstaller unpacks libpython at launch, signed separately, and
+  macOS refuses to load it ("different Team IDs"). With a Developer ID the
+  sidecar needs `com.apple.security.cs.disable-library-validation` instead.
 
 ## Distribution and license
 

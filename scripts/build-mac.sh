@@ -87,5 +87,20 @@ npm ci --prefix apps/desktop --no-audit --no-fund
 (cd apps/desktop && npx tauri build)
 
 APP="apps/desktop/src-tauri/target/release/bundle/macos/Wooju.app"
+
+# Signing can change whether the server starts (macOS checks the libraries it
+# unpacks), so check the server inside the finished app as well.
+SIGNED="$(mktemp -d)"
+WOOJU_DATA_DIR="$SIGNED" "$APP/Contents/MacOS/wooju-server" --port 48798 >"$SIGNED/server.log" 2>&1 &
+PID=$!
+ok=""
+for _ in $(seq 1 120); do
+  if curl -sf http://127.0.0.1:48798/api/health >/dev/null; then ok=1; break; fi
+  kill -0 "$PID" 2>/dev/null || break
+  sleep 0.5
+done
+kill "$PID" 2>/dev/null || true
+[[ -n "$ok" ]] || { tail -20 "$SIGNED/server.log"; fail "완성된 앱 안의 서버가 시작되지 않았어요(서명 문제일 수 있어요). 위 로그를 확인해 주세요."; }
+echo "완성된 앱의 서버 정상"
 printf '\n\033[1;32m✓ 완료\033[0m\n  앱: %s\n  설치 파일: %s\n' "$ROOT/$APP" "$(ls "$ROOT"/apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg 2>/dev/null | head -1)"
 echo "  실행: open \"$ROOT/$APP\""
