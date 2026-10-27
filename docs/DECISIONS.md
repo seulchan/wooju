@@ -270,6 +270,15 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - One copy of the app at a time: a second launch brings the first window
   forward instead of starting another server on the same Brain.
 
+## Ad-hoc signing until there is a developer account
+
+- Without an Apple Developer ID the app is ad-hoc signed (`signingIdentity:
+  "-"` in tauri.conf.json). Apple Silicon needs every downloaded app signed;
+  an unsigned download can be reported as "damaged", which only a Terminal
+  command fixes. Ad-hoc signed, a tester opens it once through System
+  Settings → Privacy & Security → Open Anyway. Notarization replaces this
+  when there is an account.
+
 ## Distribution and license
 
 - Local desktop app first, Apple Silicon Mac first. Cloud only for an optional

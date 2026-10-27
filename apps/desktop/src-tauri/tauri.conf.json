@@ -14,10 +14,15 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "category": "Productivity",
     "copyright": "Copyright 2026 Seulchan Hwang",
-    "externalBin": ["binaries/wooju-server"],
+    "externalBin": [
+      "binaries/wooju-server"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -26,7 +31,8 @@
       "icons/icon.png"
     ],
     "macOS": {
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
     }
   }
 }
