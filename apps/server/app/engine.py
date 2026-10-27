@@ -16,7 +16,7 @@ import re
 import shutil
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
@@ -941,6 +941,7 @@ class Engine:
         body: str,
         grounds: list[str],
         insight_kind: str = "hypothesis",
+        recall: bool = True,
     ) -> tuple[str, Proposal]:
         """Save a note the user wrote. A thought must rest on at least one note."""
         brain = self._require_brain()
@@ -957,12 +958,42 @@ class Engine:
             body=body,
             grounds=records,
             insight_kind=insight_kind,
+            review_after=(
+                date.today() + timedelta(days=notes.FIRST_REVIEW_DAYS) if recall else None
+            ),
         )
         ko = self.language() == "ko"
         proposal = await self._apply_own(
             path, content, f"새 노트: {title.strip()}" if ko else f"New note: {title.strip()}"
         )
         return path.removesuffix(".md"), proposal
+
+    async def recall(self, record_id: str, rating: str) -> Proposal:
+        """The user tried to recall a note before reading it; schedule the next time."""
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        previous = record.metadata.get("review_interval")
+        days = notes.next_interval(previous if isinstance(previous, int) else None, rating)
+        until = date.today() + timedelta(days=days)
+        text = (brain / record.path).read_text(encoding="utf-8")
+        try:
+            updated = set_frontmatter_value(text, "review_after", until.isoformat())
+            updated = set_frontmatter_value(updated, "review_interval", str(days))
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
+        ko = self.language() == "ko"
+        label = {"good": "잘 기억함", "partial": "일부 기억함", "poor": "거의 못 떠올림"}
+        title = (
+            f"떠올림({label[rating]}), 다음 {until.isoformat()}: {record.title}"
+            if ko
+            else f"Recalled ({rating}), next {until.isoformat()}: {record.title}"
+        )
+        proposal = await self._apply_own(record.path, updated, title)
+        if proposal.status == "applied":
+            notes.log_recall(brain, record_id, rating)
+        return proposal
 
     async def set_takeaway(self, record_id: str, text: str) -> Proposal:
         """The user's one line about a note, in their own words."""

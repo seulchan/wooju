@@ -107,8 +107,14 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   must name at least one note it rests on.
 - Step 1: after a source is saved, an optional one-line takeaway in the
   user's words goes into its "내 생각 / My Takeaway" section (searchable).
-- Next: recall before review (review dates), the AI asking questions on a
-  note, growing memos into notes, typed connections. Testers check steps 1–2
+- Step 2: recall before reading. A note past its review date opens with its
+  title only and a box for what the user remembers; then the note, then a
+  rating that spaces the next recall (well: interval doubles, at least 30
+  days, at most a year; partly: same, at least 14; hardly: 7 days), stored
+  as `review_interval`. Notes the user writes start with a recall in a week
+  (can be turned off). Home shows the last 30 days' count, from a local log.
+- Next: the AI asking questions on a note, growing memos into notes, typed
+  connections. Testers check steps 1–2
   before the AI-assisted steps are built.
 
 ## Conflict check

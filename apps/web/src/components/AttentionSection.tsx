@@ -15,7 +15,8 @@
  * list (a few items drawn across the reasons) rather than a full card per group.
  */
 
-import { fetchAttention, markChecked } from '../api'
+import { fetchAttention, fetchRecallStats, markChecked } from '../api'
+import { useAsync as useStats } from '../lib/useAsync'
 import { requestRefresh } from '../lib/freshness'
 import { encodeId } from '../lib/paths'
 import { useAsync } from '../lib/useAsync'
@@ -82,11 +83,17 @@ function pickRepresentative(
 /** Notes whose review date has passed, each with one-click "reviewed" actions. */
 function DueList({ items }: { items: AttentionItem[] }) {
   const t = useT()
+  const stats = useStats((signal) => fetchRecallStats(signal), [])
   return (
     <section className="due" aria-label={t('reviewDue')}>
       <h3 className="subsection-title">
         {t('reviewDue')} <span className="due-count">{items.length}</span>
       </h3>
+      {stats.kind === 'ready' && stats.data.count ? (
+        <p className="hint">
+          {t('recallStats').replace('{count}', String(stats.data.count)).replace('{good}', String(stats.data.good))}
+        </p>
+      ) : null}
       <ul className="due-list">
         {items.slice(0, 10).map((item) => (
           <li key={item.id} className="due-item">
@@ -98,7 +105,12 @@ function DueList({ items }: { items: AttentionItem[] }) {
                 {t('reviewDueSince')} {item.detail}
               </span>
             </div>
-            <ReviewButtons id={item.id} compact />
+            <div className="due-actions">
+              <Link className="btn btn-small btn-primary" to={`/recall/${encodeId(item.id)}`}>
+                {t('recallStart')}
+              </Link>
+              <ReviewButtons id={item.id} compact />
+            </div>
           </li>
         ))}
       </ul>

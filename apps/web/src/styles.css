@@ -1673,3 +1673,34 @@ code {
   align-items: center;
   border-color: var(--border);
 }
+
+/* --------------------------------------------------------------- recall */
+
+.recall-mine {
+  border-left: 3px solid var(--accent);
+  padding: 0.25rem 0.9rem;
+  margin: 1rem 0;
+  background: var(--panel);
+}
+.recall-mine__text {
+  white-space: pre-wrap;
+}
+.recall-note {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+}
+.recall-rate {
+  margin-top: 1rem;
+}
+.due-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}

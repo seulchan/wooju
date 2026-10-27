@@ -431,6 +431,7 @@ export function createNote(note: {
   body: string
   grounds?: string[]
   insight_kind?: string
+  recall?: boolean
 }): Promise<{ id: string }> {
   return postJson('/api/notes/new', note)
 }
@@ -438,4 +439,14 @@ export function createNote(note: {
 /** The user's one line about a note, in their own words. */
 export function saveTakeaway(id: string, text: string): Promise<{ ok: boolean }> {
   return postJson('/api/notes/takeaway', { id, text })
+}
+
+export type RecallRating = 'good' | 'partial' | 'poor'
+
+export function recallNote(id: string, rating: RecallRating): Promise<{ next: string | null }> {
+  return postJson('/api/recall', { id, rating })
+}
+
+export function fetchRecallStats(signal?: AbortSignal): Promise<{ count: number; good: number; days: number }> {
+  return apiGet('/api/recall/stats', signal)
 }

@@ -34,6 +34,7 @@ export function NewNotePage({ kind: initialKind = '', ground = '' }: { kind?: st
   const touched = useRef(false)
   const [grounds, setGrounds] = useState<Ground[]>([])
   const [insightKind, setInsightKind] = useState('hypothesis')
+  const [recall, setRecall] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,6 +69,7 @@ export function NewNotePage({ kind: initialKind = '', ground = '' }: { kind?: st
         body,
         grounds: grounds.map((g) => g.id),
         insight_kind: kind === 'thought' ? insightKind : undefined,
+        recall,
       })
       requestRefresh()
       navigate(`/record/${encodeId(id)}`)
@@ -137,6 +139,10 @@ export function NewNotePage({ kind: initialKind = '', ground = '' }: { kind?: st
           {error}
         </p>
       ) : null}
+      <label className="check">
+        <input type="checkbox" checked={recall} onChange={(e) => setRecall(e.target.checked)} />{' '}
+        {t('recallOnNew')}
+      </label>
       <div className="card-actions">
         <button
           className="btn btn-primary"

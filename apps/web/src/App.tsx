@@ -16,6 +16,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AskPage } from './pages/AskPage'
 import { NewNotePage } from './pages/NewNotePage'
+import { RecallPage } from './pages/RecallPage'
 
 export default function App() {
   const route = useRoute()
@@ -55,6 +56,9 @@ export default function App() {
       break
     case 'ask':
       page = <AskPage initial={route.q} />
+      break
+    case 'recall':
+      page = <RecallPage key={route.id} id={route.id} />
       break
     case 'newNote':
       page = <NewNotePage kind={route.kind} ground={route.ground} />

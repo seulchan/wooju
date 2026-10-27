@@ -15,6 +15,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'ask'; q: string }
   | { name: 'newNote'; kind: string; ground: string }
+  | { name: 'recall'; id: string }
   | { name: 'knowledge' }
   | { name: 'knowledgeDetail'; id: string }
   | { name: 'insights' }
@@ -60,6 +61,8 @@ export function parseHash(hash: string): Route {
       return { name: 'search', q }
     case 'ask':
       return { name: 'ask', q }
+    case 'recall':
+      return rest ? { name: 'recall', id: rest } : { name: 'notFound', path: h }
     case 'new': {
       const params = new URLSearchParams(queryPart)
       return { name: 'newNote', kind: params.get('kind') ?? '', ground: params.get('ground') ?? '' }

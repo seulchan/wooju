@@ -528,6 +528,7 @@ class NewNote(BaseModel):
     title: str
     body: str = ""
     grounds: list[str] = []
+    recall: bool = True  # remind the user to recall it in a week
     insight_kind: Literal["hypothesis", "connection", "pattern", "implication", "tension"] = (
         "hypothesis"
     )
@@ -548,13 +549,40 @@ async def new_note(body: NewNote, engine: EngineDep) -> dict[str, Any]:
     """Save a note the user wrote (checked, recorded, undoable)."""
     try:
         note_id, proposal = await engine.create_note(
-            body.kind, body.title, body.body, body.grounds, body.insight_kind
+            body.kind, body.title, body.body, body.grounds, body.insight_kind, body.recall
         )
     except SetupError as exc:
         raise _fail_from(engine, exc) from exc
     if proposal.status != "applied":
         raise _fail(engine, "note.invalid", error=proposal.error or "")
     return {"id": note_id}
+
+
+class Recall(BaseModel):
+    id: str
+    rating: Literal["good", "partial", "poor"]
+
+
+@actions_router.post("/recall", tags=["maintainer"])
+async def recall(body: Recall, engine: EngineDep) -> dict[str, Any]:
+    """The user recalled a note before reading it; schedule the next recall."""
+    try:
+        proposal = await engine.recall(body.id, body.rating)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    record = engine.index.get(body.id)
+    return {"next": record.metadata.get("review_after") if record else None}
+
+
+@actions_router.get("/recall/stats", tags=["maintainer"])
+def recall_stats(engine: EngineDep) -> dict[str, Any]:
+    from .. import notes
+
+    if engine.brain is None:
+        return {"count": 0, "good": 0, "days": 30}
+    return notes.recall_stats(engine.brain)
 
 
 class Takeaway(BaseModel):

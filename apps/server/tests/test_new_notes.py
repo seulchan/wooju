@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -64,7 +65,10 @@ def test_new_concept_note(client):
     note_id = r.json()["id"]
     assert note_id.startswith("wiki/concepts/concept-")
     text = (b / f"{note_id}.md").read_text(encoding="utf-8")
-    assert text.startswith("---\ntitle: 복리\n---\n# 복리\n\n## 무엇인가")
+    week = (date.today() + timedelta(days=7)).isoformat()
+    assert text.startswith(
+        f"---\ntitle: 복리\nreview_after: {week}\nreview_interval: 7\n---\n# 복리"
+    )
     record = c.get(f"/api/records/{note_id}").json()
     assert record["title"] == "복리" and record["category"] == "knowledge"
     assert c.get("/api/history").json()["items"][0]["title"] == "새 노트: 복리"
@@ -126,3 +130,43 @@ def test_takeaway_after_a_source_is_saved(client):
     assert (
         text.count("## 내 생각") == 1 and "두 번째 생각" in text and "재평가는 아니다" not in text
     )
+
+
+def test_recall_can_be_turned_off(client):
+    c, b = client
+    r = c.post("/api/notes/new", json={"kind": "concept", "title": "No recall", "recall": False})
+    assert "review_after" not in (b / f"{r.json()['id']}.md").read_text(encoding="utf-8")
+
+
+def test_recall_spaces_the_next_review(client):
+    c, b = client
+    note_id = c.post("/api/notes/new", json={"kind": "concept", "title": "Spacing"}).json()["id"]
+    path = b / f"{note_id}.md"
+
+    def after():
+        rec = c.get(f"/api/records/{note_id}").json()["metadata"]
+        return (date.fromisoformat(str(rec["review_after"])) - date.today()).days, rec[
+            "review_interval"
+        ]
+
+    assert c.post("/api/recall", json={"id": note_id, "rating": "good"}).status_code == 200
+    assert after() == (30, 30)  # 7-day start, remembered well → at least a month
+    c.post("/api/recall", json={"id": note_id, "rating": "good"})
+    assert after() == (60, 60)
+    c.post("/api/recall", json={"id": note_id, "rating": "partial"})
+    assert after() == (60, 60)
+    c.post("/api/recall", json={"id": note_id, "rating": "poor"})
+    assert after() == (7, 7)
+    assert "review_after" in path.read_text(encoding="utf-8")
+
+    stats = c.get("/api/recall/stats").json()
+    assert stats["count"] == 4 and stats["good"] == 2
+    assert c.get("/api/history").json()["items"][0]["title"].startswith("떠올림(거의 못 떠올림)")
+
+
+def test_interval_rules():
+    from app.notes import next_interval
+
+    assert next_interval(None, "good") == 60  # unknown history counts as a month
+    assert next_interval(300, "good") == 365
+    assert next_interval(7, "partial") == 14

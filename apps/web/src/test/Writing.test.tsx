@@ -29,7 +29,7 @@ describe('New note', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
       expect(bodies(fetchMock, '/api/notes/new')).toEqual([
-        { kind: 'concept', title: 'Compound interest', body: '## What it is\n\n\n\nInterest on interest.', grounds: [] },
+        { kind: 'concept', title: 'Compound interest', body: '## What it is\n\n\n\nInterest on interest.', grounds: [], recall: true },
       ]),
     )
     await waitFor(() => expect(window.location.hash).toBe('#/record/wiki/concepts/compound-interest'))

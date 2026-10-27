@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
@@ -86,8 +86,13 @@ def build(
     body: str,
     grounds: list[Record],
     insight_kind: str = "hypothesis",
+    review_after: date | None = None,
 ) -> str:
     frontmatter: dict[str, object] = {"title": title.strip()}
+    if review_after:
+        # First recall a week after writing it (see "recall" below).
+        frontmatter["review_after"] = review_after
+        frontmatter["review_interval"] = FIRST_REVIEW_DAYS
     if kind == "thought":
         frontmatter.update(
             origin="synthesis",
@@ -121,3 +126,66 @@ def takeaway_of(content: str) -> str | None:
     names = "|".join(re.escape(h) for h in TAKEAWAY.values())
     m = re.search(rf"^##\s+({names})\s*$(.*?)(?=^##\s|\Z)", content, re.M | re.S)
     return m.group(2).strip() if m and m.group(2).strip() else None
+
+
+# ------------------------------------------------------------------ recall
+
+Rating = Literal["good", "partial", "poor"]
+FIRST_REVIEW_DAYS = 7
+DEFAULT_INTERVAL = 30
+MAX_INTERVAL = 365
+
+
+def next_interval(previous: int | None, rating: str) -> int:
+    """Days until the next recall: spaced further apart as the note sticks."""
+    prev = previous or DEFAULT_INTERVAL
+    if rating == "good":
+        return min(MAX_INTERVAL, max(DEFAULT_INTERVAL, prev * 2))
+    if rating == "partial":
+        return max(14, prev)
+    return FIRST_REVIEW_DAYS
+
+
+def _recall_log() -> Path:
+    from brain_core.changes import data_dir
+
+    return data_dir() / "recall.json"
+
+
+def log_recall(brain: Path, record_id: str, rating: str, today: datetime | None = None) -> None:
+    """Keep a small local log so the app can show how recall is going."""
+    import json
+
+    path = _recall_log()
+    try:
+        entries = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        entries = []
+    entries.append(
+        {
+            "brain": str(brain),
+            "id": record_id,
+            "rating": rating,
+            "at": (today or datetime.now()).isoformat(timespec="seconds"),
+        }
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(entries[-2000:], ensure_ascii=False), encoding="utf-8")
+
+
+def recall_stats(brain: Path, days: int = 30, today: datetime | None = None) -> dict[str, object]:
+    import json
+    from datetime import timedelta
+
+    try:
+        entries = json.loads(_recall_log().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        entries = []
+    since = (today or datetime.now()) - timedelta(days=days)
+    recent = [
+        e
+        for e in entries
+        if e.get("brain") == str(brain) and datetime.fromisoformat(e["at"]) >= since
+    ]
+    good = sum(1 for e in recent if e.get("rating") == "good")
+    return {"count": len(recent), "good": good, "days": days}
