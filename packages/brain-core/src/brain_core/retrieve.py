@@ -29,9 +29,11 @@ _CANDIDATES = 50
 _MIN_COSINE = 0.35
 # Note-to-note similarity: shown as "similar notes" from here up, and treated
 # as a possible duplicate from DUPLICATE_MIN up (a question to the user, never
-# a merge). Calibrated with evals/near_pairs.py on a real Brain.
-SIMILAR_MIN = 0.55
-DUPLICATE_MIN = 0.9
+# a merge). Calibrated with evals/near_pairs.py on the 34-note dev Brain:
+# median pair 0.44, 90th percentile 0.61, 95th 0.66; distinct notes on the same
+# event (two outlets on one law) reach 0.87, so duplicates start well above.
+SIMILAR_MIN = 0.62
+DUPLICATE_MIN = 0.92
 
 _K1 = 1.4
 _B = 0.75

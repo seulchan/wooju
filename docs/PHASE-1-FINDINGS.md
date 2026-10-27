@@ -116,3 +116,32 @@ an expected note 85%, all 12 Korean questions cite an expected note. The run
 was slower (median 47 s, later answers 70–90 s) although prompts are the same
 size; timing varies with what else the Mac is doing, so compare speed only
 on runs made under the same conditions.
+
+## Baseline before graph-engineering changes (2026-10-27)
+
+30 questions: the 20 above plus 10 that test behaviour (4 the Brain cannot
+answer, 2 partly covered, 2 where the date matters, 2 under another name).
+Same Mac, app closed, qwen3.5:9b.
+
+| | |
+|---|---|
+| Hybrid hit@8 (26 answerable) | 100% (MRR 0.83; Korean 0.94, English 0.63) |
+| Cites an expected note | 85% |
+| Cites anything | 96% |
+| Question's language | 100% |
+| Median time | 34 s |
+| Says it isn't in the notes | 4/4 |
+| Names the missing part | 0/2 |
+| Gets the date right | 1/2 |
+| Finds it under another name | 2/2 |
+
+Abstaining works; naming what is missing does not (both partial questions were
+answered as if complete), and one date question used the wrong source. Those
+are the targets for passing status and conflicts to Ask.
+
+Note similarity (evals/near_pairs.py, 34 notes, 561 pairs): median 0.44, 90th
+percentile 0.61, 95th 0.66, highest 0.87 (two outlets on the same law). No
+true duplicates in this Brain. "Similar" now starts at 0.62 and "may say the
+same thing" at 0.92. The closest pairs fall into five clear groups (Commercial
+Act amendments, the BOK rate path, treasury-share cancellation, the value-up
+programme, the Korea discount): the topics the next step should find.
