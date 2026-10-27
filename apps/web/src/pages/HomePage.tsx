@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, Spinner } from '../components/ui'
 import { AttentionSection } from '../components/AttentionSection'
 import { HomeChanges } from '../components/HomeChanges'
 import { DropZone } from '../components/DropZone'
+import { RecentMemos } from '../components/RecentMemos'
 import { tr } from '../lib/i18n'
 
 const BrainMap = lazy(() =>
@@ -81,6 +82,7 @@ export function HomePage() {
       <h1 className="page-title">Brain</h1>
 
       <DropZone />
+      <RecentMemos />
 
       <section className="section section-first" aria-labelledby="know-heading">
         <h2 id="know-heading" className="section-title">

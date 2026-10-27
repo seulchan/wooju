@@ -468,3 +468,14 @@ export function fetchQuestions(id: string): Promise<{ questions: ThinkQuestion[]
 export function saveReflection(id: string, question: string, answer: string): Promise<{ ok: boolean }> {
   return postJson('/api/notes/reflect', { id, question, answer })
 }
+
+export interface MemoSummary {
+  id: string
+  title: string
+  captured_at: string
+  via: string | null
+}
+
+export function fetchMemos(signal?: AbortSignal): Promise<{ total: number; items: MemoSummary[] }> {
+  return apiGet('/api/memos', signal)
+}

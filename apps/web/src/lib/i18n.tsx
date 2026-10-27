@@ -273,6 +273,11 @@ const STRINGS = {
   thinkKindWhy: { ko: '왜', en: 'Why' },
   thinkKindConnect: { ko: '연결', en: 'Connect' },
   thinkKindLimits: { ko: '한계', en: 'Limits' },
+  recentMemos: { ko: '최근 메모', en: 'Recent memos' },
+  memosHint: {
+    ko: '메모를 열어 "이 노트로 생각 쓰기"나 "생각해 볼 질문"으로 키워 보세요.',
+    en: 'Open a memo and grow it with "Write a thought from this" or "Questions to think with".',
+  },
   recallStart: { ko: '떠올리기', en: 'Recall' },
   recallTitle: { ko: '다시 떠올리기', en: 'Recall' },
   recallPrompt: {

@@ -170,3 +170,14 @@ def test_interval_rules():
     assert next_interval(None, "good") == 60  # unknown history counts as a month
     assert next_interval(300, "good") == 365
     assert next_interval(7, "partial") == 14
+
+
+def test_recent_memos_newest_first(client):
+    c, _ = client
+    for text in ("첫 메모", "두 번째 메모"):
+        assert c.post("/api/capture", json={"text": text}).json()["kind"] == "memo"
+        time.sleep(1.05)  # memo file names are per second
+    memos = c.get("/api/memos").json()
+    assert memos["total"] == 2
+    assert [m["title"] for m in memos["items"]] == ["두 번째 메모", "첫 메모"]
+    assert memos["items"][0]["via"] == "app"

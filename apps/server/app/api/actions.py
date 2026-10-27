@@ -585,6 +585,25 @@ def recall_stats(engine: EngineDep) -> dict[str, Any]:
     return notes.recall_stats(engine.brain)
 
 
+@actions_router.get("/memos", tags=["inbox"])
+def recent_memos(engine: EngineDep, limit: int = 6) -> dict[str, Any]:
+    """The user's latest memos (kept as written in inbox/memos/)."""
+    memos = [r for r in engine.index.all_records() if r.path.startswith("inbox/memos/")]
+    memos.sort(key=lambda r: str(r.metadata.get("captured_at") or r.path), reverse=True)
+    return {
+        "total": len(memos),
+        "items": [
+            {
+                "id": r.id,
+                "title": r.title,
+                "captured_at": str(r.metadata.get("captured_at") or ""),
+                "via": r.metadata.get("via"),
+            }
+            for r in memos[: max(1, min(limit, 20))]
+        ],
+    }
+
+
 class NoteRef(BaseModel):
     id: str
 

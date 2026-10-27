@@ -85,3 +85,24 @@ describe('Takeaway after saving a source', () => {
     expect(await screen.findByText(/Saved. Ask can find it too./)).toBeInTheDocument()
   })
 })
+
+describe('Recent memos', () => {
+  it('lists the latest memos with links', async () => {
+    const { RecentMemos } = await import('../components/RecentMemos')
+    mockFetch([
+      {
+        match: /^\/api\/memos/,
+        body: {
+          total: 3,
+          items: [{ id: 'inbox/memos/2026-10-27-093000', title: 'HBM 비중 다시 보기', captured_at: '2026-10-27T09:30:00+07:00', via: 'telegram' }],
+        },
+      },
+    ])
+    render(<RecentMemos />)
+    expect(await screen.findByRole('link', { name: 'HBM 비중 다시 보기' })).toHaveAttribute(
+      'href',
+      '#/record/inbox/memos/2026-10-27-093000',
+    )
+    expect(screen.getByText(/2026-10-27 · Telegram/)).toBeInTheDocument()
+  })
+})
