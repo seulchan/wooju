@@ -246,6 +246,11 @@ export function pullModel(model?: string): Promise<{ model: string | null; state
   return postJson('/api/setup/ai/pull', model ? { model } : undefined)
 }
 
+/** Open a file inside the Brain (e.g. an original PDF in library/) with the Mac's app for it. */
+export async function openBrainFile(path: string): Promise<void> {
+  await postJson('/api/open-file', { path })
+}
+
 /** Open an allowed web page in the user's browser (works inside the desktop app). */
 export async function openExternal(url: string): Promise<void> {
   try {

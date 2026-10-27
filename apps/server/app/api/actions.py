@@ -14,6 +14,7 @@ import webbrowser
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from pydantic import BaseModel
@@ -260,11 +261,33 @@ class OpenUrl(BaseModel):
 def open_url(body: OpenUrl, engine: EngineDep) -> dict[str, bool]:
     """Open an allowed page in the default browser (the desktop window cannot)."""
     if body.url not in OPENABLE_URLS and not _TELEGRAM_LINK.fullmatch(body.url):
-        raise _fail(engine, "open.refused", 403)
+        # Links inside the user's notes: plain web addresses only.
+        parts = urlparse(body.url)
+        if parts.scheme not in ("http", "https") or not parts.netloc or re.search(r"\s", body.url):
+            raise _fail(engine, "open.refused", 403)
     if sys.platform == "darwin":
         subprocess.run(["open", body.url], check=False, timeout=10)
     else:
         webbrowser.open(body.url)
+    return {"opened": True}
+
+
+class OpenFile(BaseModel):
+    path: str
+
+
+@actions_router.post("/open-file", tags=["setup"])
+def open_file(body: OpenFile, engine: EngineDep) -> dict[str, bool]:
+    """Open a file inside the Brain (an original PDF, say) with the Mac's app for it."""
+    brain = engine.brain
+    if brain is None:
+        raise _fail(engine, "setup.brain_first")
+    root = brain.resolve()
+    target = (root / body.path).resolve()
+    if root not in target.parents or not target.is_file():
+        raise _fail(engine, "open.no_file", 404)
+    if sys.platform == "darwin":
+        subprocess.run(["open", "--", str(target)], check=False, timeout=10)
     return {"opened": True}
 
 

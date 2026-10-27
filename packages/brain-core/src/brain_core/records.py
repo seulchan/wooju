@@ -61,6 +61,9 @@ class Record(BaseModel):
     id: str  # relative path without extension, e.g. "wiki/concepts/llm-agent-memory"
     path: str  # relative path with extension
     title: str
+    # The frontmatter title when the note's heading differs (e.g. a source's
+    # original-language title); ``title`` is then the heading shown to people.
+    original_title: str | None = None
     category: Category
     subtype: str | None = None
     content: str  # markdown body, frontmatter stripped

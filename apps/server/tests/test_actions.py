@@ -257,13 +257,14 @@ def test_files_wait_for_the_ai_and_continue_when_it_is_ready(client, tmp_path, m
     assert (brain / "sources/korea-value-up-index-launch.md").exists()
 
 
-def test_open_url_only_allows_known_pages(client, monkeypatch):
+def test_open_url_only_opens_web_pages(client, monkeypatch):
+    """Web links (setup pages, links in notes) open in the browser; nothing else does."""
     opened = []
     monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url))
     monkeypatch.setattr("subprocess.run", lambda args, **kw: opened.append(args[-1]))
     assert client.post("/api/open", json={"url": "https://ollama.com/download"}).status_code == 200
     assert client.post("/api/open", json={"url": "file:///etc/passwd"}).status_code == 403
-    assert client.post("/api/open", json={"url": "https://evil.example"}).status_code == 403
+    assert client.post("/api/open", json={"url": "/Applications/Calculator.app"}).status_code == 403
     assert opened == ["https://ollama.com/download"]
 
 
@@ -467,3 +468,31 @@ def test_app_follows_the_mac_and_notes_follow_the_brain(client, tmp_path, monkey
     assert "## 한 줄 요약" in note
     applied = client.get("/api/proposals?status=applied").json()["items"]
     assert applied[0]["title"].startswith("Saved source:")
+
+
+def test_open_links_and_files_from_notes(client, tmp_path, monkeypatch):
+    import subprocess
+
+    opened = []
+
+    def fake_run(args, **kwargs):
+        opened.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr("sys.platform", "darwin")
+    brain = setup_brain(client, tmp_path)
+    (brain / "library").mkdir(exist_ok=True)
+    (brain / "library" / "report.pdf").write_bytes(b"%PDF")
+
+    assert client.post("/api/open-file", json={"path": "library/report.pdf"}).status_code == 200
+    assert [a for a in opened if a[0] == "open"][-1][-1].endswith("library/report.pdf")
+    assert client.post("/api/open-file", json={"path": "../../etc/passwd"}).status_code == 404
+    assert client.post("/api/open-file", json={"path": "library/nope.pdf"}).status_code == 404
+
+    assert (
+        client.post("/api/open", json={"url": "https://en.wikipedia.org/wiki/KOSPI"}).status_code
+        == 200
+    )
+    for bad in ("file:///etc/passwd", "javascript:alert(1)", "-a Calculator", "https://x.com/a b"):
+        assert client.post("/api/open", json={"url": bad}).status_code == 403, bad

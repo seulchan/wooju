@@ -66,6 +66,8 @@ export interface BrainRecord {
   id: string
   path: string
   title: string
+  /** The frontmatter title when the note's heading differs (e.g. a source's original title). */
+  original_title?: string | null
   category: Category
   subtype?: string | null
   content: string

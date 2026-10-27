@@ -125,6 +125,15 @@ def extract_title(frontmatter: dict[str, Any], body: str, filename: str) -> str:
     return Path(filename).stem
 
 
+def first_heading(body: str) -> str | None:
+    """The first H1 that is not a date banner, or None."""
+    for match in _H1_RE.finditer(body):
+        h1 = match.group(1).strip()
+        if h1 and not _is_date_only(h1):
+            return h1
+    return None
+
+
 def _is_date_only(value: str) -> bool:
     """Return whether ``value`` is a bare ISO-like calendar date."""
     return bool(_DATE_ONLY_RE.fullmatch(value.strip()))

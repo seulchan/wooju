@@ -318,6 +318,7 @@ const KO: Record<string, string> = {
     '검토 중인 연결, 열린 질문, 엇갈리는 주장, 깨진 참조가 없어요.',
   'Provisional insight': '잠정 연결',
   'Provisional insights': '잠정 연결',
+  'Original title': '원제',
   'Due for review': '검토할 때가 된 노트',
   'Due: review': '검토할 때',
   "Notes that break the Brain's rules": '규칙에 맞지 않는 노트',

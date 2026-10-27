@@ -13,7 +13,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .markdown import extract_title, extract_wikilinks, split_frontmatter
+from .markdown import extract_title, extract_wikilinks, first_heading, split_frontmatter
 from .records import Link, Record, classify, coerce_list
 
 logger = logging.getLogger("brain_core")
@@ -58,11 +58,19 @@ def _read_record(root: Path, file_path: Path) -> Record | None:
     text = file_path.read_text(encoding="utf-8")
     frontmatter, body = split_frontmatter(text)
     title = extract_title(frontmatter, body, file_path.stem)
+    # A note may keep a source's original title in frontmatter (for citing)
+    # and give itself a heading in the reader's language. Show the heading,
+    # and keep the original alongside, so a note never has two titles on screen.
+    original_title = None
+    heading = first_heading(body)
+    if heading and heading != title and frontmatter.get("title"):
+        original_title, title = title, heading
     category, subtype, kind, status = classify(relative_path, frontmatter)
     return Record(
         id=relative_path.with_suffix("").as_posix(),
         path=relative_path.as_posix(),
         title=title,
+        original_title=original_title,
         category=category,
         subtype=subtype,
         content=body,

@@ -61,6 +61,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "시스템 설정 > Apple 계정 > iCloud에서 iCloud Drive를 켜 주세요.",
         "iCloud Drive is off on this Mac. Turn it on in System Settings > Apple Account > iCloud.",
     ),
+    "open.no_file": (
+        "그 파일이 Brain 폴더에 없어요. 옮겨졌거나 지워졌을 수 있어요.",
+        "That file isn't in the Brain folder. It may have been moved or deleted.",
+    ),
     # telegram
     "telegram.paired": (
         "연결됐어요. 이제 링크, 메모, 파일(PDF, 텍스트, HTML)을 보내면 Wooju에 저장해요. "

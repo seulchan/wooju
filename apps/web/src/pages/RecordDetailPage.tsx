@@ -63,6 +63,11 @@ function RecordView({ record }: { record: BrainRecord }) {
         </Link>
       </p>
       <h1 className="page-title">{record.title}</h1>
+      {record.original_title ? (
+        <p className="subtitle original-title">
+          {tr('Original title')}: {record.original_title}
+        </p>
+      ) : null}
       <div className="badges">
         {isInsight ? <StatusBadge status={record.status} /> : null}
         {isInsight ? <MetaBadge label="Kind" value={titleCase(record.kind)} /> : null}
@@ -80,7 +85,7 @@ function RecordView({ record }: { record: BrainRecord }) {
                 return (
                   <section key={key} className={`callout ${CALLOUT[key].tone}`} aria-label={tr(CALLOUT[key].label)}>
                     <h3 className="callout-label">{tr(CALLOUT[key].label)}</h3>
-                    <Markdown content={content} links={record.links} />
+                    <Markdown content={content} links={record.links} path={record.path} />
                   </section>
                 )
               })}
@@ -88,7 +93,7 @@ function RecordView({ record }: { record: BrainRecord }) {
           ) : null}
 
           {mainBody.trim() ? (
-            <Markdown content={mainBody} links={record.links} />
+            <Markdown content={mainBody} links={record.links} path={record.path} />
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>
           )}

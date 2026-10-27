@@ -23,3 +23,26 @@ def test_no_frontmatter_and_unclosed():
     )
     with pytest.raises(ValueError):
         set_frontmatter_value("---\ntitle: x\n", "review_after", "2027-01-01")
+
+
+def test_heading_is_shown_and_original_title_kept(tmp_path):
+    from brain_core.index import BrainIndex
+
+    (tmp_path / "sources").mkdir()
+    (tmp_path / "sources" / "a.md").write_text(
+        '---\ntitle: "Korea Value-up Index to begin publication"\nsource_type: article\n'
+        "canonical_ref: x\n---\n# 코리아 밸류업 지수 산출 개시\n\n본문\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "sources" / "b.md").write_text(
+        "---\ntitle: Same\nsource_type: article\ncanonical_ref: x\n---\n# Same\n\n본문\n",
+        encoding="utf-8",
+    )
+    index = BrainIndex()
+    index.scan(tmp_path)
+    a = index.get("sources/a")
+    assert a.title == "코리아 밸류업 지수 산출 개시"
+    assert a.original_title == "Korea Value-up Index to begin publication"
+    assert index.get("sources/b").original_title is None
+    # The original title is still searchable.
+    assert [r.id for _, r in index.search("Value-up publication")] == ["sources/a"]
