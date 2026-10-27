@@ -11,6 +11,13 @@ import os
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+
+# The server answers only requests addressed to this Mac (127.0.0.1/localhost).
+# TestClient's default base URL is http://testserver, so tests speak as localhost.
+TestClient.__init__.__defaults__ = tuple(
+    "http://localhost" if d == "http://testserver" else d for d in TestClient.__init__.__defaults__
+)
 
 
 @pytest.fixture(autouse=True)

@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> None:
 
     from app.main import app  # imported after the paths above are set
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info", access_log=False)
 
 
 if __name__ == "__main__":

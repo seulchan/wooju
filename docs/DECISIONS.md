@@ -178,6 +178,16 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## Local server safety
+
+- The server listens on 127.0.0.1 only and answers only requests whose Host
+  is the local machine (127.0.0.1, localhost, [::1]), so a web page cannot
+  reach it through a name of its own pointed at 127.0.0.1 (DNS rebinding).
+- No access log: search queries would otherwise sit in ~/Library/Logs/Wooju.
+  The desktop app keeps server.log and rotates it past 5 MB (server.log.1).
+- One copy of the app at a time: a second launch brings the first window
+  forward instead of starting another server on the same Brain.
+
 ## Distribution and license
 
 - Local desktop app first, Apple Silicon Mac first. Cloud only for an optional

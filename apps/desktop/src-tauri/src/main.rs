@@ -3,11 +3,14 @@
 //! Starts the bundled Python server (a sidecar) on a free local port, shows a
 //! loading page, and switches the window to the app once the server answers.
 //! Quitting the app stops the server. Server output goes to
-//! ~/Library/Logs/Wooju/server.log for troubleshooting.
+//! ~/Library/Logs/Wooju/server.log for troubleshooting; the previous run's log
+//! is kept as server.log.1 once the file grows past a few megabytes. A second
+//! copy of the app brings the first window forward instead of starting another
+//! server on the same Brain.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs::{create_dir_all, OpenOptions};
+use std::fs::{create_dir_all, rename, OpenOptions};
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -38,15 +41,31 @@ fn wait_until_listening(port: u16, timeout: Duration) -> bool {
     false
 }
 
+/// Keep the log from growing forever: past this size the current file becomes
+/// server.log.1 (replacing the older one) and a fresh server.log starts.
+const LOG_ROTATE_BYTES: u64 = 5 * 1024 * 1024;
+
 fn log_path() -> Option<PathBuf> {
     let home = std::env::var_os("HOME")?;
     let dir = PathBuf::from(home).join("Library/Logs/Wooju");
     create_dir_all(&dir).ok()?;
-    Some(dir.join("server.log"))
+    let path = dir.join("server.log");
+    if std::fs::metadata(&path).map(|m| m.len() > LOG_ROTATE_BYTES).unwrap_or(false) {
+        let _ = rename(&path, dir.join("server.log.1"));
+    }
+    Some(path)
 }
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // Opened a second time: show the window that is already running.
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))

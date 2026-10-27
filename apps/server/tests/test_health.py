@@ -91,3 +91,12 @@ def test_health_never_mutates_brain(tmp_path, monkeypatch):
 
     assert canary.read_text() == "do-not-touch"
     assert list(brain.iterdir()) == [canary]
+
+
+def test_only_requests_addressed_to_this_mac_are_answered(tmp_path, monkeypatch):
+    """A web page that points its own name at 127.0.0.1 gets nothing."""
+    monkeypatch.setenv("WOOJU_BRAIN_PATH", str(tmp_path))
+    with TestClient(app, base_url="http://localhost") as client:
+        assert client.get("/api/health").status_code == 200
+        assert client.get("/api/health", headers={"Host": "127.0.0.1:48731"}).status_code == 200
+        assert client.get("/api/health", headers={"Host": "evil.example.com"}).status_code == 400

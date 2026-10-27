@@ -285,7 +285,7 @@ def test_launcher_uses_bundle_paths(monkeypatch, tmp_path):
     launcher.main(["--port", "9123"])
     import os
 
-    assert calls == {"host": "127.0.0.1", "port": 9123, "log_level": "info"}
+    assert calls == {"host": "127.0.0.1", "port": 9123, "log_level": "info", "access_log": False}
     assert os.environ["WOOJU_WEB_DIST"] == str(tmp_path / "web")
     assert os.environ["WOOJU_TEMPLATE_DIR"] == str(tmp_path / "template")
 
@@ -637,6 +637,14 @@ def test_notes_keep_their_own_language(client, tmp_path):
     setup_brain(client, tmp_path)
     engine = client.app.state.engine
     client.post("/api/setup/language", json={"app": "en"})
-    assert engine.content_language("자사주 소각 의무화가 저PBR 기업의 재평가로 이어질 수 있다는 가설이다.") == "ko"
-    assert engine.content_language("The index rose sharply while most small companies stayed cheap.") == "en"
+    assert (
+        engine.content_language(
+            "자사주 소각 의무화가 저PBR 기업의 재평가로 이어질 수 있다는 가설이다."
+        )
+        == "ko"
+    )
+    assert (
+        engine.content_language("The index rose sharply while most small companies stayed cheap.")
+        == "en"
+    )
     assert engine.content_language("") == "en"  # nothing to go by: the app's language

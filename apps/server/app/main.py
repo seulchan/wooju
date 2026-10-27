@@ -14,6 +14,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .api.actions import actions_router
@@ -21,6 +22,10 @@ from .api.routes import api_router
 from .engine import Engine
 
 logging.basicConfig(level=logging.INFO)
+# Chatty libraries stay quiet: their INFO lines would fill the log file the
+# desktop app keeps, and uvicorn's access log would record every search query.
+for _name in ("httpx", "httpcore", "uvicorn.access", "watchfiles"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
 logger = logging.getLogger("wooju")
 
 
@@ -44,6 +49,11 @@ app = FastAPI(
     version="0.3.0",
     lifespan=lifespan,
 )
+
+# The server listens on this Mac only, but a web page could still reach it by
+# pointing a name of its own at 127.0.0.1 (DNS rebinding). Only requests
+# addressed to the local machine itself are answered.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"])
 
 # The Vite dev server proxies /api to this backend. These origins also support
 # direct browser access in development.
