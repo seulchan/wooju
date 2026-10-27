@@ -19,8 +19,10 @@ from pydantic import BaseModel, Field, ValidationError
 
 from brain_core.index import BrainIndex
 from brain_core.messages import UserFacingError
+from brain_core.records import Record
 from brain_core.retrieve import Passage, Retriever
 
+from .conflicts import first_conflict
 from .llm import Provider
 
 # Measured on an M1 with qwen3.5:9b (evals/ask_quality.py): reading time grows
@@ -62,8 +64,8 @@ class AnswerDraft(BaseModel):
     missing: str = Field(
         default="",
         description=(
-            "What the question asks that the passages do not say, in one sentence. "
-            "Empty string if the passages answer it fully."
+            "Every part of the question the passages do not answer (a number, a date, "
+            "a result, an outcome...), in one sentence. Empty only if every part is answered."
         ),
     )
 
@@ -78,10 +80,17 @@ _TERMS_SYSTEM = (
 _ANSWER_SYSTEM = (
     "You answer questions using only the numbered passages from the user's own notes. "
     "Rules: use no outside knowledge; give each sentence the numbers of the passages it "
-    "comes from; if passages disagree, say so; if they do not answer the question, say "
-    "what is missing in the missing field (otherwise leave it empty); add no advice or "
-    "predictions of your own. Write every sentence in {language}, concisely: the direct "
-    "answer first, then at most four supporting points."
+    "comes from; add no advice or predictions of your own. "
+    "A question often asks several things (a number and a result, what and when): answer "
+    "each part the passages cover, and name every part they do not cover in the missing "
+    "field; leave it empty only if every part is answered. "
+    "If passages give different dates or figures for the same thing, give each with its "
+    "passage number and say which source is more recent; do not pick one silently. "
+    "A passage marked 'unchallenged idea' or 'provisional idea' is the user's hypothesis, "
+    "not an established fact: say so when you use it. A passage marked 'notes disagree' "
+    "has a recorded conflict: mention it. "
+    "Write every sentence in {language}, concisely: the direct answer first, then at most "
+    "four supporting points."
 )
 _HANGUL = re.compile(r"[가-힣]")
 
@@ -170,13 +179,41 @@ def gather(
     return [p for _, p in hits], seconds
 
 
+_STATUS_LABEL = {
+    "candidate": "unchallenged idea",
+    "provisional": "provisional idea",
+    "established": "established idea",
+}
+
+
+def _meta(record: Record) -> str:
+    """What the model should know about where a passage comes from."""
+    meta = record.metadata
+    if record.category == "insight":
+        kind = _STATUS_LABEL.get((record.status or "").lower(), "idea")
+    elif record.category == "source":
+        kind = "source"
+    elif record.category == "memory":
+        kind = "the user's own memory"
+    else:
+        kind = "knowledge note"
+    parts = [kind]
+    published = meta.get("published")
+    if published and str(published) != "unknown":
+        parts.append(f"published {published}")
+    elif meta.get("observed_at"):
+        parts.append(f"noted {meta['observed_at']}")
+    conflict = first_conflict(record.content)
+    if conflict:
+        parts.append(f"notes disagree: {conflict}")
+    return ", ".join(parts)
+
+
 def _prompt(question: str, found: list[Passage]) -> str:
     blocks = []
     for n, p in enumerate(found, 1):
         where = p.record.title + (f" — {p.heading}" if p.heading else "")
-        kind = p.record.category
-        date = p.record.metadata.get("published") or p.record.metadata.get("observed_at")
-        meta = f"{kind}" + (f", {date}" if date else "")
+        meta = _meta(p.record)
         text = p.text.strip()
         if len(text) > PASSAGE_CHARS:
             text = text[:PASSAGE_CHARS].rsplit(" ", 1)[0] + " …"

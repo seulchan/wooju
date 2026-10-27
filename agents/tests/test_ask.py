@@ -189,3 +189,32 @@ def test_sentences_arrive_while_the_answer_is_written(index):
     ]
     assert all(a.partial and a.citations for a in seen)
     assert not result.partial and result.answer == seen[-1].answer
+
+
+def test_the_model_is_told_what_each_passage_is(tmp_path):
+    from brain_core.index import BrainIndex as Index
+    from brain_core.retrieve import Retriever as R
+    from wooju_agents.ask import _prompt, gather
+
+    (tmp_path / "sources").mkdir()
+    (tmp_path / "wiki" / "questions").mkdir(parents=True)
+    (tmp_path / "sources" / "rate.md").write_text(
+        "---\ntitle: 금리 인상\nsource_type: article\ncanonical_ref: x\npublished: 2026-07-16\n---\n"
+        "# 금리 인상\n\n## 핵심 내용\n\n- 기준금리를 2.75%로 올렸다.\n\n## Conflicts\n\n"
+        "- 다른 노트는 2024년에 이미 2.75%였다고 한다.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "wiki" / "questions" / "idea.md").write_text(
+        "---\ntitle: 금리와 은행주\norigin: synthesis\ninsight_kind: hypothesis\nstatus: candidate\n"
+        "derived_from: ['[x](../../sources/rate.md)']\n---\n# 금리와 은행주\n\n## Insight\n\n기준금리가 오르면 은행주가 오른다.\n",
+        encoding="utf-8",
+    )
+    i = Index()
+    i.scan(tmp_path)
+    found, _ = gather(R(i), "기준금리", None)
+    prompt = _prompt("기준금리", found)
+    assert (
+        "(source, published 2026-07-16, notes disagree: 다른 노트는 2024년에 이미 2.75%였다고 한다.)"
+        in prompt
+    )
+    assert "(unchallenged idea)" in prompt
