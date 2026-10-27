@@ -13,6 +13,7 @@ import {
 } from '../api'
 import { encodeId } from '../lib/paths'
 import { NoteEditor } from '../components/NoteEditor'
+import { ThinkPanel } from '../components/ThinkPanel'
 import { requestRefresh } from '../lib/freshness'
 import type { BrainRecord, Category, ProposalView } from '../types'
 import { titleCase } from '../lib/format'
@@ -172,6 +173,7 @@ function RecordView({ record }: { record: BrainRecord }) {
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>
           )}
+          {!editing && !record.retired && record.category !== 'other' ? <ThinkPanel id={record.id} /> : null}
           {isInsight && !record.retired ? <ChallengePanel id={record.id} /> : null}
         </div>
 

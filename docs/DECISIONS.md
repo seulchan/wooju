@@ -113,8 +113,13 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   days, at most a year; partly: same, at least 14; hardly: 7 days), stored
   as `review_interval`. Notes the user writes start with a recall in a week
   (can be turned off). Home shows the last 30 days' count, from a local log.
-- Next: the AI asking questions on a note, growing memos into notes, typed
-  connections. Testers check steps 1–2
+- Step 3: questions to think with. On request, the AI asks up to three
+  questions about a note (why it holds; how it connects to a specific other
+  note, found by search and checked in code; where it would not hold) and
+  never answers. The user's answer goes into the note's "생각해 본 것 /
+  Reflections" section, or, for a connection, becomes a thought (candidate
+  insight) resting on both notes.
+- Next: growing memos into notes, typed connections. Testers check steps 1–2
   before the AI-assisted steps are built.
 
 ## Conflict check

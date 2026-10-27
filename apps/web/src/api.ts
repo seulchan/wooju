@@ -450,3 +450,21 @@ export function recallNote(id: string, rating: RecallRating): Promise<{ next: st
 export function fetchRecallStats(signal?: AbortSignal): Promise<{ count: number; good: number; days: number }> {
   return apiGet('/api/recall/stats', signal)
 }
+
+// --------------------------------------------------- questions to think with
+
+export interface ThinkQuestion {
+  kind: 'why' | 'connect' | 'limits'
+  text: string
+  related: { id: string; title: string } | null
+}
+
+/** Questions about a note. The AI asks; it never answers. */
+export function fetchQuestions(id: string): Promise<{ questions: ThinkQuestion[] }> {
+  return postJson('/api/notes/questions', { id })
+}
+
+/** Keep the user's answer to a question in the note. */
+export function saveReflection(id: string, question: string, answer: string): Promise<{ ok: boolean }> {
+  return postJson('/api/notes/reflect', { id, question, answer })
+}

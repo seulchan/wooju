@@ -189,3 +189,24 @@ def recall_stats(brain: Path, days: int = 30, today: datetime | None = None) -> 
     ]
     good = sum(1 for e in recent if e.get("rating") == "good")
     return {"count": len(recent), "good": good, "days": days}
+
+
+# ------------------------------------------------------------- reflections
+
+REFLECTIONS = {"ko": "생각해 본 것", "en": "Reflections"}
+
+
+def add_reflection(note: str, question: str, answer: str, language: str, when: date) -> str:
+    """Add a question the user answered, with their answer, to the note."""
+    heading = REFLECTIONS.get(language, REFLECTIONS["en"])
+    names = "|".join(re.escape(h) for h in REFLECTIONS.values())
+    entry = f"- **{question.strip()}** ({when.isoformat()})\n  {' '.join(answer.split())}\n"
+    m = re.search(rf"^##\s+({names})\s*$.*?(?=^##\s|\Z)", note, re.M | re.S)
+    if m:
+        block = m.group(0).rstrip("\n") + "\n" + entry
+        return note[: m.start()] + block + "\n" + note[m.end() :].lstrip("\n")
+    section = f"## {heading}\n\n{entry}"
+    anchor = re.search(r"^##\s+(Conflicts|원본|Original)\s*$", note, re.M)
+    if anchor:
+        return note[: anchor.start()] + section + "\n" + note[anchor.start() :]
+    return note.rstrip("\n") + "\n\n" + section

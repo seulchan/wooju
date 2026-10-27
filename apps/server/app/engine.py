@@ -59,6 +59,7 @@ from wooju_agents.llm import (
     Provider,
     recommended_ollama_model,
 )
+from wooju_agents.questions import Question, make_questions
 from wooju_agents.text import ACCEPTED_SUFFIXES, resolve_language
 
 from . import icloud, notes, telegram
@@ -994,6 +995,49 @@ class Engine:
         if proposal.status == "applied":
             notes.log_recall(brain, record_id, rating)
         return proposal
+
+    async def questions(self, record_id: str) -> list[Question]:
+        """Questions to think about a note with (the AI asks; the user answers)."""
+        self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        provider = self.provider()
+        retriever = await self.retriever()
+        query = f"{record.title} {record.content[:1000]}"
+        async with self.ai_lane:
+            query_vec = await self.query_vector(query)
+            hits = await asyncio.to_thread(retriever.search, query, 12, 1, query_vec)
+            others: dict[str, Any] = {}
+            for _, p in hits:
+                if p.id != record.id and p.record.category != "other":
+                    others.setdefault(p.id, p.record)
+            return await asyncio.to_thread(
+                make_questions,
+                record,
+                list(others.values())[:4],
+                provider,
+                language=self.content_language(),
+            )
+
+    async def reflect(self, record_id: str, question: str, answer: str) -> Proposal:
+        """Keep a question the user answered, with their answer, in the note."""
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        if not answer.strip() or not question.strip():
+            raise SetupError("note.empty")
+        current = (brain / record.path).read_text(encoding="utf-8")
+        updated = notes.add_reflection(
+            current, question, answer, self.content_language(), date.today()
+        )
+        ko = self.language() == "ko"
+        return await self._apply_own(
+            record.path,
+            updated,
+            f"생각해 봄: {record.title}" if ko else f"Reflected: {record.title}",
+        )
 
     async def set_takeaway(self, record_id: str, text: str) -> Proposal:
         """The user's one line about a note, in their own words."""

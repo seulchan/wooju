@@ -585,6 +585,49 @@ def recall_stats(engine: EngineDep) -> dict[str, Any]:
     return notes.recall_stats(engine.brain)
 
 
+class NoteRef(BaseModel):
+    id: str
+
+
+@actions_router.post("/notes/questions", tags=["ask"])
+async def note_questions(body: NoteRef, engine: EngineDep) -> dict[str, Any]:
+    """Two or three questions to think about this note with. Never answers."""
+    try:
+        questions = await engine.questions(body.id)
+    except LLMError as exc:
+        raise _ai_fail(engine, exc) from exc
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    return {
+        "questions": [
+            {
+                "kind": q.kind,
+                "text": q.text,
+                "related": {"id": q.related.id, "title": q.related.title} if q.related else None,
+            }
+            for q in questions
+        ]
+    }
+
+
+class Reflection(BaseModel):
+    id: str
+    question: str
+    answer: str
+
+
+@actions_router.post("/notes/reflect", tags=["ask"])
+async def reflect(body: Reflection, engine: EngineDep) -> dict[str, bool]:
+    """Keep the user's answer to a question in the note."""
+    try:
+        proposal = await engine.reflect(body.id, body.question, body.answer)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return {"ok": True}
+
+
 class Takeaway(BaseModel):
     id: str
     text: str
