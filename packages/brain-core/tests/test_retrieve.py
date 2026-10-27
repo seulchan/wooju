@@ -67,3 +67,28 @@ def test_per_note_cap(tmp_path):
 def test_passages_split_on_sections(tmp_path):
     rec = _brain(tmp_path).get("sources/value-up")
     assert [p.heading for p in passages(rec)] == ["핵심 내용", "한계와 주의점"]
+
+
+def test_link_only_sections_are_not_searched():
+    from brain_core.retrieve import is_link_list
+
+    assert is_link_list(
+        "- [2026년 한국은행 기준금리 경로](../wiki/overviews/x.md)\n- [[questions/y]]"
+    )
+    assert is_link_list("[[a]], [[b]]")
+    assert not is_link_list("- 한국은행은 [[x]] 이후 금리를 올렸다.")
+    assert not is_link_list("- [원문](https://e.com) 7월 16일 0.25%p 인상")
+    assert not is_link_list("")
+
+
+def test_related_sections_rank_below_content(tmp_path):
+    (tmp_path / "sources").mkdir()
+    (tmp_path / "sources" / "a.md").write_text(
+        "---\ntitle: 금리\nsource_type: article\ncanonical_ref: x\n---\n# 금리\n\n"
+        "## 한 줄 요약\n\n7월에 올렸다.\n\n## 관련 지식\n\n- [경로](../wiki/x.md)\n",
+        encoding="utf-8",
+    )
+    index = BrainIndex()
+    index.scan(tmp_path)
+    hits = Retriever(index).search("금리")  # matches both through the title
+    assert [p.heading for _, p in hits] == ["한 줄 요약", "관련 지식"]

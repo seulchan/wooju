@@ -98,3 +98,13 @@ Answers with qwen3.5:9b: cites an expected note 90%, cites anything 95%,
 answers in the question's language 100%, median 39 s per answer (16–67 s).
 One answer cited nothing (BOK rate-hike reason); one cited a related but
 unexpected note. Speed, not accuracy, is now the weakest part of Ask.
+
+Fewer, shorter passages (6 × 700 chars instead of 8 × 1500): median answer
+time 39 s → 30 s; cites an expected note 90% → 85% (the one change is a
+question answered from knowledge notes that summarize the expected source).
+
+Link-list sections ("관련 지식", "Related") rank at 0.3× so they stop taking
+answer slots: for "한국은행이 기준금리를 올린 이유는?" the section that holds
+the reason now makes the top 6. Keyword-only English hit@8 falls 88% → 62%
+(MRR 0.38 → 0.50) because some English questions matched only link titles
+and slugs; to be checked with meaning search and answers on the Mac.

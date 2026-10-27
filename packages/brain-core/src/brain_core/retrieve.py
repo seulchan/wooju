@@ -164,6 +164,27 @@ def tokens(text: str) -> list[str]:
     return out
 
 
+_LINK_ONLY = re.compile(
+    r"^\s*(?:[-*]\s*)?(?:\[\[[^\]]+\]\]|\[[^\]]*\]\([^)]*\))(?:\s*[,·]?\s*"
+    r"(?:\[\[[^\]]+\]\]|\[[^\]]*\]\([^)]*\)))*\s*$"
+)
+
+
+def is_link_list(text: str) -> bool:
+    """A section that only lists links ("Related", "관련 지식"): navigation, no content.
+
+    Such sections matched questions by title words and took answer slots
+    without saying anything (seen in evals/ask_quality.py), so they rank low:
+    still a last resort when nothing else matches (an English question whose
+    only English words are a link's title), never ahead of real content.
+    """
+    lines = [line for line in text.splitlines() if line.strip()]
+    return bool(lines) and all(_LINK_ONLY.match(line) for line in lines)
+
+
+LINK_LIST_WEIGHT = 0.3
+
+
 def passages(record: Record) -> list[Passage]:
     """Split a note into passages at ``##`` headings, capped in length."""
     parts: list[Passage] = []
@@ -220,6 +241,7 @@ class Retriever:
         self._avg = (sum(self._len) / n) or 1.0
         self._idf = {t: math.log(1 + (n - d + 0.5) / (d + 0.5)) for t, d in df.items()}
         self._vectors = [None] * len(self._passages)
+        self._weight = [LINK_LIST_WEIGHT if is_link_list(p.text) else 1.0 for p in self._passages]
 
     # ---------------------------------------------------------------- vectors
 
@@ -253,12 +275,16 @@ class Retriever:
                     norm = f + _K1 * (1 - _B + _B * self._len[i] / self._avg)
                     score += self._idf.get(term, 0.0) * f * (_K1 + 1) / norm
             if score > 0:
-                scored.append((score, i))
+                scored.append((score * self._weight[i], i))
         scored.sort(key=lambda s: (-s[0], self._passages[s[1]].record.path))
         return scored
 
     def _semantic(self, query_vec: Sequence[float]) -> list[tuple[float, int]]:
-        scored = [(cosine(query_vec, v), i) for i, v in enumerate(self._vectors) if v is not None]
+        scored = [
+            (cosine(query_vec, v) * self._weight[i], i)
+            for i, v in enumerate(self._vectors)
+            if v is not None
+        ]
         scored = [s for s in scored if s[0] >= _MIN_COSINE]
         scored.sort(key=lambda s: (-s[0], self._passages[s[1]].record.path))
         return scored
