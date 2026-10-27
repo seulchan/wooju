@@ -23,6 +23,7 @@ def resolve_relationships(records: Mapping[str, Record]) -> None:
     for record in records.values():
         for link in record.links:
             link.resolved_id = resolve_target(link.target, records)
+            link.title = records[link.resolved_id].title if link.resolved_id else None
         record.derived_from_resolved = [
             _resolve_derived_ref(reference, records) for reference in record.derived_from
         ]

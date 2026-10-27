@@ -19,7 +19,7 @@
  * period change. No continuous animation. `prefers-reduced-motion` is honored.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   Controls,
@@ -30,6 +30,7 @@ import {
   type Node,
   type NodeMouseHandler,
   type NodeProps,
+  type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -321,11 +322,27 @@ function MapSurface({
     return ranked[0]?.title ?? null
   }, [gNodes, deg])
 
+  // Fit once the canvas has its real size, and again when it is resized: the
+  // initial fit can run before layout and leave nodes outside the view.
+  const flow = useRef<ReactFlowInstance<MapNodeType, Edge> | null>(null)
+  const viewport = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = viewport.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => void flow.current?.fitView({ padding: 0.25 }))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div className="brain-map">
-      <div className="brain-map__viewport" role="group" aria-label="Brain map">
+      <div className="brain-map__viewport" role="group" aria-label="Brain map" ref={viewport}>
         <ReactFlow
           key={signature}
+          onInit={(instance) => {
+            flow.current = instance
+            requestAnimationFrame(() => void instance.fitView({ padding: 0.25 }))
+          }}
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}

@@ -78,12 +78,21 @@ export function ReviewButtons({ id, compact = false }: { id: string; compact?: b
 export function ReviewPanel({ id, value }: { id: string; value: unknown }) {
   const t = useT()
   const current = typeof value === 'string' && value ? value : null
+  const [open, setOpen] = useState(false)
   return (
-    <section className="panel" aria-label={t('reviewNext')}>
-      <h2 className="panel-title">{t('reviewNext')}</h2>
-      <p>{current ?? t('reviewNone')}</p>
-      <ReviewButtons id={id} />
-      <p className="hint">{t('reviewHint')}</p>
+    <section className="panel review-panel" aria-label={t('reviewNext')}>
+      <p className="review-panel__line">
+        <span className="panel-title">{t('reviewNext')}</span> · {current ?? t('reviewNone')}{' '}
+        <button className="btn-link" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {open ? t('close') : t('reviewSet')}
+        </button>
+      </p>
+      {open ? (
+        <>
+          <ReviewButtons id={id} />
+          <p className="hint">{t('reviewHint')}</p>
+        </>
+      ) : null}
     </section>
   )
 }

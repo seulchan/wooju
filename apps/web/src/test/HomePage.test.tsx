@@ -211,10 +211,10 @@ describe('HomePage', () => {
     const headings = await screen.findAllByRole('heading', { level: 2 })
     const titles = headings.map((h) => h.textContent)
     expect(titles).toEqual([
+      'What needs attention?',
       'What do I know?',
       'What changed?',
       'What is connected?',
-      'What needs attention?',
     ])
     // The redundant "Recently updated" section is gone.
     expect(screen.queryByText('Recently updated')).not.toBeInTheDocument()

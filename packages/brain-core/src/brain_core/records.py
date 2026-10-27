@@ -39,6 +39,7 @@ class Link(BaseModel):
     label: str | None = None
     anchor: str | None = None
     resolved_id: str | None = None  # id of the resolved record, or None if unresolved
+    title: str | None = None  # title of the resolved record, shown instead of a path
 
 
 class ResolvedRef(BaseModel):

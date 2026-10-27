@@ -82,7 +82,7 @@ def test_overview_main_areas_grouped_by_wiki_subdir(make_brain, monkeypatch):
     areas = data["main_areas"]
     assert areas == [
         {"label": "Concepts", "count": 2},
-        {"label": "How Tos", "count": 1},
+        {"label": "How-tos", "count": 1},
         {"label": "Overviews", "count": 1},
     ]
 

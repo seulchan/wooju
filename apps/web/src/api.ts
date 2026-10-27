@@ -299,6 +299,11 @@ export function challengeInsight(id: string): Promise<ProposalView> {
   return postJson('/api/challenge', { id })
 }
 
+/** Move an insight one step: candidate ⇄ provisional ⇄ established. */
+export function setInsightStatus(id: string, status: string): Promise<ProposalView> {
+  return postJson('/api/notes/status', { id, status })
+}
+
 // --------------------------------------------------------- Claude connection
 
 export interface ClaudeStatus {

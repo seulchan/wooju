@@ -115,3 +115,26 @@ def test_reason_is_required(client):
     c, _ = client
     r = c.post("/api/notes/retire", json={"id": "sources/treasury", "reason": " "})
     assert r.status_code == 400 and "이유" in r.json()["detail"]
+
+
+def test_insight_status_moves_one_step_and_needs_a_challenge(client):
+    c, b = client
+    r = c.post("/api/notes/status", json={"id": "wiki/questions/rerating", "status": "provisional"})
+    assert r.status_code == 400 and "반론" in r.json()["detail"]  # no Challenge section yet
+    assert "status: candidate" in (b / "wiki/questions/rerating.md").read_text(encoding="utf-8")
+
+    path = b / "wiki/questions/rerating.md"
+    path.write_text(
+        path.read_text(encoding="utf-8") + "\n## Challenge\n\n- 반례: 없음\n", encoding="utf-8"
+    )
+    c.app.state.engine.index.scan(b)
+    r = c.post("/api/notes/status", json={"id": "wiki/questions/rerating", "status": "provisional"})
+    assert r.status_code == 200, r.text
+    assert "status: provisional" in path.read_text(encoding="utf-8")
+
+    r = c.post("/api/notes/status", json={"id": "wiki/questions/rerating", "status": "candidate"})
+    assert r.status_code == 200
+    r = c.post("/api/notes/status", json={"id": "wiki/questions/rerating", "status": "established"})
+    assert r.status_code == 400 and "한 단계씩" in r.json()["detail"]
+    r = c.post("/api/notes/status", json={"id": "sources/treasury", "status": "provisional"})
+    assert r.status_code == 404

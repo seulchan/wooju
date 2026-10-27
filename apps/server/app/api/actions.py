@@ -139,6 +139,11 @@ async def pull_model(engine: EngineDep, body: PullRequest | None = None) -> dict
 _MODEL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,100}$")
 
 
+def _is_embedding_model(name: str) -> bool:
+    """Models that only turn text into numbers for search; they can't answer."""
+    return "embed" in name.lower() or name.lower().startswith(("bge-", "nomic-", "mxbai-"))
+
+
 @actions_router.get("/setup/ai/models", tags=["setup"])
 def ai_models(engine: EngineDep) -> dict[str, Any]:
     """Local models installed in Ollama, plus the ones Wooju recommends."""
@@ -161,9 +166,11 @@ def ai_models(engine: EngineDep) -> dict[str, Any]:
         "provider": ai.provider,
         "current": current,
         "recommended": recommended,
+        # Search-only models (meaning search) are not offered as the answer model.
         "installed": [
             {**m, "recommended": m["name"] == recommended}
             for m in sorted(installed or [], key=lambda m: m["name"])
+            if not _is_embedding_model(m["name"])
         ],
         "suggested": suggested,
     }
@@ -215,6 +222,8 @@ async def choose_ai(body: ChooseAi, engine: EngineDep) -> AiStatus:
     model = (body.model or "").strip() or None
     if model and not _MODEL_NAME.match(model):
         raise _fail(engine, "setup.bad_model")
+    if model and _is_embedding_model(model):
+        raise _fail(engine, "setup.embedding_model")
     if body.provider != "ollama" and body.api_key:
         try:
             app_settings.set_api_key(body.provider, body.api_key.strip())
@@ -556,6 +565,25 @@ async def new_note(body: NewNote, engine: EngineDep) -> dict[str, Any]:
     if proposal.status != "applied":
         raise _fail(engine, "note.invalid", error=proposal.error or "")
     return {"id": note_id}
+
+
+class InsightStatus(BaseModel):
+    id: str
+    status: Literal["candidate", "provisional", "established"]
+
+
+@actions_router.post("/notes/status", tags=["proposals"])
+async def insight_status(body: InsightStatus, engine: EngineDep) -> dict[str, Any]:
+    """Move an insight one step: candidate ⇄ provisional ⇄ established."""
+    try:
+        proposal = await engine.set_insight_status(body.id, body.status)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        # The validator refused it: a provisional insight needs a Challenge section.
+        key = "status.needs_challenge" if "Challenge" in (proposal.error or "") else "note.invalid"
+        raise _fail(engine, key, error=proposal.error or "")
+    return {"status": body.status}
 
 
 class Recall(BaseModel):

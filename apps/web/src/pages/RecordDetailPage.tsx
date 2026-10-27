@@ -3,6 +3,7 @@ import { useState } from 'react'
 import {
   ApiError,
   challengeInsight,
+  setInsightStatus,
   editNote,
   fetchDependents,
   saveTakeaway,
@@ -24,6 +25,12 @@ import { Markdown } from '../components/Markdown'
 import { RecordSidebar } from '../components/RecordSidebar'
 import { EmptyState, ErrorState, MetaBadge, Spinner, StatusBadge } from '../components/ui'
 import { tr, pick, useT } from '../lib/i18n'
+
+const BACK_LABEL: Partial<Record<Category, string>> = {
+  knowledge: 'Knowledge',
+  insight: 'Insights',
+  source: 'Sources',
+}
 
 const SECTION_ROUTE: Partial<Record<Category, string>> = {
   knowledge: '/knowledge',
@@ -77,7 +84,7 @@ function RecordView({ record }: { record: BrainRecord }) {
     <article className="detail">
       <p className="back">
         <Link to={back}>
-          {pick(`← Back to ${titleCase(record.category) ?? 'list'}`, `← ${titleCase(record.category) ?? '목록'}(으)로`)}
+          ← {tr(BACK_LABEL[record.category] ?? 'Home')}
         </Link>
       </p>
       <div className="title-row">
@@ -173,8 +180,16 @@ function RecordView({ record }: { record: BrainRecord }) {
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>
           )}
-          {!editing && !record.retired && record.category !== 'other' ? <ThinkPanel id={record.id} /> : null}
-          {isInsight && !record.retired ? <ChallengePanel id={record.id} /> : null}
+          {!editing && !record.retired && record.category !== 'other' ? (
+            <section className="think-box" aria-labelledby="think-box-heading">
+              <h2 id="think-box-heading" className="section-title">
+                {t('thinkBox')}
+              </h2>
+              <ThinkPanel id={record.id} />
+              {isInsight ? <ChallengePanel id={record.id} /> : null}
+              {isInsight ? <StatusControl record={record} hasChallenge={Boolean(sections?.challenge)} /> : null}
+            </section>
+          ) : null}
         </div>
 
         <RecordSidebar record={record} />
@@ -204,7 +219,7 @@ function ChallengePanel({ id }: { id: string }) {
 
   return (
     <section className="challenge-panel" aria-label={t('challengeTitle')}>
-      <h2 className="section-title">{t('challengeTitle')}</h2>
+      <h3 className="think-sub">{t('challengeTitle')}</h3>
       <p className="hint">{t('challengeIntro')}</p>
       {made ? (
         <div className="form-ok" role="status">
@@ -220,6 +235,70 @@ function ChallengePanel({ id }: { id: string }) {
           {busy ? t('challengeWorking') : t('challengeButton')}
         </button>
       )}
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+const STATUS_MOVES: Record<string, Array<{ to: string; key: 'statusUp' | 'statusDown' }>> = {
+  candidate: [{ to: 'provisional', key: 'statusUp' }],
+  provisional: [
+    { to: 'established', key: 'statusUp' },
+    { to: 'candidate', key: 'statusDown' },
+  ],
+  established: [{ to: 'provisional', key: 'statusDown' }],
+}
+
+const STATUS_NAME = {
+  candidate: 'statusCandidate',
+  provisional: 'statusProvisional',
+  established: 'statusEstablished',
+} as const
+
+/** Where this insight stands, and a one-step move up or down. */
+function StatusControl({ record, hasChallenge }: { record: BrainRecord; hasChallenge: boolean }) {
+  const t = useT()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const current = record.status ?? 'candidate'
+  const moves = STATUS_MOVES[current] ?? []
+  if (!moves.length) return null
+  const name = (s: string) => (s in STATUS_NAME ? t(STATUS_NAME[s as keyof typeof STATUS_NAME]) : s)
+
+  async function move(to: string) {
+    setBusy(true)
+    setError(null)
+    try {
+      await setInsightStatus(record.id, to)
+      requestRefresh()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="status-control" aria-label={t('statusTitle')}>
+      <h3 className="think-sub">{t('statusTitle')}</h3>
+      <p>
+        <strong>{name(current)}</strong> — {t(`${STATUS_NAME[current as keyof typeof STATUS_NAME] ?? 'statusCandidate'}Help` as 'statusCandidateHelp')}
+      </p>
+      <div className="row-actions">
+        {moves.map((m) => {
+          const blocked = m.to === 'provisional' && current === 'candidate' && !hasChallenge
+          return (
+            <button key={m.to} className="btn btn-small" disabled={busy || blocked} onClick={() => void move(m.to)}>
+              {t(m.key)} {name(m.to)}
+            </button>
+          )
+        })}
+      </div>
+      {current === 'candidate' && !hasChallenge ? <p className="hint">{t('statusNeedsChallenge')}</p> : null}
       {error ? (
         <p className="form-error" role="alert">
           {error}

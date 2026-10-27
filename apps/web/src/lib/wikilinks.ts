@@ -20,6 +20,14 @@ export function buildResolvedMap(links: BrainLink[]): Map<string, string> {
   return m
 }
 
+function buildTitleMap(links: BrainLink[]): Map<string, string> {
+  const m = new Map<string, string>()
+  for (const link of links) {
+    if (link.target && link.title) m.set(link.target, link.title)
+  }
+  return m
+}
+
 function escapeMd(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/([[\]])/g, '\\$1')
 }
@@ -32,10 +40,12 @@ function escapeMd(text: string): string {
  */
 export function transformWikilinks(content: string, links: BrainLink[]): string {
   const resolved = buildResolvedMap(links)
+  const titles = buildTitleMap(links)
   return content.replace(WIKILINK_RE, (full, targetRaw: string, _anchor: string | null, label: string | null) => {
     const target = (targetRaw ?? '').trim()
     if (!target) return full
-    const display = label && label.trim() ? label.trim() : target
+    // A written label wins; otherwise the linked note's title, never its path.
+    const display = label && label.trim() ? label.trim() : (titles.get(target) ?? target)
     const rid = resolved.get(target)
     if (rid) return `[${escapeMd(display)}](#/record/${encodeId(rid)})`
     return `[${escapeMd(display)}](#unresolved:${encodeURIComponent(target)})`

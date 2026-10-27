@@ -84,6 +84,16 @@ export function HomePage() {
       <DropZone />
       <RecentMemos />
 
+      {/* Period-independent: attention reflects the Brain's *current* uncertainty
+          (provisional/candidate insights, open questions, explicit contested
+          claims, unresolved refs), not only recent changes. */}
+      <section aria-labelledby="attention-heading" className="section">
+        <h2 id="attention-heading" className="section-title">
+          {tr('What needs attention?')}
+        </h2>
+        <AttentionSection />
+      </section>
+
       <section className="section section-first" aria-labelledby="know-heading">
         <h2 id="know-heading" className="section-title">
           {tr('What do I know?')}
@@ -120,20 +130,14 @@ export function HomePage() {
         </h2>
         {/* The map reuses the "What changed?" period window so recent-change
             highlighting tracks the same selection the user made above. */}
-        <Suspense fallback={<Spinner label={tr('Loading map…')} />}>
-          <BrainMap since={changesSince(period, lastSeenAt)} />
-        </Suspense>
+        <details className="map-toggle">
+          <summary>{tr('Show map')}</summary>
+          <Suspense fallback={<Spinner label={tr('Loading map…')} />}>
+            <BrainMap since={changesSince(period, lastSeenAt)} />
+          </Suspense>
+        </details>
       </section>
 
-      {/* Period-independent: attention reflects the Brain's *current* uncertainty
-          (provisional/candidate insights, open questions, explicit contested
-          claims, unresolved refs), not only recent changes. */}
-      <section aria-labelledby="attention-heading" className="section">
-        <h2 id="attention-heading" className="section-title">
-          {tr('What needs attention?')}
-        </h2>
-        <AttentionSection />
-      </section>
     </>
   )
 }

@@ -969,6 +969,37 @@ class Engine:
         )
         return path.removesuffix(".md"), proposal
 
+    # An insight moves one step at a time (SYNTHESIS.md). Rejecting it is
+    # "Retire"; superseding it is done by hand.
+    _STATUS_STEPS = {
+        ("candidate", "provisional"),
+        ("provisional", "established"),
+        ("established", "provisional"),
+        ("provisional", "candidate"),
+    }
+
+    async def set_insight_status(self, record_id: str, status: str) -> Proposal:
+        """Move an insight one step along its lifecycle (the validator checks the rules)."""
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None or record.category != "insight":
+            raise SetupError("review.not_found")
+        current = record.status or "candidate"
+        if (current, status) not in self._STATUS_STEPS:
+            raise SetupError("status.step", current=current, status=status)
+        text = (brain / record.path).read_text(encoding="utf-8")
+        try:
+            updated = set_frontmatter_value(text, "status", status)
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
+        ko = self.language() == "ko"
+        title = (
+            f"상태 변경 {current} → {status}: {record.title}"
+            if ko
+            else f"Status {current} → {status}: {record.title}"
+        )
+        return await self._apply_own(record.path, updated, title)
+
     async def recall(self, record_id: str, rating: str) -> Proposal:
         """The user tried to recall a note before reading it; schedule the next time."""
         brain = self._require_brain()

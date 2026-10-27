@@ -31,7 +31,7 @@ export function ThinkPanel({ id }: { id: string }) {
 
   return (
     <section className="think-panel" aria-label={t('thinkTitle')}>
-      <h2 className="section-title">{t('thinkTitle')}</h2>
+      <h3 className="think-sub">{t('thinkTitle')}</h3>
       <p className="hint">{t('thinkIntro')}</p>
       {questions?.length ? (
         <ul className="think-list">

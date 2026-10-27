@@ -600,3 +600,20 @@ def test_leftover_inbox_files_are_picked_up_at_start(monkeypatch, tmp_path):
             time.sleep(0.05)
         c.portal.call(engine.retry_waiting)  # on the app's own event loop
         assert wait_jobs(c)[0]["state"] == "done"
+
+
+def test_search_only_models_are_not_answer_models(client, monkeypatch):
+    from wooju_agents import llm
+
+    monkeypatch.setattr(
+        llm.OllamaProvider,
+        "installed",
+        lambda self: [
+            {"name": "qwen3.5:9b", "size": 1},
+            {"name": "qwen3-embedding:0.6b", "size": 1},
+        ],
+    )
+    names = [m["name"] for m in client.get("/api/setup/ai/models").json()["installed"]]
+    assert names == ["qwen3.5:9b"]
+    r = client.post("/api/setup/ai", json={"provider": "ollama", "model": "qwen3-embedding:0.6b"})
+    assert r.status_code == 400 and "의미 검색" in r.json()["detail"]

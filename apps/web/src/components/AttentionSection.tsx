@@ -66,12 +66,16 @@ function pickRepresentative(
 ): Array<{ group: AttentionGroup; item: AttentionItem }> {
   const queues = groups.map((g) => [...g.items])
   const out: Array<{ group: AttentionGroup; item: AttentionItem }> = []
+  const seen = new Set<string>()
   let progress = true
   while (out.length < MAX_REPRESENTATIVE && progress) {
     progress = false
     for (let i = 0; i < queues.length && out.length < MAX_REPRESENTATIVE; i++) {
-      const item = queues[i].shift()
+      // One line per note: skip notes already shown for an earlier reason.
+      let item = queues[i].shift()
+      while (item && seen.has(item.id)) item = queues[i].shift()
       if (item) {
+        seen.add(item.id)
         out.push({ group: groups[i], item })
         progress = true
       }

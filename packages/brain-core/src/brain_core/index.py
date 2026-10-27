@@ -296,6 +296,18 @@ def _parse_iso(value: str | None) -> datetime | None:
         return None
 
 
+_AREA_LABELS = {
+    "concepts": "Concepts",
+    "overviews": "Overviews",
+    "questions": "Questions",
+    "how-tos": "How-tos",
+    "mental-models": "Mental models",
+}
+
+
 def _titlecase_slug(slug: str) -> str:
-    """Title-case a slug for display: ``mental-models`` → ``Mental Models``."""
-    return " ".join(word.capitalize() for word in slug.replace("_", "-").split("-") if word)
+    """Display label for a wiki folder: ``mental-models`` → ``Mental models``."""
+    if slug in _AREA_LABELS:
+        return _AREA_LABELS[slug]
+    words = [w for w in slug.replace("_", "-").split("-") if w]
+    return " ".join(words).capitalize()

@@ -42,9 +42,6 @@ function Metadata({ record }: { record: BrainRecord }) {
     <section className="panel meta" aria-label="Record metadata">
       <h2 className="panel-title">{tr('Details')}</h2>
       <dl className="meta-list">
-        <MetaRow label="Path">
-          <code>{record.path}</code>
-        </MetaRow>
         <MetaRow label="Modified">{formatDate(record.modified_at)}</MetaRow>
         {record.subtype ? <MetaRow label="Type">{titleCase(record.subtype)}</MetaRow> : null}
         {record.kind ? <MetaRow label="Kind">{titleCase(record.kind)}</MetaRow> : null}
@@ -52,6 +49,10 @@ function Metadata({ record }: { record: BrainRecord }) {
         {record.aliases.length ? <MetaRow label="Aliases">{record.aliases.join(', ')}</MetaRow> : null}
         {tags?.length ? <MetaRow label="Tags">{tags.join(', ')}</MetaRow> : null}
       </dl>
+      <details className="meta-path">
+        <summary>{tr('File location')}</summary>
+        <code>{record.path}</code>
+      </details>
     </section>
   )
 }
@@ -140,7 +141,7 @@ function OutgoingLinks({ links }: { links: BrainLink[] }) {
       <h2 className="panel-title">{tr('Links')}</h2>
       <ul className="ref-list">
         {unique.map((link, index) => {
-          const label = link.label ?? link.target
+          const label = link.label ?? link.title ?? link.target
           const display = link.anchor ? `${label} › ${link.anchor}` : label
           return (
             <li key={`${link.target}-${index}`} className="ref-item">

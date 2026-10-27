@@ -1419,15 +1419,6 @@ code {
   color: var(--muted);
   font-size: 0.88rem;
 }
-.challenge-panel {
-  margin-top: 2rem;
-  padding: 1rem 1.25rem;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-}
-.challenge-panel .section-title {
-  margin-top: 0;
-}
 .claude-row {
   display: flex;
   gap: 0.75rem;
@@ -1707,14 +1698,51 @@ code {
 
 /* ------------------------------------------------------------- thinking */
 
-.think-panel {
+.think-box {
   margin-top: 2rem;
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.think-panel .section-title {
+.think-box > .section-title {
   margin-top: 0;
+}
+.think-box > section + section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.think-sub {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.review-panel__line {
+  margin: 0;
+}
+.review-panel__line .panel-title {
+  display: inline;
+}
+.meta-path {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+.meta-path summary {
+  cursor: pointer;
+  color: var(--muted, inherit);
+}
+.meta-path code {
+  display: block;
+  margin-top: 0.25rem;
+  word-break: break-all;
+}
+.map-toggle summary {
+  cursor: pointer;
+  margin-bottom: 0.5rem;
 }
 .think-list {
   list-style: none;

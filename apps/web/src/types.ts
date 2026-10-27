@@ -54,6 +54,8 @@ export interface BrainLink {
   label?: string | null
   anchor?: string | null
   resolved_id?: string | null
+  /** Title of the linked note, shown instead of its path. */
+  title?: string | null
 }
 
 export interface ResolvedRef {

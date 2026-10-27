@@ -151,6 +151,14 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "저장하면 노트 규칙에 어긋나서 저장하지 않았어요: {error}",
         "Not saved, because it would break the note rules: {error}",
     ),
+    "status.step": (
+        "{current}에서 {status}(으)로는 바로 바꿀 수 없어요. 한 단계씩 바꿔 주세요.",
+        "An insight can't go from {current} to {status} directly; move one step at a time.",
+    ),
+    "status.needs_challenge": (
+        "잠정으로 올리려면 먼저 반론 검토를 해서 노트에 반론(Challenge) 섹션이 있어야 해요.",
+        "To make it provisional, challenge it first so the note has a Challenge section.",
+    ),
     "retire.reason": (
         "폐기하는 이유를 적어 주세요. 나중에 왜 버렸는지 알 수 있어요.",
         "Write why it's being retired, so you know later.",
@@ -240,6 +248,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "Couldn't store the key safely. Please allow access to the Mac keychain.",
     ),
     # setup and files
+    "setup.embedding_model": (
+        "이 모델은 의미 검색 전용이라 답을 만들 수 없어요. 다른 모델을 골라 주세요.",
+        "This model is for meaning search only and can't write answers. Pick another model.",
+    ),
     "setup.bad_model": ("모델 이름이 올바르지 않아요.", "That model name isn't valid."),
     "setup.choose_folder": ("폴더를 골라 주세요.", "Please choose a folder."),
     "setup.not_folder": (
