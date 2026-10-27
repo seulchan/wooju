@@ -12,9 +12,9 @@ import re
 import subprocess
 import sys
 import webbrowser
+from collections.abc import AsyncIterator
 from datetime import date
 from pathlib import Path
-from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 
