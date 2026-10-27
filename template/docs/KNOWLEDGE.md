@@ -204,3 +204,11 @@ project-specific implication is not silently generalized into world knowledge.
 Generalizable knowledge discovered during a project should be promoted into `wiki/` rather than duplicated permanently inside the project.
 
 Project-local implementation details remain in the project unless they become reusable beyond it.
+
+## Retiring a note
+
+When a note turns out to be wrong or obsolete, retire it instead of deleting it:
+add `retired: YYYY-MM-DD` and `retired_reason: "..."` to its frontmatter (Wooju's
+"Retire" button does this and sets the layer's own status, e.g. `archived` for a
+source). A retired note keeps its history and reason, is not used as grounds for
+answers, and notes that rest on it should be checked again.

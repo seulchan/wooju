@@ -1581,3 +1581,22 @@ code {
   margin: 0.25rem 0 0;
   padding-left: 1.2rem;
 }
+.retired-banner,
+.retire-form {
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0 1rem;
+  background: var(--panel);
+}
+.retired-banner p,
+.retire-form p {
+  margin: 0.25rem 0 0.5rem;
+}
+.retire-form .text-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.card-retired {
+  opacity: 0.65;
+}

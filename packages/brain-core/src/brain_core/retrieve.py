@@ -204,8 +204,8 @@ class Retriever:
         self._len: list[int] = []
         df: Counter[str] = Counter()
         for record in index.all_records():
-            if record.category == "other":
-                continue
+            if record.category == "other" or record.retired:
+                continue  # retired notes are never grounds for an answer
             head = " ".join([record.title, *record.aliases])
             for passage in passages(record):
                 # The title counts twice, so a note about the subject outranks

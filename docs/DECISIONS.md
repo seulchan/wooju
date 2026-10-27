@@ -105,6 +105,11 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   (from history order, so notes added together never show), and the note
   page names them right after an edit. Challenging, editing, or marking a
   note as checked clears it.
+- A wrong or obsolete note is retired, not deleted: `retired: date` and
+  `retired_reason` are added (plus the layer's own status: source `archived`,
+  insight `rejected`, memory `historical`, the old status kept for restore).
+  It stays readable with its reason, is never grounds for Ask, the Challenger,
+  or Claude, and what rests on it is flagged. Restore brings it back.
 - A source note records what the source says: the editor asks to fix only
   what was copied wrong, and to put disagreement under its limitations.
 

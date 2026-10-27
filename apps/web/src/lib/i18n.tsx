@@ -239,6 +239,22 @@ const STRINGS = {
   },
   changedGround: { ko: '바뀐 근거:', en: 'Changed:' },
   checked: { ko: '확인함', en: 'Checked' },
+  retire: { ko: '폐기', en: 'Retire' },
+  retired: { ko: '폐기됨', en: 'Retired' },
+  retireTitle: { ko: '이 노트를 폐기할까요?', en: 'Retire this note?' },
+  retireHint: {
+    ko: '지우지 않고 남겨 두되, 질문하기와 반론 검토의 근거로 더는 쓰지 않아요. 이 노트를 근거로 쓰는 노트는 홈에서 다시 확인하라고 알려 줘요. 언제든 되살릴 수 있어요.',
+    en: 'It is kept, but never used as grounds for answers or challenges again. Notes that rest on it are flagged on Home. You can restore it any time.',
+  },
+  retireReason: { ko: '폐기하는 이유', en: 'Why it is retired' },
+  retireReasonPlaceholder: {
+    ko: '예: 정정 보도가 나옴, 더 정확한 자료로 대체됨',
+    en: 'e.g. a correction was published; replaced by a better source',
+  },
+  retireConfirm: { ko: '폐기하기', en: 'Retire' },
+  retiredBanner: { ko: '폐기된 노트예요', en: 'This note is retired' },
+  restore: { ko: '되살리기', en: 'Restore' },
+  retiredGround: { ko: '폐기된 근거:', en: 'Retired:' },
   dependentsTitle: {
     ko: '이 노트를 근거로 쓰는 노트예요. 바뀐 내용에 맞는지 확인해 보세요:',
     en: 'These notes rest on this one. Check that they still hold:',

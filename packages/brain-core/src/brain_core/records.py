@@ -64,6 +64,9 @@ class Record(BaseModel):
     # The frontmatter title when the note's heading differs (e.g. a source's
     # original-language title); ``title`` is then the heading shown to people.
     original_title: str | None = None
+    # Retired by the user as wrong or obsolete (frontmatter ``retired: date``):
+    # kept for the record, never used as grounds for answers.
+    retired: bool = False
     category: Category
     subtype: str | None = None
     content: str  # markdown body, frontmatter stripped

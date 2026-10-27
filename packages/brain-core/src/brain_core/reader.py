@@ -71,6 +71,7 @@ def _read_record(root: Path, file_path: Path) -> Record | None:
         path=relative_path.as_posix(),
         title=title,
         original_title=original_title,
+        retired=bool(frontmatter.get("retired")),
         category=category,
         subtype=subtype,
         content=body,

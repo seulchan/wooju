@@ -121,7 +121,9 @@ function GroundsList({ items, count }: { items: AttentionItem[]; count: number }
                 {item.title}
               </Link>
               <span className="hint">
-                {t('changedGround')} {item.detail}
+                {item.detail?.startsWith('⊘ ')
+                  ? `${t('retiredGround')} ${item.detail.slice(2)}`
+                  : `${t('changedGround')} ${item.detail ?? ''}`}
               </span>
             </div>
             <button

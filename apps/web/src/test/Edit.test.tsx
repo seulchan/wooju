@@ -138,3 +138,36 @@ describe('Grounds changed', () => {
     await waitFor(() => expect(bodies(fetchMock, '/api/checked')).toEqual([{ id: 'wiki/questions/rerating' }]))
   })
 })
+
+describe('Retiring a note', () => {
+  it('asks for a reason and retires it', async () => {
+    const fetchMock = mockFetch([
+      { match: /^\/api\/records\//, body: note },
+      { match: /^\/api\/notes\/retire$/, body: { status: 'applied' } },
+      { match: /^\/api\/dependents\//, body: { items: [] } },
+    ])
+    render(<RecordDetailPage id={note.id} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Retire' }))
+    const confirm = screen.getAllByRole('button', { name: 'Retire' }).at(-1)!
+    expect(confirm).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('Why it is retired'), '정정 보도')
+    await userEvent.click(confirm)
+    await waitFor(() => expect(bodies(fetchMock, '/api/notes/retire')).toEqual([{ id: note.id, reason: '정정 보도' }]))
+  })
+
+  it('shows a retired note with its reason and can restore it', async () => {
+    const fetchMock = mockFetch([
+      {
+        match: /^\/api\/records\//,
+        body: { ...note, retired: true, metadata: { retired: '2026-10-27', retired_reason: '정정 보도' } },
+      },
+      { match: /^\/api\/notes\/restore$/, body: { status: 'applied' } },
+    ])
+    render(<RecordDetailPage id={note.id} />)
+    expect(await screen.findByText(/This note is retired/)).toBeInTheDocument()
+    expect(screen.getByText(/정정 보도/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retire' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Restore' }))
+    await waitFor(() => expect(bodies(fetchMock, '/api/notes/restore')).toEqual([{ id: note.id }]))
+  })
+})

@@ -147,7 +147,11 @@ def _collect(index: BrainIndex, today: date, brain: Path | None) -> dict[str, li
         from .upstream import changed_grounds
 
         for record, ground in changed_grounds(index, brain):
-            groups["grounds_changed"].append(_item_from(record, detail=ground.title))
+            if record.retired:
+                continue
+            # "⊘" marks a ground that was retired, not just edited.
+            detail = f"⊘ {ground.title}" if ground.retired else ground.title
+            groups["grounds_changed"].append(_item_from(record, detail=detail))
         by_path = {r.path: r for r in index.all_records()}
         for path, message in _rule_errors(brain, index.indexed_at):
             record = by_path.get(path)
@@ -156,7 +160,7 @@ def _collect(index: BrainIndex, today: date, brain: Path | None) -> dict[str, li
 
     for record in sorted(index.all_records(), key=lambda r: r.path):
         due = _review_date(record)
-        if due is not None and due <= today:
+        if due is not None and due <= today and not record.retired:
             groups["review_due"].append(_item_from(record, detail=due.isoformat()))
 
         if record.category == "insight":

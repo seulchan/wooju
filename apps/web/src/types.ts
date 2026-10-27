@@ -35,6 +35,8 @@ export interface RecordSummary {
   modified_at?: string | null
   excerpt?: string | null
   derived_from_count?: number
+  /** Retired by the user as wrong or obsolete. */
+  retired?: boolean
 }
 
 export interface ListResponse {
@@ -68,6 +70,8 @@ export interface BrainRecord {
   title: string
   /** The frontmatter title when the note's heading differs (e.g. a source's original title). */
   original_title?: string | null
+  /** Retired by the user as wrong or obsolete (reason and date in metadata). */
+  retired?: boolean
   category: Category
   subtype?: string | null
   content: string

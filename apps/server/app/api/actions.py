@@ -523,6 +523,38 @@ async def edit_note(body: EditNote, engine: EngineDep) -> ProposalView:
     return _view(proposal)
 
 
+class RetireNote(BaseModel):
+    id: str
+    reason: str
+
+
+@actions_router.post("/notes/retire", tags=["proposals"], response_model=ProposalView)
+async def retire_note(body: RetireNote, engine: EngineDep) -> ProposalView:
+    """Retire a wrong or obsolete note: kept with the reason, no longer used as grounds."""
+    try:
+        proposal = await engine.retire_note(body.id, body.reason)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return _view(proposal)
+
+
+class NoteId(BaseModel):
+    id: str
+
+
+@actions_router.post("/notes/restore", tags=["proposals"], response_model=ProposalView)
+async def restore_note(body: NoteId, engine: EngineDep) -> ProposalView:
+    try:
+        proposal = await engine.restore_note(body.id)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return _view(proposal)
+
+
 @actions_router.get("/proposals", tags=["proposals"])
 def list_proposals(
     engine: EngineDep, status: Literal["pending", "applied", "rejected", "failed"] | None = None

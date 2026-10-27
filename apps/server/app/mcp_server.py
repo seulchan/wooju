@@ -36,7 +36,8 @@ Layers: sources/ (what one source says), wiki/ (durable knowledge: concepts,
 overviews, questions), insights (origin: synthesis; derived hypotheses with a
 status: candidate < provisional < established; never treat them as facts),
 memory/ (the user's own preferences, decisions, and history), projects/ and
-areas/ (ongoing work).
+areas/ (ongoing work). A note with `retired` was judged wrong or obsolete by the
+user (see `retired_reason`): it never appears in search; don't rely on it.
 
 When answering from the Brain: search first, read the notes you rely on, and
 cite them by title. Say when the Brain does not contain the answer. Prefer
@@ -169,6 +170,8 @@ def build_server(  # noqa: ANN201
             "title": record.title,
             "kind": record.category,
             "status": record.status,
+            # Retired notes are wrong or obsolete: never use them as grounds.
+            "retired": record.retired,
             "frontmatter": record.metadata,
             "content": record.content,
             "links": [link.resolved_id or link.target for link in record.links],

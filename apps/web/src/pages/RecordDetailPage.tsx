@@ -1,6 +1,15 @@
 import { useState } from 'react'
 
-import { ApiError, challengeInsight, editNote, fetchDependents, fetchRecord, NotFoundError } from '../api'
+import {
+  ApiError,
+  challengeInsight,
+  editNote,
+  fetchDependents,
+  fetchRecord,
+  NotFoundError,
+  restoreNote,
+  retireNote,
+} from '../api'
 import { encodeId } from '../lib/paths'
 import { NoteEditor } from '../components/NoteEditor'
 import { requestRefresh } from '../lib/freshness'
@@ -54,6 +63,7 @@ export function RecordDetailPage({ id }: { id: string }) {
 function RecordView({ record }: { record: BrainRecord }) {
   const t = useT()
   const [editing, setEditing] = useState(false)
+  const [retiring, setRetiring] = useState(false)
   const [dependents, setDependents] = useState<{ id: string; title: string }[]>([])
   const isInsight = record.category === 'insight'
   const back = SECTION_ROUTE[record.category] ?? '/'
@@ -75,7 +85,24 @@ function RecordView({ record }: { record: BrainRecord }) {
             {t('edit')}
           </button>
         ) : null}
+        {!editing && !record.retired && record.category !== 'other' ? (
+          <button className="btn btn-small btn-quiet" onClick={() => setRetiring(true)}>
+            {t('retire')}
+          </button>
+        ) : null}
       </div>
+      {record.retired ? <RetiredBanner record={record} /> : null}
+      {retiring ? (
+        <RetireForm
+          onCancel={() => setRetiring(false)}
+          onRetire={async (reason) => {
+            await retireNote(record.id, reason)
+            setRetiring(false)
+            requestRefresh()
+            fetchDependents(record.id).then((r) => setDependents(r.items), () => setDependents([]))
+          }}
+        />
+      ) : null}
       {record.original_title ? (
         <p className="subtitle original-title">
           {tr('Original title')}: {record.original_title}
@@ -136,7 +163,7 @@ function RecordView({ record }: { record: BrainRecord }) {
           ) : (
             <p className="subtitle">{tr('This note has no body content.')}</p>
           )}
-          {isInsight ? <ChallengePanel id={record.id} /> : null}
+          {isInsight && !record.retired ? <ChallengePanel id={record.id} /> : null}
         </div>
 
         <RecordSidebar record={record} />
@@ -188,5 +215,88 @@ function ChallengePanel({ id }: { id: string }) {
         </p>
       ) : null}
     </section>
+  )
+}
+
+function RetiredBanner({ record }: { record: BrainRecord }) {
+  const t = useT()
+  const [error, setError] = useState<string | null>(null)
+  const when = typeof record.metadata.retired === 'string' ? record.metadata.retired : ''
+  const reason = typeof record.metadata.retired_reason === 'string' ? record.metadata.retired_reason : ''
+  return (
+    <div className="retired-banner" role="note">
+      <p>
+        <strong>{t('retiredBanner')}</strong> {when ? `(${when})` : null}
+        {reason ? ` — ${reason}` : null}
+      </p>
+      <button
+        className="btn btn-small"
+        onClick={() =>
+          void restoreNote(record.id).then(
+            () => requestRefresh(),
+            (err: unknown) => setError(err instanceof ApiError ? err.message : String(err)),
+          )
+        }
+      >
+        {t('restore')}
+      </button>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+function RetireForm({
+  onRetire,
+  onCancel,
+}: {
+  onRetire: (reason: string) => Promise<unknown>
+  onCancel: () => void
+}) {
+  const t = useT()
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <form
+      className="retire-form"
+      onSubmit={(e) => {
+        e.preventDefault()
+        setBusy(true)
+        setError(null)
+        onRetire(reason).catch((err: unknown) => {
+          setError(err instanceof ApiError ? err.message : String(err))
+          setBusy(false)
+        })
+      }}
+    >
+      <p>
+        <strong>{t('retireTitle')}</strong>
+      </p>
+      <p className="hint">{t('retireHint')}</p>
+      <input
+        className="text-input"
+        aria-label={t('retireReason')}
+        placeholder={t('retireReasonPlaceholder')}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="card-actions">
+        <button className="btn btn-primary" type="submit" disabled={busy || !reason.trim()}>
+          {t('retireConfirm')}
+        </button>
+        <button className="btn" type="button" disabled={busy} onClick={onCancel}>
+          {t('cancel')}
+        </button>
+      </div>
+    </form>
   )
 }

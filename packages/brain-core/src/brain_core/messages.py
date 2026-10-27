@@ -142,6 +142,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "저장하면 노트 규칙에 어긋나서 저장하지 않았어요: {error}",
         "Not saved, because it would break the note rules: {error}",
     ),
+    "retire.reason": (
+        "폐기하는 이유를 적어 주세요. 나중에 왜 버렸는지 알 수 있어요.",
+        "Write why it's being retired, so you know later.",
+    ),
     # maintainer
     "review.not_found": ("그 노트를 찾지 못했어요.", "That note wasn't found."),
     "review.unreadable": (

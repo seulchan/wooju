@@ -44,6 +44,7 @@ class RecordSummary(BaseModel):
     modified_at: str | None = None
     excerpt: str | None = None  # short plain-text preview of the body
     derived_from_count: int = 0  # number of derivation refs (insight provenance)
+    retired: bool = False  # retired by the user as wrong or obsolete
 
 
 class ListResponse(BaseModel):
@@ -296,6 +297,7 @@ def to_summary(record: Record) -> RecordSummary:
         modified_at=record.modified_at,
         excerpt=_excerpt(record.content),
         derived_from_count=len(record.derived_from),
+        retired=record.retired,
     )
 
 

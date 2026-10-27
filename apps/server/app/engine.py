@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import re
@@ -810,6 +811,71 @@ class Engine:
             origin=record.path,
             title=f"직접 고침: {record.title}" if ko else f"Edited: {record.title}",
             changes=[FileChange(op="write", path=record.path, content=updated)],
+            approval="auto",
+        )
+        self.store.save(proposal)
+        return await self.apply(proposal)
+
+    # What "retired" means in each layer's own status, where it has one.
+    _RETIRED_STATUS = {"source": "archived", "insight": "rejected", "memory": "historical"}
+
+    async def retire_note(self, record_id: str, reason: str) -> Proposal:
+        """Mark a note as wrong or obsolete. It stays in the Brain with the reason,
+        is never used as grounds again, and what rests on it is flagged."""
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        if not reason.strip():
+            raise SetupError("retire.reason")
+        text = (brain / record.path).read_text(encoding="utf-8")
+        try:
+            updated = set_frontmatter_value(text, "retired", date.today().isoformat())
+            updated = set_frontmatter_value(
+                updated, "retired_reason", json.dumps(reason.strip(), ensure_ascii=False)
+            )
+            status = self._RETIRED_STATUS.get(record.category)
+            if status:
+                before = split_frontmatter(text)[0].get("status")
+                if before and before != status:
+                    updated = set_frontmatter_value(updated, "status_before_retired", str(before))
+                updated = set_frontmatter_value(updated, "status", status)
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
+        ko = self.language() == "ko"
+        return await self._apply_own(
+            record.path, updated, f"폐기: {record.title}" if ko else f"Retired: {record.title}"
+        )
+
+    async def restore_note(self, record_id: str) -> Proposal:
+        """Undo a retirement: the note counts again, with its earlier status."""
+        brain = self._require_brain()
+        record = self.index.get(record_id)
+        if record is None:
+            raise SetupError("review.not_found")
+        text = (brain / record.path).read_text(encoding="utf-8")
+        frontmatter = split_frontmatter(text)[0]
+        try:
+            updated = text
+            for key in ("retired", "retired_reason", "status_before_retired"):
+                updated = set_frontmatter_value(updated, key, None)
+            if record.category in self._RETIRED_STATUS:
+                before = frontmatter.get("status_before_retired")
+                updated = set_frontmatter_value(updated, "status", str(before) if before else None)
+        except ValueError as exc:
+            raise SetupError("review.unreadable") from exc
+        ko = self.language() == "ko"
+        return await self._apply_own(
+            record.path, updated, f"되살림: {record.title}" if ko else f"Restored: {record.title}"
+        )
+
+    async def _apply_own(self, path: str, content: str, title: str) -> Proposal:
+        """Apply a change the user made by clicking (their click is the approval)."""
+        proposal = Proposal(
+            agent="you",
+            origin=path,
+            title=title,
+            changes=[FileChange(op="write", path=path, content=content)],
             approval="auto",
         )
         self.store.save(proposal)
