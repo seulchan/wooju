@@ -159,3 +159,24 @@ anything 96% → 100%, names the missing part 0/2 → 2/2, median 34 s → 31 s,
 dates 1/2 → 1/2, but says "not in your notes" 4/4 → 2/4: the rewrite had
 dropped the rule for questions the notes do not answer at all. Restored; to be
 measured again.
+
+Final run after two fixes found by printing the failing answers: a sentence
+saying the notes do not cover something no longer has to cite a passage
+(forcing one made the model cite all six), and answers get the Korean number
+spacing fix ("2026 년 7 월" failed the date check although the date was right).
+
+| | Baseline | Final |
+|---|---|---|
+| Says it isn't in the notes | 4/4 | 4/4 |
+| Names the missing part | 0/2 | 2/2 |
+| Gets the date right | 1/2 | 2/2 |
+| Finds it under another name | 2/2 | 2/2 |
+| Cites an expected note | 85% | 85% |
+| Cites anything | 96% | 92% |
+| Median time | 34 s | 26 s |
+
+Kept. The cost: two English answers came back without citations now that
+citing is not forced. The app already marks such answers as "not tied to
+specific notes" and shows what was read, which is a safer failure than a
+wrong citation. Following the topic one hop in Ask is not needed for now
+(aliases 2/2) and stays out until a question needs it.
