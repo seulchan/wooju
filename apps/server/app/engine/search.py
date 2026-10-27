@@ -63,6 +63,7 @@ class SearchMixin:
         done, total = retriever.vector_coverage
         if not missing:
             self.search_state = {"state": "ready", "done": done, "total": total}
+            await self._sweep_if_changed()
             return
 
         # Set before the task starts, so a status check right now already sees it.
@@ -87,11 +88,23 @@ class SearchMixin:
                 await asyncio.to_thread(current.load_vectors, cache)
                 d, t = current.vector_coverage
                 self.search_state = {"state": "ready", "done": d, "total": t}
+                await self._sweep_if_changed()
             except LLMError:
                 logger.warning("Meaning search indexing paused; keyword search still works")
                 self.search_state["state"] = "off"
 
         self._embedding = asyncio.create_task(run(), name="wooju-embed")
+
+    async def _sweep_if_changed(self) -> None:
+        """Let the topics agent file new notes, once per index version."""
+        if self._swept_at == self.index.indexed_at:
+            return
+        self._swept_at = self.index.indexed_at
+        try:
+            await self.sweep_topics()
+        except Exception:  # noqa: BLE001 — filing is a convenience; search still works
+            logger.exception("Filing notes into topics failed")
+        self._swept_at = self.index.indexed_at
 
     async def query_vector(self, text: str) -> Any:
         """The query's embedding, or None (keyword search) if meaning search is off.

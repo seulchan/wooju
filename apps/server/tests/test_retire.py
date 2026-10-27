@@ -149,7 +149,11 @@ def test_retire_with_a_replacement_points_to_it(client):
     c.app.state.engine.index.scan(b)
     r = c.post(
         "/api/notes/retire",
-        json={"id": "sources/treasury", "reason": "정정 보도", "replaced_by": "sources/treasury-fixed"},
+        json={
+            "id": "sources/treasury",
+            "reason": "정정 보도",
+            "replaced_by": "sources/treasury-fixed",
+        },
     )
     assert r.status_code == 200, r.text
     text = (b / "sources/treasury.md").read_text(encoding="utf-8")

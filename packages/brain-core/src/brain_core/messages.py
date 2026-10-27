@@ -256,6 +256,19 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "이 모델은 의미 검색 전용이라 답을 만들 수 없어요. 다른 모델을 골라 주세요.",
         "This model is for meaning search only and can't write answers. Pick another model.",
     ),
+    "job.topics": ("주제에 연결했어요: {titles}", "Filed under: {titles}"),
+    "topic.too_few": (
+        "주제로 묶으려면 노트가 두 개 이상 필요해요.",
+        "A topic needs at least two notes.",
+    ),
+    "topic.bad_shape": (
+        "AI가 주제를 제대로 쓰지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+        "The AI couldn't write the topic. Please try again in a moment.",
+    ),
+    "digest.topics": (
+        "주제로 묶을 만한 노트 묶음 {n}개가 있어요",
+        "{n} groups of notes could become topics",
+    ),
     "job.similar": (
         "비슷한 노트가 이미 있어요: {titles}",
         "A similar note is already in your Brain: {titles}",

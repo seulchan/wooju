@@ -151,6 +151,8 @@ class TelegramBotMixin:
                     text = self._say("telegram.saved", title=job.title or job.file)
                     if job.conflicts:
                         text += "\n" + self._say("job.conflicts", count=job.conflicts)
+                    if job.topics:
+                        text += "\n" + self._say("job.topics", titles=", ".join(job.topics))
                     if job.similar:
                         titles = ", ".join(s["title"] for s in job.similar)
                         text += "\n" + self._say("job.similar", titles=titles)

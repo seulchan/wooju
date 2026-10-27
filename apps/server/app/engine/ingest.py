@@ -243,4 +243,6 @@ class IngestMixin:
             if job.note_id:
                 with contextlib.suppress(Exception):  # a hint; saving already succeeded
                     job.similar = await self.near_duplicates(job.note_id)
+                with contextlib.suppress(Exception):  # filing is a convenience too
+                    job.topics = await self.file_into_topics([job.note_id])
         job.state = "done"

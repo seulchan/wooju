@@ -50,9 +50,18 @@ from .ingest import IngestMixin
 from .search import SearchMixin
 from .telegram_bot import TelegramBotMixin
 from .thinking import ThinkingMixin
+from .topics import TopicsMixin
 
 
-class Engine(CaptureMixin, IngestMixin, TelegramBotMixin, SearchMixin, EditingMixin, ThinkingMixin):
+class Engine(
+    CaptureMixin,
+    IngestMixin,
+    TelegramBotMixin,
+    SearchMixin,
+    TopicsMixin,
+    EditingMixin,
+    ThinkingMixin,
+):
     def __init__(self) -> None:
         self.index = BrainIndex()
         self.brain: Path | None = None
@@ -81,6 +90,7 @@ class Engine(CaptureMixin, IngestMixin, TelegramBotMixin, SearchMixin, EditingMi
         self.capture_log: list[dict[str, Any]] = []  # recent captures, newest first
         self.provider_override: Provider | None = None  # tests
         self.pull_state: dict[str, str | None] = {"model": None, "state": None, "message": None}
+        self._swept_at: str | None = None  # index version the topics agent last filed
 
     # ------------------------------------------------------------ lifecycle
 

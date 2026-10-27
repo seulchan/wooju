@@ -919,6 +919,76 @@ async def find_notes(engine: EngineDep, q: str = "", limit: int = 40) -> dict[st
     return {"query": q, "total": len(out), "hits": out, "meaning": meaning}
 
 
+class TopicMembers(BaseModel):
+    members: list[str]
+
+
+class TopicMember(BaseModel):
+    topic: str
+    member: str
+
+
+@actions_router.get("/topics", tags=["topics"])
+def list_topics(engine: EngineDep) -> dict[str, Any]:
+    """Topics (overview notes) with how many notes each gathers."""
+    return {
+        "items": [
+            {"id": t.id, "title": t.title, "count": len(engine.topic_members(t))}
+            for t in engine.topic_records()
+        ]
+    }
+
+
+@actions_router.get("/topics/suggestions", tags=["topics"])
+async def topic_suggestions(engine: EngineDep) -> dict[str, Any]:
+    """Groups of close notes that could become a topic (computed; nothing is written)."""
+    return {"items": await engine.topic_suggestions()}
+
+
+@actions_router.post("/topics/create", tags=["topics"], response_model=ProposalView)
+async def create_topic(body: TopicMembers, engine: EngineDep) -> ProposalView:
+    try:
+        proposal = await engine.create_topic(body.members)
+    except LLMError as exc:
+        raise _ai_fail(engine, exc) from exc
+    except UserFacingError as exc:
+        raise _fail_from(engine, exc) from exc
+    if proposal.status != "applied":
+        raise _fail(engine, "note.invalid", error=proposal.error or "")
+    return _view(proposal)
+
+
+@actions_router.post("/topics/dismiss", tags=["topics"])
+def dismiss_topic(body: TopicMembers, engine: EngineDep) -> dict[str, bool]:
+    engine.dismiss_topic(body.members)
+    return {"ok": True}
+
+
+@actions_router.post("/topics/remove", tags=["topics"], response_model=ProposalView)
+async def remove_from_topic(body: TopicMember, engine: EngineDep) -> ProposalView:
+    try:
+        proposal = await engine.remove_from_topic(body.topic, body.member)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404) from exc
+    return _view(proposal)
+
+
+@actions_router.post("/topics/add", tags=["topics"])
+async def add_to_topic(body: TopicMember, engine: EngineDep) -> dict[str, bool]:
+    try:
+        return {"added": await engine.add_to_topic(body.topic, body.member)}
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404) from exc
+
+
+@actions_router.get("/topics/view/{topic_id:path}", tags=["topics"])
+async def topic_view(topic_id: str, engine: EngineDep) -> dict[str, Any]:
+    try:
+        return await engine.topic_view(topic_id)
+    except SetupError as exc:
+        raise _fail_from(engine, exc, 404) from exc
+
+
 @actions_router.get("/related/{record_id:path}", tags=["brain"])
 async def related_notes(record_id: str, engine: EngineDep) -> dict[str, Any]:
     """Notes this one links to, notes linking to it, and notes close in meaning."""
