@@ -158,6 +158,10 @@ def main() -> None:
         mark = "✓" if ok else ("·" if ids else "✗")
         tag = f"[{kind}] " if kind else ""
         print(f"  {mark} {times[-1]:5.1f}s  {tag}{item['q']}")
+        if kind and not ok:  # show what went wrong, so it can be fixed
+            flat = " ".join(answer.answer.split())
+            print(f"        answer: {flat[:220]}")
+            print(f"        missing: {answer.missing or '-'}   cited: {sorted(ids) or '-'}")
     n, m = len(questions), len(answerable)
     print(
         f"\n  cites an expected note {cited_expected / m:.0%}   cites anything {cited_any / m:.0%}"

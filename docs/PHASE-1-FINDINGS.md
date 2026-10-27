@@ -145,3 +145,17 @@ true duplicates in this Brain. "Similar" now starts at 0.62 and "may say the
 same thing" at 0.92. The closest pairs fall into five clear groups (Commercial
 Act amendments, the BOK rate path, treasury-share cancellation, the value-up
 programme, the Korea discount): the topics the next step should find.
+
+## Topic linking and Ask context (2026-10-27)
+
+Topic linking (evals/topic_links.py, 3 topics, 26 notes, 19 gold links):
+0.65 → 60% precision / 71% recall, 0.75 → 80% / 47%, 0.78 → 88% / 41%,
+0.80 → 80% / 24%. LINK_MIN is 0.78. The remaining "wrong" link is one the
+overview had not made yet, so real precision is higher.
+
+Ask with passage status, dates and conflicts in the prompt, and "answer each
+part, name every missing part": cites an expected note 85% → 92%, cites
+anything 96% → 100%, names the missing part 0/2 → 2/2, median 34 s → 31 s,
+dates 1/2 → 1/2, but says "not in your notes" 4/4 → 2/4: the rewrite had
+dropped the rule for questions the notes do not answer at all. Restored; to be
+measured again.

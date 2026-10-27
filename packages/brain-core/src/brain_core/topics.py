@@ -142,7 +142,10 @@ def remove_member(text: str, topic_path: str, member_path: str) -> str:
 # overviews already have (the gold set). Prefer missing a link to adding a
 # wrong one: a missing link is visible and one tap away; wrong links quietly
 # turn a topic into noise.
-LINK_MIN = 0.75  # a note joins a topic from here
+# On the dev Brain (3 topics, 19 links in the answer key): 0.75 → 80% precision,
+# 47% recall; 0.78 → 88%, 41%. The "wrong" links left were ones the overview
+# simply had not made yet (a 3rd-amendment source under the amendments topic).
+LINK_MIN = 0.78  # a note joins a topic from here
 LINK_MARGIN = 0.04  # ...and only topics this close to its best one
 MAX_TOPICS_PER_NOTE = 2
 CLUSTER_MIN = 0.72  # notes this close may form a new topic
