@@ -156,3 +156,9 @@ def test_markdown_links_to_notes_count_as_links():
         ("sources/forgetting-curve", None, "markdown"),
     ]
     assert links[0]["label"] == "the spacing effect"
+
+
+def test_snippet_shows_link_labels_not_markdown() -> None:
+    content = "See [Spacing effect](../concepts/spacing-effect.md) and [[forgetting-curve|the curve]], **bold** `code`."
+    snippet = make_snippet(content, ["see"])
+    assert snippet == "See Spacing effect and the curve, bold code."

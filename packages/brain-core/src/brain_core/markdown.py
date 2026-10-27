@@ -254,12 +254,25 @@ def normalize_target(ref: Any) -> str | None:
     return s or None
 
 
+_PLAIN_MD_LINK_RE = re.compile(r"!?\[([^\]\n]*)\]\([^)\n]*\)")
+_PLAIN_WIKILINK_RE = re.compile(r"\[\[([^\]|\n]+?)(?:\|([^\]\n]+))?\]\]")
+_PLAIN_EMPHASIS_RE = re.compile(r"(\*\*|__|`)")
+
+
+def plain_text(text: str) -> str:
+    """Markdown → readable text for previews: links become their label, marks go away."""
+    text = _PLAIN_MD_LINK_RE.sub(lambda m: m.group(1), text)
+    text = _PLAIN_WIKILINK_RE.sub(lambda m: (m.group(2) or m.group(1)).strip(), text)
+    return _PLAIN_EMPHASIS_RE.sub("", text)
+
+
 def make_snippet(content: str, terms: list[str], width: int = 200) -> str:
     """Build a short text snippet around the first matched term.
 
     Used for search hit previews. Falls back to the start of the body when no
     term is found. Returns plain, single-line text.
     """
+    content = plain_text(content)
     if not content.strip():
         return ""
     lowered = content.lower()

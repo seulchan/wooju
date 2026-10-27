@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from brain_core import history
 from brain_core.changes import Proposal, ProposalError
+from brain_core.markdown import plain_text
 from brain_core.messages import UserFacingError, render
 from wooju_agents.ask import AskError
 from wooju_agents.challenge import ChallengeError
@@ -901,7 +902,7 @@ async def find_notes(engine: EngineDep, q: str = "", limit: int = 40) -> dict[st
     hits, meaning = await engine.find(q, max(1, min(limit, 100)))
     out = []
     for rank, (_, p) in enumerate(hits):
-        text = " ".join(p.text.split())
+        text = " ".join(plain_text(p.text).split())
         out.append(
             {
                 "id": p.record.id,
