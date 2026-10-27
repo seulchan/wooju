@@ -6,7 +6,7 @@ import type { BrainLink, BrainRecord, Category, RelatedNote, ResolvedRef } from 
 import { encodeId } from '../lib/paths'
 import { formatDate, pluralize, titleCase } from '../lib/format'
 import { Link } from '../lib/router'
-import { tr } from '../lib/i18n'
+import { tr, useT } from '../lib/i18n'
 import { ReviewPanel } from './ReviewDate'
 
 /** Right-hand panels for a record detail view. */
@@ -52,6 +52,7 @@ function Metadata({ record }: { record: BrainRecord }) {
         {record.aliases.length ? <MetaRow label="Aliases">{record.aliases.join(', ')}</MetaRow> : null}
         {tags?.length ? <MetaRow label="Tags">{tags.join(', ')}</MetaRow> : null}
       </dl>
+      <AiWork value={record.metadata.made_by} />
       <details className="meta-path">
         <summary>{tr('File location')}</summary>
         <code>{record.path}</code>
@@ -126,6 +127,39 @@ function Derivation({ derived }: { derived: ResolvedRef[] }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+const AI_DID: Record<string, 'aiDidCreated' | 'aiDidChallenge' | 'aiDidConflicts' | 'aiDidEdited'> = {
+  created: 'aiDidCreated',
+  challenge: 'aiDidChallenge',
+  conflicts: 'aiDidConflicts',
+  edited: 'aiDidEdited',
+}
+
+/** What an AI wrote into this note: which agent, which model, when. Absent on the user's own notes. */
+function AiWork({ value }: { value: unknown }) {
+  const t = useT()
+  if (!Array.isArray(value) || !value.length) return null
+  const entries = value.filter(
+    (e): e is { agent?: string; did?: string; on?: string; model?: string } => !!e && typeof e === 'object',
+  )
+  return (
+    <div className="ai-work">
+      <h3 className="related-title">{t('aiWork')}</h3>
+      <ul className="ref-list">
+        {entries
+          .slice()
+          .reverse()
+          .map((e, i) => (
+            <li key={i} className="ref-item">
+              {e.did && AI_DID[e.did] ? t(AI_DID[e.did]) : e.did ?? e.agent}
+              {e.model ? ` · ${e.model}` : e.agent === 'claude' ? ' · Claude' : ''}
+              {e.on ? ` · ${e.on}` : ''}
+            </li>
+          ))}
+      </ul>
+    </div>
   )
 }
 

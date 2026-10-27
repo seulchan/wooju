@@ -55,3 +55,28 @@ def test_replace_body_keeps_frontmatter_exactly():
     out = replace_body(text, "# x\r\n\r\n새 본문\n\n\n")
     assert out == "---\ntitle: x  # 메모\ntags: [a]\n---\n\n# x\n\n새 본문\n"
     assert replace_body("# 없음\n", "새") == "새\n"
+
+
+def test_made_by_records_ai_work_newest_last():
+    import yaml
+
+    from brain_core.markdown import add_made_by, split_frontmatter
+
+    text = "---\ntitle: X\n---\n# X\n"
+    text = add_made_by(text, agent="ingest", model="qwen3.5:9b", did="created", on="2026-10-27")
+    text = add_made_by(
+        text, agent="challenger", model="qwen3.5:9b", did="challenge", on="2026-10-28"
+    )
+    made_by = split_frontmatter(text)[0]["made_by"]
+    assert [e["did"] for e in made_by] == ["created", "challenge"]
+    assert made_by[0] == {
+        "agent": "ingest",
+        "did": "created",
+        "on": "2026-10-27",
+        "model": "qwen3.5:9b",
+    }
+    assert text.count("made_by") == 1  # one line, updated in place
+    assert yaml.safe_load(text.split("---")[1])["title"] == "X"
+    for i in range(12):
+        text = add_made_by(text, agent="a", model=None, did=str(i), on="2026-10-29")
+    assert len(split_frontmatter(text)[0]["made_by"]) == 10

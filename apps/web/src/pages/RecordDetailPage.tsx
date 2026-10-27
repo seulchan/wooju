@@ -6,6 +6,8 @@ import {
   setInsightStatus,
   editNote,
   fetchDependents,
+  fetchRelated,
+  findNotes,
   saveTakeaway,
   fetchRecord,
   NotFoundError,
@@ -16,7 +18,7 @@ import { encodeId } from '../lib/paths'
 import { NoteEditor } from '../components/NoteEditor'
 import { ThinkPanel } from '../components/ThinkPanel'
 import { requestRefresh } from '../lib/freshness'
-import type { BrainRecord, Category, ProposalView } from '../types'
+import type { BrainRecord, Category, ProposalView, RelatedNote } from '../types'
 import { titleCase } from '../lib/format'
 import { extractEpistemicSections, stripLeadingH1, type EpistemicKey } from '../lib/sections'
 import { Link } from '../lib/router'
@@ -111,9 +113,10 @@ function RecordView({ record }: { record: BrainRecord }) {
       ) : null}
       {retiring ? (
         <RetireForm
+          id={record.id}
           onCancel={() => setRetiring(false)}
-          onRetire={async (reason) => {
-            await retireNote(record.id, reason)
+          onRetire={async (reason, replacedBy) => {
+            await retireNote(record.id, reason, replacedBy)
             setRetiring(false)
             requestRefresh()
             fetchDependents(record.id).then((r) => setDependents(r.items), () => setDependents([]))
@@ -313,12 +316,19 @@ function RetiredBanner({ record }: { record: BrainRecord }) {
   const [error, setError] = useState<string | null>(null)
   const when = typeof record.metadata.retired === 'string' ? record.metadata.retired : ''
   const reason = typeof record.metadata.retired_reason === 'string' ? record.metadata.retired_reason : ''
+  const replacedBy =
+    typeof record.metadata.superseded_by === 'string' ? record.metadata.superseded_by.replace(/\.md$/, '') : ''
   return (
     <div className="retired-banner" role="note">
       <p>
         <strong>{t('retiredBanner')}</strong> {when ? `(${when})` : null}
         {reason ? ` — ${reason}` : null}
       </p>
+      {replacedBy ? (
+        <p>
+          {t('retiredReplacedBy')} <Link to={`/record/${encodeId(replacedBy)}`}>{t('retiredOpenReplacement')}</Link>
+        </p>
+      ) : null}
       <button
         className="btn btn-small"
         onClick={() =>
@@ -340,16 +350,19 @@ function RetiredBanner({ record }: { record: BrainRecord }) {
 }
 
 function RetireForm({
+  id,
   onRetire,
   onCancel,
 }: {
-  onRetire: (reason: string) => Promise<unknown>
+  id: string
+  onRetire: (reason: string, replacedBy: string | null) => Promise<unknown>
   onCancel: () => void
 }) {
   const t = useT()
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [replacement, setReplacement] = useState<string | null>(null)
   return (
     <form
       className="retire-form"
@@ -357,7 +370,7 @@ function RetireForm({
         e.preventDefault()
         setBusy(true)
         setError(null)
-        onRetire(reason).catch((err: unknown) => {
+        onRetire(reason, replacement).catch((err: unknown) => {
           setError(err instanceof ApiError ? err.message : String(err))
           setBusy(false)
         })
@@ -374,6 +387,7 @@ function RetireForm({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
       />
+      <ReplacementPicker id={id} value={replacement} onChange={setReplacement} />
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -388,6 +402,63 @@ function RetireForm({
         </button>
       </div>
     </form>
+  )
+}
+
+/**
+ * Optionally, the note that takes this one's place. Notes close in meaning are
+ * offered first (the likeliest replacements); any other note can be searched.
+ */
+function ReplacementPicker({
+  id,
+  value,
+  onChange,
+}: {
+  id: string
+  value: string | null
+  onChange: (id: string | null) => void
+}) {
+  const t = useT()
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState<RelatedNote[]>([])
+  const related = useAsync((signal) => fetchRelated(id, signal), [id])
+  const suggested = related.kind === 'ready' ? related.data.similar.slice(0, 4) : []
+  const options = [...suggested, ...found.filter((f) => !suggested.some((s) => s.id === f.id))].filter(
+    (n) => n.id !== id,
+  )
+
+  async function search(q: string) {
+    setQuery(q)
+    if (q.trim().length < 2) return setFound([])
+    try {
+      const r = await findNotes(q)
+      setFound(r.hits.slice(0, 5).map((h) => ({ id: h.id, title: h.title, category: h.category })))
+    } catch {
+      setFound([])
+    }
+  }
+
+  return (
+    <fieldset className="replacement">
+      <legend>{t('retireReplacement')}</legend>
+      <label className="check-row">
+        <input type="radio" name="replacement" checked={value === null} onChange={() => onChange(null)} />{' '}
+        {t('retireNoReplacement')}
+      </label>
+      {options.map((n) => (
+        <label key={n.id} className="check-row">
+          <input type="radio" name="replacement" checked={value === n.id} onChange={() => onChange(n.id)} />{' '}
+          {n.title}
+        </label>
+      ))}
+      <input
+        className="text-input"
+        aria-label={t('retireFindReplacement')}
+        placeholder={t('retireFindReplacement')}
+        value={query}
+        onChange={(e) => void search(e.target.value)}
+      />
+    </fieldset>
   )
 }
 

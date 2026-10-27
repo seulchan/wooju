@@ -9,6 +9,8 @@ until 1.0, a minor version may change how things work.
 - Related notes on every note: what it links to, what links to it, what is close in meaning.
 - A new source that says nearly the same as an existing note is pointed out (never merged).
 - Markdown links between notes count as connections (they were missing from the map).
+- Notes record which AI agent and model wrote to them, shown under Details.
+- Retiring a note can name the note that replaces it.
 
 - Weekly summary on Telegram: Sunday evening, what is waiting on Home.
 - Keyboard shortcuts: ⌘K to search, ⌘N for a new note.

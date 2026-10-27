@@ -138,3 +138,35 @@ def test_insight_status_moves_one_step_and_needs_a_challenge(client):
     assert r.status_code == 400 and "한 단계씩" in r.json()["detail"]
     r = c.post("/api/notes/status", json={"id": "sources/treasury", "status": "provisional"})
     assert r.status_code == 404
+
+
+def test_retire_with_a_replacement_points_to_it(client):
+    c, b = client
+    (b / "sources/treasury-fixed.md").write_text(
+        SOURCE.replace("자사주 소각 해설", "자사주 소각 해설 (정정)").replace("1년", "18개월"),
+        encoding="utf-8",
+    )
+    c.app.state.engine.index.scan(b)
+    r = c.post(
+        "/api/notes/retire",
+        json={"id": "sources/treasury", "reason": "정정 보도", "replaced_by": "sources/treasury-fixed"},
+    )
+    assert r.status_code == 200, r.text
+    text = (b / "sources/treasury.md").read_text(encoding="utf-8")
+    assert "superseded_by: sources/treasury-fixed.md" in text
+    record = c.get("/api/records/sources/treasury").json()
+    assert record["metadata"]["superseded_by"] == "sources/treasury-fixed.md"
+
+    # Restoring takes the pointer away again.
+    c.post("/api/notes/restore", json={"id": "sources/treasury"})
+    assert "superseded_by" not in (b / "sources/treasury.md").read_text(encoding="utf-8")
+
+
+def test_a_note_cannot_replace_itself_or_a_missing_note(client):
+    c, _ = client
+    for target in ("sources/treasury", "sources/nope"):
+        r = c.post(
+            "/api/notes/retire",
+            json={"id": "sources/treasury", "reason": "x", "replaced_by": target},
+        )
+        assert r.status_code == 400 and "대신할 노트" in r.json()["detail"]

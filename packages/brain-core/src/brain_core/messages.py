@@ -159,6 +159,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "잠정으로 올리려면 먼저 반론 검토를 해서 노트에 반론(Challenge) 섹션이 있어야 해요.",
         "To make it provisional, challenge it first so the note has a Challenge section.",
     ),
+    "retire.replacement": (
+        "대신할 노트를 찾을 수 없어요. 다른 노트를 골라 주세요.",
+        "That replacement note can't be used. Please pick another.",
+    ),
     "retire.reason": (
         "폐기하는 이유를 적어 주세요. 나중에 왜 버렸는지 알 수 있어요.",
         "Write why it's being retired, so you know later.",

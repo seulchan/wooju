@@ -307,6 +307,30 @@ def set_frontmatter_value(text: str, key: str, value: str | None) -> str:
     return "\n".join(lines)
 
 
+MADE_BY_KEY = "made_by"
+_MADE_BY_KEEP = 10
+
+
+def add_made_by(text: str, *, agent: str, model: str | None, did: str, on: str) -> str:
+    """Record that an AI agent wrote to this note (who, which model, when, what).
+
+    Kept in the frontmatter as one line (``made_by: [{...}]``, JSON is valid
+    YAML), newest last, at most ten entries. Notes the user writes carry none:
+    this is how a reader tells the AI's words from their own, and which model
+    produced them if they need redoing.
+    """
+    import json
+
+    frontmatter, _ = split_frontmatter(text)
+    existing = frontmatter.get(MADE_BY_KEY)
+    entries = [e for e in existing if isinstance(e, dict)] if isinstance(existing, list) else []
+    entry = {"agent": agent, "did": did, "on": on}
+    if model:
+        entry["model"] = model
+    entries = [*entries, entry][-_MADE_BY_KEEP:]
+    return set_frontmatter_value(text, MADE_BY_KEY, json.dumps(entries, ensure_ascii=False))
+
+
 def replace_body(text: str, body: str) -> str:
     """Swap a note's body, keeping its frontmatter block byte for byte."""
     body = body.replace("\r\n", "\n").strip("\n") + "\n"

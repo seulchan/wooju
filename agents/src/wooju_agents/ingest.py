@@ -26,6 +26,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError
 
 from brain_core.changes import FileChange, Proposal, approval_for
+from brain_core.markdown import add_made_by
 from brain_core.messages import UserFacingError
 from brain_core.schema import SourceFrontmatter, SourceType
 
@@ -261,6 +262,13 @@ def ingest_file(
         accessed=today or date.today(),
         language=language,
         original_link=f"../{library_path}",
+    )
+    note = add_made_by(
+        note,
+        agent=AGENT,
+        model=provider.model,
+        did="created",
+        on=(today or date.today()).isoformat(),
     )
     changes = [
         FileChange(op="write", path=note_path, content=note),

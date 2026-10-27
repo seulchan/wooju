@@ -754,13 +754,14 @@ async def takeaway(body: Takeaway, engine: EngineDep) -> dict[str, bool]:
 class RetireNote(BaseModel):
     id: str
     reason: str
+    replaced_by: str | None = None  # the note that takes its place, if any
 
 
 @actions_router.post("/notes/retire", tags=["proposals"], response_model=ProposalView)
 async def retire_note(body: RetireNote, engine: EngineDep) -> ProposalView:
     """Retire a wrong or obsolete note: kept with the reason, no longer used as grounds."""
     try:
-        proposal = await engine.retire_note(body.id, body.reason)
+        proposal = await engine.retire_note(body.id, body.reason, body.replaced_by)
     except SetupError as exc:
         raise _fail_from(engine, exc, 404 if exc.key == "review.not_found" else 400) from exc
     if proposal.status != "applied":

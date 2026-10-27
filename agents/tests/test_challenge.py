@@ -94,6 +94,7 @@ def test_challenge_adds_section_with_links_and_passes_validation(brain):
     assert "[자사주 테마 주가](../../sources/market.md)" in text
     assert "판정 (Challenger 검토, 2026-10-26): 후보로 유지" in text
     assert "status: candidate" in text  # status untouched
+    assert '"agent": "challenger", "did": "challenge", "on": "2026-10-26"' in text
     user = provider.calls[0][1]
     assert user.index("[1] 자사주 소각") < user.index("[2] 자사주 테마 주가")
 

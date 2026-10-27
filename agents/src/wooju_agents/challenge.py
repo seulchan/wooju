@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from brain_core.changes import FileChange, Proposal, approval_for
 from brain_core.index import BrainIndex
+from brain_core.markdown import add_made_by
 from brain_core.messages import UserFacingError
 from brain_core.retrieve import Passage, Retriever, passages
 
@@ -252,6 +253,9 @@ def challenge_insight(
     lines = render_challenge(draft, path=path, found=found, language=language, today=today)
     labels = _LABELS.get(language, _LABELS["en"])
     updated = insert_challenge(original, lines, heading_note=f"{labels['by']} {today.isoformat()}")
+    updated = add_made_by(
+        updated, agent=AGENT, model=provider.model, did="challenge", on=today.isoformat()
+    )
     changes = [FileChange(op="write", path=path, content=updated)]
     ui = ui_language or language
     verdict = _LABELS.get(ui, _LABELS["en"])["verdicts"][draft.verdict]

@@ -155,6 +155,43 @@ describe('Retiring a note', () => {
     await waitFor(() => expect(bodies(fetchMock, '/api/notes/retire')).toEqual([{ id: note.id, reason: '정정 보도' }]))
   })
 
+  it('can name the note that replaces it, offering similar notes first', async () => {
+    const fetchMock = mockFetch([
+      { match: /^\/api\/records\//, body: note },
+      { match: /^\/api\/notes\/retire$/, body: { status: 'applied' } },
+      { match: /^\/api\/dependents\//, body: { items: [] } },
+      {
+        match: /^\/api\/related\//,
+        body: { links_out: [], links_in: [], similar: [{ id: 'sources/fx-fixed', title: '환율 기사 (정정)', category: 'source' }] },
+      },
+    ])
+    render(<RecordDetailPage id={note.id} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Retire' }))
+    await userEvent.type(screen.getByLabelText('Why it is retired'), '정정 보도')
+    await userEvent.click(await screen.findByRole('radio', { name: '환율 기사 (정정)' }))
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retire' }).at(-1)!)
+    await waitFor(() =>
+      expect(bodies(fetchMock, '/api/notes/retire')).toEqual([
+        { id: note.id, reason: '정정 보도', replaced_by: 'sources/fx-fixed' },
+      ]),
+    )
+  })
+
+  it('links a retired note to the one that replaces it', async () => {
+    mockFetch([
+      {
+        match: /^\/api\/records\//,
+        body: {
+          ...note,
+          retired: true,
+          metadata: { retired: '2026-10-27', retired_reason: '정정 보도', superseded_by: 'sources/fx-fixed.md' },
+        },
+      },
+    ])
+    render(<RecordDetailPage id={note.id} />)
+    expect(await screen.findByRole('link', { name: 'Open it →' })).toHaveAttribute('href', '#/record/sources/fx-fixed')
+  })
+
   it('shows a retired note with its reason and can restore it', async () => {
     const fetchMock = mockFetch([
       {

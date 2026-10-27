@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from datetime import date
 from pathlib import Path
 
 from brain_core import history
-from brain_core.markdown import split_frontmatter
+from brain_core.markdown import add_made_by, split_frontmatter
 from brain_core.messages import render
 from wooju_agents.capture import (
     LINK_SUFFIXES,
@@ -58,7 +59,14 @@ class IngestMixin:
         if not conflicts:
             return 0, content
         section = render_section(conflicts, note_path=path, language=self.content_language(body))
-        return len(conflicts), add_section(content, section)
+        updated = add_made_by(
+            add_section(content, section),
+            agent="conflicts",
+            model=provider.model,
+            did="conflicts",
+            on=date.today().isoformat(),
+        )
+        return len(conflicts), updated
 
     async def retry_job(self, job_id: str) -> Job:
         job = self.jobs.get(job_id)

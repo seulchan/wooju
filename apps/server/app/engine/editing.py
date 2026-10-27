@@ -59,18 +59,31 @@ class EditingMixin:
     # What "retired" means in each layer's own status, where it has one.
     _RETIRED_STATUS = {"source": "archived", "insight": "rejected", "memory": "historical"}
 
-    async def retire_note(self, record_id: str, reason: str) -> Proposal:
+    async def retire_note(
+        self, record_id: str, reason: str, replaced_by: str | None = None
+    ) -> Proposal:
         """Mark a note as wrong or obsolete. It stays in the Brain with the reason,
-        is never used as grounds again, and what rests on it is flagged."""
+        is never used as grounds again, and what rests on it is flagged.
+
+        ``replaced_by`` names the note that takes its place, if any: the old
+        note then points readers there (``superseded_by``).
+        """
         brain = self._require_brain()
         record = self.index.get(record_id)
         if record is None:
             raise SetupError("review.not_found")
         if not reason.strip():
             raise SetupError("retire.reason")
+        replacement = self.index.get(replaced_by) if replaced_by else None
+        if replaced_by and (
+            replacement is None or replacement.id == record_id or replacement.retired
+        ):
+            raise SetupError("retire.replacement")
         text = (brain / record.path).read_text(encoding="utf-8")
         try:
             updated = set_frontmatter_value(text, "retired", date.today().isoformat())
+            if replacement is not None:
+                updated = set_frontmatter_value(updated, "superseded_by", replacement.path)
             updated = set_frontmatter_value(
                 updated, "retired_reason", json.dumps(reason.strip(), ensure_ascii=False)
             )
@@ -97,7 +110,7 @@ class EditingMixin:
         frontmatter = split_frontmatter(text)[0]
         try:
             updated = text
-            for key in ("retired", "retired_reason", "status_before_retired"):
+            for key in ("retired", "retired_reason", "status_before_retired", "superseded_by"):
                 updated = set_frontmatter_value(updated, key, None)
             if record.category in self._RETIRED_STATUS:
                 before = frontmatter.get("status_before_retired")

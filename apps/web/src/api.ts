@@ -512,8 +512,8 @@ export function fetchDependents(
 }
 
 /** Retire a wrong or obsolete note (kept with the reason; never used as grounds). */
-export function retireNote(id: string, reason: string): Promise<ProposalView> {
-  return postJson('/api/notes/retire', { id, reason })
+export function retireNote(id: string, reason: string, replacedBy?: string | null): Promise<ProposalView> {
+  return postJson('/api/notes/retire', { id, reason, ...(replacedBy ? { replaced_by: replacedBy } : {}) })
 }
 
 export function restoreNote(id: string): Promise<ProposalView> {

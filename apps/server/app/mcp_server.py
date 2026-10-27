@@ -13,6 +13,7 @@ import logging
 import re
 import sys
 import time
+from datetime import date
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -20,7 +21,7 @@ from pydantic import ValidationError
 
 from brain_core.changes import FileChange, Proposal, ProposalStore, approval_for
 from brain_core.index import BrainIndex
-from brain_core.markdown import split_frontmatter
+from brain_core.markdown import add_made_by, split_frontmatter
 from brain_core.retrieve import RetrieverCache
 from brain_core.schema import SCHEMAS, layer_for
 
@@ -212,6 +213,13 @@ def build_server(  # noqa: ANN201
         if problem:
             raise ToolError(problem)
         exists = (view.brain / path).exists()
+        content = add_made_by(
+            content,
+            agent="claude",
+            model=None,
+            did="edited" if exists else "created",
+            on=date.today().isoformat(),
+        )
         changes = [FileChange(op="write", path=path, content=content)]
         approval = approval_for(changes)
         if approval == "auto":

@@ -178,6 +178,20 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## What the AI wrote, and what replaced what
+
+- Every note an AI agent writes to carries `made_by` in its frontmatter: a
+  one-line list of {agent, did, on, model}, newest last, at most ten (the
+  book's fifth invariant: agent-written knowledge carries its provenance).
+  Ingest ("created"), the conflict check ("conflicts"), the Challenger
+  ("challenge") and Claude over MCP ("created"/"edited") record it; notes the
+  user writes carry none. Details on a note lists it. It tells the AI's words
+  from the user's and which model to blame or redo.
+- Retiring can name the note that replaces it (`superseded_by: <path>`); the
+  retired note then sends readers there. Similar notes are offered first.
+  Restoring removes the pointer. Deciding that one note replaces another
+  stays with the user (the book: supersession is not automated).
+
 ## Related notes (computed, never written)
 
 - Following *Graph Engineering* (Pavlyshyn, 2026), closeness in meaning is

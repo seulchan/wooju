@@ -206,3 +206,13 @@ def test_without_a_fixed_language_the_note_follows_the_material(brain):
     p = ingest_file(brain, "inbox/clip.txt", provider, language=None, ui_language="ko")
     assert "English" in provider.calls[0][0]
     assert "## One-line Summary" in p.changes[0].content
+
+
+def test_the_note_records_which_model_wrote_it(brain):
+    from brain_core.markdown import split_frontmatter
+
+    p = ingest_file(
+        brain, "inbox/clip.txt", FakeProvider(DRAFT), language="en", today=date(2026, 10, 27)
+    )
+    made_by = split_frontmatter(p.changes[0].content)[0]["made_by"]
+    assert made_by == [{"agent": "ingest", "did": "created", "on": "2026-10-27", "model": "fake-1"}]

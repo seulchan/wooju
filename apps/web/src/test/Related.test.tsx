@@ -50,3 +50,27 @@ describe('Related notes', () => {
     expect(screen.queryByRole('region', { name: 'Related' })).toBeNull()
   })
 })
+
+describe('AI work in Details', () => {
+  it('lists what an AI wrote, newest first, and nothing for your own notes', async () => {
+    mockFetch([{ match: /^\/api\/related\//, body: { links_out: [], links_in: [], similar: [] } }])
+    const made = {
+      ...record,
+      metadata: {
+        made_by: [
+          { agent: 'ingest', did: 'created', on: '2026-10-27', model: 'qwen3.5:9b' },
+          { agent: 'challenger', did: 'challenge', on: '2026-10-28', model: 'qwen3.5:9b' },
+        ],
+      },
+    } as unknown as BrainRecord
+    const { unmount } = render(<RecordSidebar record={made} />)
+    const items = screen.getByText('AI work').parentElement!.querySelectorAll('li')
+    expect([...items].map((li) => li.textContent)).toEqual([
+      'Challenge · qwen3.5:9b · 2026-10-28',
+      'Organized · qwen3.5:9b · 2026-10-27',
+    ])
+    unmount()
+    render(<RecordSidebar record={record} />)
+    expect(screen.queryByText('AI work')).toBeNull()
+  })
+})
