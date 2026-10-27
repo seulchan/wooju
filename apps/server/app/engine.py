@@ -209,19 +209,61 @@ class Engine:
     # ------------------------------------------------------------ settings
 
     def language(self) -> str:
-        """The app's own language (menus, messages, card titles): the Mac's."""
-        return resolve_language("auto")
+        """The app's own language (screens, messages, bot replies).
 
-    def content_language(self) -> str:
-        """The language notes are written in: the Brain's content.language."""
-        setting = "auto"
+        Chosen in Settings; "auto" follows the Mac.
+        """
+        return resolve_language(app_settings.load().language)
+
+    def content_language_setting(self) -> str:
+        """The Brain's ``content.language`` as written ("auto" when unset)."""
         if self.brain is not None:
             try:
                 data = yaml.safe_load((self.brain / "wooju-brain.yaml").read_text("utf-8")) or {}
-                setting = (data.get("content") or {}).get("language", "auto")
+                value = (data.get("content") or {}).get("language", "auto")
+                return str(value or "auto").strip().lower() or "auto"
             except (OSError, yaml.YAMLError, AttributeError):
                 pass
-        return resolve_language(setting)
+        return "auto"
+
+    def content_language(self) -> str:
+        """The language notes are written in; "auto" means the app's language."""
+        setting = self.content_language_setting()
+        return self.language() if setting == "auto" else resolve_language(setting)
+
+    def set_content_language(self, value: str) -> None:
+        """Fix the language new notes are written in (or "auto" for the app's)."""
+        brain = self._require_brain()
+        path = brain / "wooju-brain.yaml"
+        try:
+            text = path.read_text("utf-8")
+        except OSError as exc:
+            raise SetupError("review.unreadable") from exc
+        lines = text.splitlines()
+        in_content, done = False, False
+        for i, line in enumerate(lines):
+            if re.match(r"^\S", line):
+                in_content = line.rstrip() == "content:"
+            elif in_content and re.match(r"^\s+language\s*:", line):
+                indent = line[: len(line) - len(line.lstrip())]
+                lines[i] = f"{indent}language: {value}"
+                done = True
+                break
+        if not done:
+            if any(line.rstrip() == "content:" for line in lines):
+                at = next(i for i, line in enumerate(lines) if line.rstrip() == "content:")
+                lines.insert(at + 1, f"  language: {value}")
+            else:
+                lines += ["", "content:", f"  language: {value}"]
+        updated = "\n".join(lines) + "\n"
+        # Brain settings are not note content, so this skips the proposal flow
+        # (agents may never write here) but is still recorded in history.
+        try:
+            path.write_text(updated, encoding="utf-8")
+        except OSError as exc:
+            raise SetupError("review.unreadable") from exc
+        with contextlib.suppress(Exception):
+            history.commit_paths(brain, ["wooju-brain.yaml"], f"Note language: {value}")
 
     def provider(self) -> Provider:
         if self.provider_override is not None:

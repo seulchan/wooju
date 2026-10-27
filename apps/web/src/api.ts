@@ -4,6 +4,7 @@ import type {
   HistoryItem,
   Job,
   ProposalView,
+  LanguageChoice,
   SetupStatus,
   BrainRecord,
   ChangesResponse,
@@ -175,6 +176,11 @@ export function fetchSetup(signal?: AbortSignal): Promise<SetupStatus> {
 
 export function chooseBrain(path: string): Promise<{ brain_path: string; created: boolean }> {
   return postJson('/api/setup/brain', { path })
+}
+
+/** Screen language and/or the language new notes are written in. */
+export function chooseLanguage(choice: { app?: LanguageChoice; content?: LanguageChoice }): Promise<SetupStatus> {
+  return postJson('/api/setup/language', choice)
 }
 
 export function chooseAi(

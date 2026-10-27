@@ -617,3 +617,28 @@ def test_search_only_models_are_not_answer_models(client, monkeypatch):
     assert names == ["qwen3.5:9b"]
     r = client.post("/api/setup/ai", json={"provider": "ollama", "model": "qwen3-embedding:0.6b"})
     assert r.status_code == 400 and "의미 검색" in r.json()["detail"]
+
+
+def test_language_can_be_chosen_in_the_app(client, tmp_path):
+    brain = setup_brain(client, tmp_path)
+    status = client.get("/api/setup").json()
+    assert status["language"] == "ko" and status["language_setting"] == "auto"
+    assert status["content_language_setting"] == "auto"
+
+    status = client.post("/api/setup/language", json={"app": "en"}).json()
+    assert status["language"] == "en" and status["language_setting"] == "en"
+    assert app_settings.load().language == "en"
+    # Notes follow the app's language while the Brain says "auto".
+    assert client.app.state.engine.content_language() == "en"
+    # Messages follow too.
+    r = client.post("/api/setup/ai", json={"provider": "ollama", "model": "bad model!"})
+    assert "valid" in r.json()["detail"]
+
+    status = client.post("/api/setup/language", json={"content": "ko"}).json()
+    assert status["content_language_setting"] == "ko"
+    text = (brain / "wooju-brain.yaml").read_text("utf-8")
+    assert "  language: ko" in text and "# Language for durable notes" in text
+    assert client.app.state.engine.content_language() == "ko"
+
+    r = client.post("/api/setup/language", json={"app": "fr"})
+    assert r.status_code == 422

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { SettingsPage } from '../pages/SettingsPage'
@@ -155,5 +155,30 @@ describe('Korean screens', () => {
     }
     expect(await screen.findByText('준비됨')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Brain에서 찾기…')).toBeInTheDocument()
+  })
+
+  it('changes the app language and the note language separately', async () => {
+    const fetchMock = mockFetch([
+      { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
+      { match: /^\/api\/setup\/language$/, body: { ...setup, language: 'ko', language_setting: 'ko' } },
+      { match: /^\/api\/setup$/, body: { ...setup, language_setting: 'auto', content_language_setting: 'auto' } },
+    ])
+    const view = render(<SettingsPage />)
+    const app = await screen.findByRole('radiogroup', { name: 'App language' })
+    expect(within(app).getByRole('radio', { name: 'Same as Mac' })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(app).getByRole('radio', { name: '한국어' }))
+    await waitFor(() => expect(posted(fetchMock, '/api/setup/language')).toEqual([{ app: 'ko' }]))
+
+    // The page reloads after a change; start again for the second choice.
+    view.unmount()
+    render(<SettingsPage />)
+    const note = await screen.findByRole('radiogroup', { name: 'Note language' })
+    await userEvent.click(within(note).getByRole('radio', { name: 'English' }))
+    await waitFor(() =>
+      expect(posted(fetchMock, '/api/setup/language')).toEqual([{ app: 'ko' }, { content: 'en' }]),
+    )
   })
 })

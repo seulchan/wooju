@@ -73,7 +73,9 @@ class AiStatus(BaseModel):
 class SetupStatus(BaseModel):
     brain_path: str | None
     brain_ready: bool
-    language: str
+    language: str  # resolved: "ko" or "en"
+    language_setting: str = "auto"  # what the user chose: auto / ko / en
+    content_language_setting: str = "auto"  # the Brain's content.language
     ai: AiStatus
 
 
@@ -121,8 +123,30 @@ def setup_status(engine: EngineDep) -> SetupStatus:
         brain_path=str(engine.brain) if engine.brain else None,
         brain_ready=engine.brain is not None,
         language=engine.language(),
+        language_setting=app_settings.load().language,
+        content_language_setting=engine.content_language_setting(),
         ai=_ai_status(engine),
     )
+
+
+class ChooseLanguage(BaseModel):
+    app: Literal["auto", "ko", "en"] | None = None
+    content: Literal["auto", "ko", "en"] | None = None
+
+
+@actions_router.post("/setup/language", tags=["setup"], response_model=SetupStatus)
+async def choose_language(body: ChooseLanguage, engine: EngineDep) -> SetupStatus:
+    """App language (screens, messages) and, separately, the language of new notes."""
+    if body.app is not None:
+        current = app_settings.load()
+        current.language = body.app
+        app_settings.save(current)
+    if body.content is not None and body.content != engine.content_language_setting():
+        try:
+            engine.set_content_language(body.content)
+        except UserFacingError as exc:
+            raise _fail_from(engine, exc) from exc
+    return setup_status(engine)
 
 
 class PullRequest(BaseModel):

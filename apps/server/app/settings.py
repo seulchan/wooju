@@ -34,8 +34,12 @@ class CaptureSettings(BaseModel):
     telegram_chat_id: int | None = None  # the one chat allowed to send
 
 
+LanguageSetting = Literal["auto", "ko", "en"]
+
+
 class AppSettings(BaseModel):
     brain_path: str | None = None
+    language: LanguageSetting = "auto"  # "auto" follows the Mac
     ai: AiSettings = Field(default_factory=AiSettings)
     capture: CaptureSettings = Field(default_factory=CaptureSettings)
 

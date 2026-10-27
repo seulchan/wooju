@@ -15,6 +15,7 @@ import {
   type SearchStatus,
   type ClaudeStatus,
   chooseBrain,
+  chooseLanguage,
   fetchModels,
   fetchSetup,
   openExternal,
@@ -26,7 +27,7 @@ import { Badge, ErrorState, Spinner } from '../components/ui'
 import { requestRefresh } from '../lib/freshness'
 import { useLang, useT } from '../lib/i18n'
 import { useAsync } from '../lib/useAsync'
-import type { AiStatus, SetupStatus } from '../types'
+import type { AiStatus, LanguageChoice, SetupStatus } from '../types'
 
 const KEY_PAGES = {
   anthropic: 'https://console.anthropic.com/settings/keys',
@@ -69,11 +70,75 @@ export function SettingsPage() {
       <SmartSearch ollamaRunning={models.running} />
       <ClaudeSettings status={claude} />
       <FolderSettings setup={setup} onChange={() => window.location.reload()} />
-      <section className="section">
-        <h2 className="section-title">{t('language')}</h2>
-        <p className="hint">{t('languageNote')}</p>
-      </section>
+      <LanguageSettings setup={setup} />
     </div>
+  )
+}
+
+const LANGUAGE_CHOICES: ReadonlyArray<{ value: LanguageChoice; label: string }> = [
+  { value: 'auto', label: '' },
+  { value: 'ko', label: '한국어' },
+  { value: 'en', label: 'English' },
+]
+
+/** Screen language, and separately the language new notes are written in. */
+function LanguageSettings({ setup }: { setup: SetupStatus }) {
+  const t = useT()
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const app = setup.language_setting ?? 'auto'
+  const content = setup.content_language_setting ?? 'auto'
+
+  async function choose(choice: { app?: LanguageChoice; content?: LanguageChoice }) {
+    setBusy(true)
+    setError(null)
+    try {
+      await chooseLanguage(choice)
+      // Every screen string comes from the language loaded at start.
+      window.location.reload()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err))
+      setBusy(false)
+    }
+  }
+
+  const group = (
+    label: string,
+    current: LanguageChoice,
+    autoLabel: string,
+    onPick: (v: LanguageChoice) => void,
+  ) => (
+    <div className="segmented" role="radiogroup" aria-label={label}>
+      {LANGUAGE_CHOICES.map((c) => (
+        <button
+          key={c.value}
+          role="radio"
+          aria-checked={current === c.value}
+          className={`chip ${current === c.value ? 'chip-active' : ''}`}
+          disabled={busy}
+          onClick={() => current !== c.value && onPick(c.value)}
+        >
+          {c.value === 'auto' ? autoLabel : c.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  return (
+    <section className="section" aria-label={t('language')}>
+      <h2 className="section-title">{t('language')}</h2>
+      <h3 className="think-sub">{t('languageApp')}</h3>
+      {group(t('languageApp'), app, t('languageAuto'), (v) => void choose({ app: v }))}
+      <p className="hint">{t('languageNote')}</p>
+      <h3 className="think-sub">{t('languageContent')}</h3>
+      {group(t('languageContent'), content, t('languageSameAsApp'), (v) => void choose({ content: v }))}
+      <p className="hint">{t('languageContentNote')}</p>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
   )
 }
 

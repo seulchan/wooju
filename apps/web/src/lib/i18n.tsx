@@ -1,8 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
 /**
- * Screen text follows the Mac's language (decided in docs/DECISIONS.md):
- * the server resolves it and returns it from /api/setup. Korean and English
+ * Screen text uses the app language chosen in Settings ("auto" = the Mac's;
+ * see docs/DECISIONS.md): the server resolves it and returns it from /api/setup. Korean and English
  * are supported; anything else falls back to English.
  */
 export type Lang = 'ko' | 'en'
@@ -90,8 +90,16 @@ const STRINGS = {
   changeFolder: { ko: '다른 폴더 열기…', en: 'Open another folder…' },
   language: { ko: '언어', en: 'Language' },
   languageNote: {
-    ko: 'Mac 언어를 따라요. 바꾸려면 Mac의 시스템 설정 > 일반 > 언어 및 지역에서 바꾼 뒤 Wooju를 다시 열어 주세요.',
-    en: 'Follows your Mac’s language. To change it, change System Settings > General > Language & Region, then reopen Wooju.',
+    ko: '화면, 안내 메시지, 텔레그램 답장에 쓰는 언어예요.',
+    en: 'Used for screens, messages and Telegram replies.',
+  },
+  languageApp: { ko: '앱 언어', en: 'App language' },
+  languageAuto: { ko: 'Mac 설정 따르기', en: 'Same as Mac' },
+  languageContent: { ko: '노트 작성 언어', en: 'Note language' },
+  languageSameAsApp: { ko: '앱 언어와 같게', en: 'Same as app' },
+  languageContentNote: {
+    ko: 'AI가 새로 정리하는 노트와 새 노트의 제목 틀에 쓰는 언어예요. 이미 있는 노트는 바뀌지 않아요.',
+    en: 'Used when the AI organizes new material and for new-note headings. Existing notes stay as they are.',
   },
   ask: { ko: '질문하기', en: 'Ask' },
   askTitle: { ko: '내 자료에 질문하기', en: 'Ask your Brain' },

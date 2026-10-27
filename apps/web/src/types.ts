@@ -265,9 +265,16 @@ export interface AiStatus {
 export interface SetupStatus {
   brain_path: string | null
   brain_ready: boolean
+  /** Resolved screen language: "ko" or "en". */
   language: string
+  /** What the user chose: "auto" follows the Mac. */
+  language_setting?: LanguageChoice
+  /** The Brain's content.language: "auto" follows the app's language. */
+  content_language_setting?: LanguageChoice
   ai: AiStatus
 }
+
+export type LanguageChoice = 'auto' | 'ko' | 'en'
 
 export type JobState = 'queued' | 'working' | 'waiting' | 'done' | 'failed'
 
