@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
-import { ApiError, askBrain, askPreview, type AskAnswer, type AskCitation } from '../api'
+import { ApiError, askBrainStreaming, askPreview, type AskAnswer, type AskCitation } from '../api'
 import { Badge } from '../components/ui'
 import { titleCase } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -19,6 +19,8 @@ export function AskPage({ initial = '' }: { initial?: string }) {
   const [error, setError] = useState<string | null>(null)
   const [answers, setAnswers] = useState<AskAnswer[]>(earlier)
   const [reading, setReading] = useState<{ id: string; title: string }[]>([])
+  // The answer so far, while the AI is still writing it.
+  const [draft, setDraft] = useState<AskAnswer | null>(null)
 
   async function submit(q: string) {
     const text = q.trim()
@@ -31,8 +33,9 @@ export function AskPage({ initial = '' }: { initial?: string }) {
       (r) => setReading(r.items),
       () => undefined,
     )
+    setDraft(null)
     try {
-      const answer = await askBrain(text)
+      const answer = await askBrainStreaming(text, setDraft)
       earlier = [answer, ...earlier].slice(0, 20)
       setAnswers(earlier)
       setQuestion('')
@@ -41,6 +44,7 @@ export function AskPage({ initial = '' }: { initial?: string }) {
     } finally {
       setBusy(false)
       setReading([])
+      setDraft(null)
     }
   }
 
@@ -84,9 +88,9 @@ export function AskPage({ initial = '' }: { initial?: string }) {
       {busy ? (
         <div className="ask-thinking" role="status">
           <p>
-            <span className="spinner-dot" aria-hidden="true" /> {t('askThinking')}
+            <span className="spinner-dot" aria-hidden="true" /> {draft ? t('askWriting') : t('askThinking')}
           </p>
-          {reading.length ? (
+          {reading.length && !draft ? (
             <p className="hint">
               {t('askReading')}:{' '}
               {reading.map((r, i) => (
@@ -104,7 +108,7 @@ export function AskPage({ initial = '' }: { initial?: string }) {
           {error}
         </p>
       ) : null}
-      {latest ? <AnswerCard answer={latest} /> : null}
+      {draft ? <AnswerCard answer={draft} /> : latest ? <AnswerCard answer={latest} /> : null}
       {rest.length ? (
         <section className="section">
           <h2 className="section-title">{t('askEarlier')}</h2>

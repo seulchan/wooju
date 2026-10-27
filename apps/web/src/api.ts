@@ -309,6 +309,68 @@ export function askBrain(question: string): Promise<AskAnswer> {
   return postJson('/api/ask', { question })
 }
 
+/**
+ * Ask and watch the answer grow: ``onPartial`` gets the answer so far each time
+ * a sentence is finished; the promise resolves with the complete answer.
+ * Falls back to the plain request when the browser cannot read a stream.
+ */
+export async function askBrainStreaming(
+  question: string,
+  onPartial: (answer: AskAnswer) => void,
+): Promise<AskAnswer> {
+  const resp = await fetch(apiUrl('/api/ask/stream'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ question }),
+  })
+  if (!resp.ok) {
+    let detail = `Request failed (${resp.status})`
+    try {
+      detail = ((await resp.json()) as { detail?: string }).detail ?? detail
+    } catch {
+      // keep the generic message
+    }
+    throw new ApiError(detail)
+  }
+  if (!resp.body) return askBrain(question)
+  const reader = resp.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let final: AskAnswer | null = null
+  for (;;) {
+    const { value, done } = await reader.read()
+    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+    let cut: number
+    while ((cut = buffer.indexOf('\n\n')) >= 0) {
+      const block = buffer.slice(0, cut)
+      buffer = buffer.slice(cut + 2)
+      const event = parseEvent(block)
+      if (!event) continue
+      if (event.kind === 'error') throw new ApiError(String(event.data.detail ?? 'Something went wrong.'))
+      if (event.kind === 'partial') onPartial(event.data as unknown as AskAnswer)
+      if (event.kind === 'answer') final = event.data as unknown as AskAnswer
+    }
+    if (done) break
+  }
+  if (!final) throw new ApiError('The answer did not arrive. Please try again.')
+  return final
+}
+
+function parseEvent(block: string): { kind: string; data: Record<string, unknown> } | null {
+  let kind = ''
+  const lines: string[] = []
+  for (const line of block.split('\n')) {
+    if (line.startsWith('event: ')) kind = line.slice(7)
+    else if (line.startsWith('data: ')) lines.push(line.slice(6))
+  }
+  if (!kind || !lines.length) return null
+  try {
+    return { kind, data: JSON.parse(lines.join('\n')) as Record<string, unknown> }
+  } catch {
+    return null
+  }
+}
+
 export function challengeInsight(id: string): Promise<ProposalView> {
   return postJson('/api/challenge', { id })
 }

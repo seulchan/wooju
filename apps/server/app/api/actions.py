@@ -7,16 +7,19 @@ written for the person using the app, in the app's language (``ko``/``en``).
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import subprocess
 import sys
 import webbrowser
 from datetime import date
 from pathlib import Path
+from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from brain_core import history
@@ -874,6 +877,30 @@ async def ask_question(body: AskRequest, engine: EngineDep) -> dict[str, Any]:
     except (AskError, SetupError) as exc:
         raise _fail_from(engine, exc) from exc
     return answer.to_dict()
+
+
+@actions_router.post("/ask/stream", tags=["ask"])
+async def ask_question_stream(body: AskRequest, engine: EngineDep) -> StreamingResponse:
+    """The answer as it is written: one ``partial`` event per finished sentence,
+    then ``answer`` with the complete result, or ``error`` with the message."""
+
+    def event(kind: str, data: dict[str, Any]) -> str:
+        return f"event: {kind}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+    async def events() -> AsyncIterator[str]:
+        try:
+            async for answer in engine.ask_stream(body.question):
+                yield event("partial" if answer.partial else "answer", answer.to_dict())
+        except LLMError as exc:
+            yield event("error", {"detail": exc.localized(engine.language())})
+        except (AskError, SetupError) as exc:
+            yield event("error", {"detail": exc.localized(engine.language())})
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @actions_router.post("/ask/preview", tags=["ask"])

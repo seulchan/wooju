@@ -5,7 +5,11 @@ export interface MockRoute {
   match: RegExp
   status?: number
   /** A static body, or a function of the full URL (for query/param reads). */
-  body: unknown | ((url: URL) => unknown)
+  body?: unknown | ((url: URL) => unknown)
+  /** Server-sent events instead of a JSON body (an `event:` + `data:` block each). */
+  sse?: Array<{ event: string; data: unknown }>
+  /** Hold the response until this settles (to observe an in-flight state). */
+  wait?: Promise<unknown>
 }
 
 /**
@@ -19,6 +23,16 @@ export function mockFetch(routes: ReadonlyArray<MockRoute>) {
     const key = url.pathname + url.search
     for (const route of routes) {
       if (route.match.test(key)) {
+        if (route.wait) await route.wait
+        if (route.sse) {
+          const text = route.sse
+            .map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`)
+            .join('')
+          return new Response(text, {
+            status: route.status ?? 200,
+            headers: { 'content-type': 'text/event-stream' },
+          })
+        }
         const body = await (typeof route.body === 'function' ? route.body(url) : route.body)
         return new Response(JSON.stringify(body), {
           status: route.status ?? 200,

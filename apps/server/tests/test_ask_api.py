@@ -124,3 +124,69 @@ def test_preview_lists_notes_without_the_ai(client):
     r = client.post("/api/ask/preview", json={"question": "자사주 소각 기한"})
     assert r.status_code == 200
     assert r.json()["items"][0]["id"] == "wiki/concepts/treasury"
+
+
+class Streaming(Scripted):
+    """Writes the answer in pieces when asked to stream, like Ollama."""
+
+    def generate_json(self, system, user, schema, on_text=None):
+        result = super().generate_json(system, user, schema)
+        if on_text is not None and "statements" in schema["properties"]:
+            import json
+
+            raw = json.dumps(
+                {
+                    "statements": [
+                        {"text": "1년 안에 소각해야 해요.", "sources": [1]},
+                        {"text": "자사주 소각 노트에 적혀 있어요.", "sources": [1]},
+                    ],
+                    "missing": "",
+                },
+                ensure_ascii=False,
+            )
+            for cut in range(1, len(raw) + 1, 11):
+                on_text(raw[:cut])
+            on_text(raw)
+            return LLMResult(json.loads(raw), raw, 0.2, self.name, self.model)
+        return result
+
+
+def events_of(text: str) -> list[tuple[str, dict]]:
+    import json
+
+    out = []
+    for block in text.strip().split("\n\n"):
+        kind = data = None
+        for line in block.splitlines():
+            if line.startswith("event: "):
+                kind = line[7:]
+            elif line.startswith("data: "):
+                data = json.loads(line[6:])
+        out.append((kind, data))
+    return out
+
+
+def test_ask_stream_sends_sentences_then_the_answer(client):
+    client.app.state.engine.provider_override = Streaming()
+    with client.stream(
+        "POST", "/api/ask/stream", json={"question": "자사주는 언제까지 소각해야 해?"}
+    ) as r:
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/event-stream")
+        events = events_of(r.read().decode())
+    kinds = [k for k, _ in events]
+    assert kinds == ["partial", "partial", "answer"], kinds
+    assert events[0][1]["answer"] == "1년 안에 소각해야 해요. [1]" and events[0][1]["partial"]
+    final = events[-1][1]
+    assert final["partial"] is False and final["found"] is True
+    assert final["answer"].startswith("1년 안에 소각해야 해요. [1]\n- 자사주 소각 노트")
+    assert final["citations"][0]["id"] == "wiki/concepts/treasury"
+
+
+def test_ask_stream_reports_errors_as_an_event(client):
+    client.app.state.engine.provider_override = Scripted(
+        LLMError("off", "llm.ollama_off", retryable=True)
+    )
+    with client.stream("POST", "/api/ask/stream", json={"question": "자사주 소각 기한"}) as r:
+        events = events_of(r.read().decode())
+    assert events[-1][0] == "error" and "Ollama" in events[-1][1]["detail"]

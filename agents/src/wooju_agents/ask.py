@@ -9,8 +9,9 @@ Ask never writes to the Brain.
 
 from __future__ import annotations
 
+import json
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Annotated, Any
 
@@ -114,6 +115,8 @@ class Answer:
     missing: str = ""
     model: str | None = None
     seconds: float = 0.0
+    # True while the answer is still being written (streamed sentence by sentence).
+    partial: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -205,6 +208,52 @@ def _cite(text: str, found: list[Passage]) -> tuple[str, list[Citation]]:
     return cleaned, citations
 
 
+_DECODER = json.JSONDecoder()
+
+
+def finished_statements(raw: str) -> list[dict[str, Any]]:
+    """The statements already complete in a partly written answer.
+
+    The model writes ``{"statements": [{...}, {...}`` one object at a time; each
+    object that has closed is returned, so the answer can show up sentence by
+    sentence while the rest is still being written.
+    """
+    start = raw.find('"statements"')
+    if start < 0:
+        return []
+    out: list[dict[str, Any]] = []
+    pos = raw.find("[", start)
+    if pos < 0:
+        return out
+    pos += 1
+    while True:
+        brace = raw.find("{", pos)
+        if brace < 0:
+            break
+        try:
+            obj, end = _DECODER.raw_decode(raw, brace)
+        except ValueError:
+            break  # still being written
+        if isinstance(obj, dict) and isinstance(obj.get("text"), str):
+            out.append(obj)
+        pos = end
+    return out
+
+
+def _lines(statements: Sequence[Any]) -> str:
+    lines = []
+    for i, s in enumerate(statements):
+        sources = s.get("sources") if isinstance(s, dict) else s.sources
+        text = (s.get("text") if isinstance(s, dict) else s.text) or ""
+        text = text.strip()
+        if not text:
+            continue
+        nums = [n for n in (sources or []) if isinstance(n, int)]
+        marks = "".join(f"[{n}]" for n in dict.fromkeys(nums))
+        lines.append(f"{'' if i == 0 else '- '}{text} {marks}".rstrip())
+    return "\n".join(lines)
+
+
 def ask(
     index: BrainIndex,
     question: str,
@@ -214,7 +263,13 @@ def ask(
     retriever: Retriever | None = None,
     query_vec: Sequence[float] | None = None,
     max_passages: int = MAX_PASSAGES,
+    on_partial: Callable[[Answer], None] | None = None,
 ) -> Answer:
+    """Answer ``question`` from the Brain.
+
+    ``on_partial`` (optional) is called with a provisional Answer each time
+    another sentence is finished, when the provider can stream.
+    """
     question = question.strip()
     if not question:
         raise AskError("Empty question", "ask.empty")
@@ -227,21 +282,27 @@ def ask(
 
     language = answer_language(question, language)
     system = _ANSWER_SYSTEM.format(language=_LANGUAGE_NAME.get(language, "English"))
+
+    shown = 0
+
+    def on_text(raw: str) -> None:
+        nonlocal shown
+        done = finished_statements(raw)
+        if len(done) > shown and on_partial is not None:
+            shown = len(done)
+            text, citations = _cite(_lines(done), found)
+            on_partial(Answer(question, text, found=True, citations=citations, partial=True))
+
+    # Only a caller that wants sentences early asks the provider to stream.
+    extra: dict[str, Any] = {"on_text": on_text} if on_partial is not None else {}
     result = provider.generate_json(
-        system, _prompt(question, found), AnswerDraft.model_json_schema()
+        system, _prompt(question, found), AnswerDraft.model_json_schema(), **extra
     )
     try:
         draft = AnswerDraft.model_validate(result.data)
     except ValidationError as exc:
         raise AskError(str(exc), "ask.bad_shape") from exc
-    lines = []
-    for i, s in enumerate(draft.statements):
-        marks = "".join(f"[{n}]" for n in dict.fromkeys(s.sources))
-        text = s.text.strip().rstrip()
-        if not text:
-            continue
-        lines.append(f"{'' if i == 0 else '- '}{text} {marks}".rstrip())
-    text, citations = _cite("\n".join(lines), found)
+    text, citations = _cite(_lines(draft.statements), found)
     if not citations:
         # The model cited nothing usable: show what it read, so the user can check.
         citations = [

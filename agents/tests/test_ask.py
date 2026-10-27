@@ -147,3 +147,45 @@ def test_meaning_search_skips_the_search_terms_call(index):
     )
     assert result.citations[0].id == "sources/kospi-pbr"
     assert len(provider.calls) == 1  # no search-terms call
+
+
+def test_finished_statements_appear_one_by_one():
+    from wooju_agents.ask import finished_statements
+
+    raw = '{"statements": [{"text": "First.", "sources": [1]}, {"text": "Sec'
+    assert [s["text"] for s in finished_statements(raw)] == ["First."]
+    raw += 'ond.", "sources": [2, 1]}], "missing": ""}'
+    assert [s["text"] for s in finished_statements(raw)] == ["First.", "Second."]
+    assert finished_statements('{"statem') == []
+
+
+class StreamingProvider(ScriptedProvider):
+    """Writes the answer in pieces, like Ollama does, when asked to stream."""
+
+    def generate_json(self, system, user, schema, on_text=None):
+        if "queries" in schema["properties"]:
+            return super().generate_json(system, user, schema)
+        import json
+
+        raw = json.dumps(self.answer, ensure_ascii=False)
+        if on_text is not None:
+            for cut in range(1, len(raw) + 1, 7):
+                on_text(raw[:cut])
+            on_text(raw)
+        return LLMResult(self.answer, raw, 0.5, self.name, self.model)
+
+
+def test_sentences_arrive_while_the_answer_is_written(index):
+    provider = StreamingProvider(
+        answer=say(("구성종목은 100개예요.", [1]), ("삼성전자가 포함됐어요.", [1]))
+    )
+    seen = []
+    result = ask(
+        index, "밸류업 지수 구성종목은 몇 개야?", provider, language="en", on_partial=seen.append
+    )
+    assert [a.answer for a in seen] == [
+        "구성종목은 100개예요. [1]",
+        "구성종목은 100개예요. [1]\n- 삼성전자가 포함됐어요. [1]",
+    ]
+    assert all(a.partial and a.citations for a in seen)
+    assert not result.partial and result.answer == seen[-1].answer

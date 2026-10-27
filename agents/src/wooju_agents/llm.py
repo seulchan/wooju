@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -49,11 +50,23 @@ class LLMResult:
     model: str
 
 
+OnText = Callable[[str], None]
+
+
 class Provider(Protocol):
     name: str
     model: str
 
-    def generate_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult: ...
+    def generate_json(
+        self,
+        system: str,
+        user: str,
+        schema: dict[str, Any],
+        on_text: OnText | None = None,
+    ) -> LLMResult:
+        """Schema-shaped JSON. ``on_text`` (optional) receives the text written so
+        far, each time more arrives; a provider that cannot stream may ignore it."""
+        ...
 
 
 def recommended_ollama_model(memory_bytes: int | None = None) -> str:
@@ -123,12 +136,18 @@ class OllamaProvider:
         except httpx.HTTPError as exc:
             raise LLMError(str(exc), "llm.pull_failed") from exc
 
-    def generate_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult:
+    def generate_json(
+        self,
+        system: str,
+        user: str,
+        schema: dict[str, Any],
+        on_text: OnText | None = None,
+    ) -> LLMResult:
         payload = {
             "model": self.model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "format": schema,
-            "stream": False,
+            "stream": on_text is not None,
             "think": False,
             # Ollama's default context (2–4K tokens) silently cuts long sources
             # and Ask's passages; 16K fits both on an 8 GB Mac with the 4B model.
@@ -136,18 +155,19 @@ class OllamaProvider:
         }
         start = time.monotonic()
         try:
-            resp = self.client.post(f"{self.host}/api/chat", json=payload)
+            resp = self._chat(payload)
             if resp.status_code == 400 and "think" in resp.text:
                 payload.pop("think")
-                resp = self.client.post(f"{self.host}/api/chat", json=payload)
+                resp = self._chat(payload)
             if resp.status_code >= 500:
                 # Usually out of memory: Ollama unloads models after a failure,
                 # so one more try a moment later normally works.
                 time.sleep(self.retry_pause)
-                resp = self.client.post(f"{self.host}/api/chat", json=payload)
+                resp = self._chat(payload)
             if resp.status_code >= 500:
                 raise LLMError(resp.text[:300], "llm.busy", retryable=True)
             resp.raise_for_status()
+            raw = self._collect(resp, on_text) if on_text else self._content(resp)
         except httpx.ConnectError as exc:
             raise LLMError(str(exc), "llm.ollama_off", retryable=True) from exc
         except httpx.HTTPStatusError as exc:
@@ -158,10 +178,46 @@ class OllamaProvider:
             raise LLMError(str(exc), "llm.no_response") from exc
         except httpx.HTTPError as exc:
             raise LLMError(str(exc), "llm.no_response") from exc
-        raw = (resp.json().get("message") or {}).get("content", "")
         return LLMResult(
             _loads(raw, self.name), raw, time.monotonic() - start, self.name, self.model
         )
+
+    def _chat(self, payload: dict[str, Any]) -> httpx.Response:
+        """One request; a streamed one is read in full before an error is judged."""
+        if not payload.get("stream"):
+            return self.client.post(f"{self.host}/api/chat", json=payload)
+        req = self.client.build_request("POST", f"{self.host}/api/chat", json=payload)
+        resp = self.client.send(req, stream=True)
+        if resp.status_code >= 400:
+            resp.read()
+            resp.close()
+        return resp
+
+    @staticmethod
+    def _content(resp: httpx.Response) -> str:
+        return (resp.json().get("message") or {}).get("content", "")
+
+    @staticmethod
+    def _collect(resp: httpx.Response, on_text: OnText) -> str:
+        """Join a streamed reply, telling ``on_text`` the text so far as it grows."""
+        parts: list[str] = []
+        try:
+            for line in resp.iter_lines():
+                if not line.strip():
+                    continue
+                try:
+                    chunk = json.loads(line)
+                except ValueError:
+                    continue
+                piece = (chunk.get("message") or {}).get("content", "")
+                if piece:
+                    parts.append(piece)
+                    on_text("".join(parts))
+                if chunk.get("error"):
+                    raise LLMError(str(chunk["error"])[:300], "llm.no_response")
+        finally:
+            resp.close()
+        return "".join(parts)
 
 
 class OpenAIProvider:
@@ -179,7 +235,13 @@ class OpenAIProvider:
         self.base_url = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=120)
 
-    def generate_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult:
+    def generate_json(
+        self,
+        system: str,
+        user: str,
+        schema: dict[str, Any],
+        on_text: OnText | None = None,
+    ) -> LLMResult:
         payload = {
             "model": self.model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -223,7 +285,13 @@ class AnthropicProvider:
         self.base_url = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=120)
 
-    def generate_json(self, system: str, user: str, schema: dict[str, Any]) -> LLMResult:
+    def generate_json(
+        self,
+        system: str,
+        user: str,
+        schema: dict[str, Any],
+        on_text: OnText | None = None,
+    ) -> LLMResult:
         # A forced tool call is Anthropic's way to get schema-shaped JSON.
         payload = {
             "model": self.model,

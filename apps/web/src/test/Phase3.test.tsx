@@ -36,13 +36,16 @@ const answer = {
 
 describe('Ask', () => {
   it('asks and shows the answer with linked sources', async () => {
-    const fetchMock = mockFetch([{ match: /^\/api\/ask$/, body: answer }])
+    const partial = { ...answer, answer: '100개 기업이에요 [1].', citations: answer.citations.slice(0, 1), partial: true }
+    const fetchMock = mockFetch([
+      { match: /^\/api\/ask\/stream$/, sse: [{ event: 'partial', data: partial }, { event: 'answer', data: answer }] },
+    ])
     render(<AskPage />)
     await userEvent.type(screen.getByRole('textbox'), '밸류업 지수에는 몇 개 기업이 있어?')
     await userEvent.click(screen.getByRole('button', { name: 'Ask' }))
 
     expect(await screen.findByRole('heading', { name: answer.question })).toBeInTheDocument()
-    expect(posted(fetchMock, '/api/ask')).toEqual([{ question: '밸류업 지수에는 몇 개 기업이 있어?' }])
+    expect(posted(fetchMock, '/api/ask/stream')).toEqual([{ question: '밸류업 지수에는 몇 개 기업이 있어?' }])
     const cites = screen.getAllByRole('link', { name: '1' })
     expect(cites[0]).toHaveAttribute('href', '#/record/sources/value-up')
     expect(screen.getByRole('link', { name: '밸류업 프로그램' })).toHaveAttribute(
@@ -54,7 +57,9 @@ describe('Ask', () => {
   })
 
   it('says plainly when the Brain has nothing on it', async () => {
-    mockFetch([{ match: /^\/api\/ask$/, body: { ...answer, answer: '', found: false, citations: [] } }])
+    mockFetch([
+      { match: /^\/api\/ask\/stream$/, sse: [{ event: 'answer', data: { ...answer, answer: '', found: false, citations: [] } }] },
+    ])
     render(<AskPage initial="bitcoin mining" />)
     expect(await screen.findByText(/Your Brain has nothing that answers this yet/)).toBeInTheDocument()
   })
@@ -62,8 +67,8 @@ describe('Ask', () => {
   it('shows the notes read when the AI cited none', async () => {
     mockFetch([
       {
-        match: /^\/api\/ask$/,
-        body: { ...answer, answer: '100개예요.', found: false, related_only: true },
+        match: /^\/api\/ask\/stream$/,
+        sse: [{ event: 'answer', data: { ...answer, answer: '100개예요.', found: false, related_only: true } }],
       },
     ])
     render(<AskPage initial="밸류업 몇 개" />)
@@ -72,7 +77,7 @@ describe('Ask', () => {
   })
 
   it('shows why the AI could not answer', async () => {
-    mockFetch([{ match: /^\/api\/ask$/, status: 503, body: { detail: 'Ollama is not running.' } }])
+    mockFetch([{ match: /^\/api\/ask\/stream$/, sse: [{ event: 'error', data: { detail: 'Ollama is not running.' } }] }])
     render(<AskPage initial="anything" />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Ollama is not running.')
   })
@@ -193,14 +198,17 @@ describe('Claude connection', () => {
 describe('Ask, partial answers', () => {
   it('names what the notes do not cover', async () => {
     mockFetch([
-      { match: /^\/api\/ask$/, body: { ...answer, found: false, missing: 'Selection criteria are not in your notes.' } },
+      {
+        match: /^\/api\/ask\/stream$/,
+        sse: [{ event: 'answer', data: { ...answer, found: false, missing: 'Selection criteria are not in your notes.' } }],
+      },
     ])
     render(<AskPage initial="value-up criteria" />)
     expect(await screen.findByText(/Not in your notes: Selection criteria/)).toBeInTheDocument()
   })
 
   it('shows no warning for a full answer', async () => {
-    mockFetch([{ match: /^\/api\/ask$/, body: { ...answer, missing: '' } }])
+    mockFetch([{ match: /^\/api\/ask\/stream$/, sse: [{ event: 'answer', data: { ...answer, missing: '' } }] }])
     render(<AskPage initial="value-up count" />)
     await screen.findAllByRole('heading', { name: answer.question })
     const newest = screen.getAllByRole('article')[0]
@@ -305,8 +313,9 @@ describe('Ask preview', () => {
     mockFetch([
       { match: /^\/api\/ask\/preview$/, body: { items: [{ id: 'sources/value-up', title: '코리아 밸류업 지수 발표', category: 'source' }] } },
       {
-        match: /^\/api\/ask$/,
-        body: () => gate.then(() => answer),
+        match: /^\/api\/ask\/stream$/,
+        sse: [{ event: 'answer', data: answer }],
+        wait: gate,
       },
     ])
     render(<AskPage initial="밸류업 지수 종목 수" />)

@@ -170,3 +170,35 @@ def test_resolve_language(monkeypatch):
     assert resolve_language("fr") == "en"
     monkeypatch.setenv("WOOJU_LANGUAGE", "ko")
     assert resolve_language("auto") == "ko"
+
+
+def test_ollama_streams_when_asked_and_reports_text_so_far():
+    seen = {}
+    pieces = ['{"a"', ": 1", "}"]
+
+    def handler(request):
+        seen.update(json.loads(request.content))
+        body = "".join(
+            json.dumps({"message": {"content": p}, "done": i == len(pieces) - 1}) + "\n"
+            for i, p in enumerate(pieces)
+        )
+        return httpx.Response(200, content=body.encode())
+
+    so_far = []
+    result = OllamaProvider("qwen3.5:4b", client=client(handler)).generate_json(
+        "s", "u", SCHEMA, on_text=so_far.append
+    )
+    assert seen["stream"] is True
+    assert so_far == ['{"a"', '{"a": 1', '{"a": 1}']
+    assert result.data == {"a": 1} and result.raw == '{"a": 1}'
+
+
+def test_ollama_stream_errors_are_still_user_errors():
+    def handler(request):
+        return httpx.Response(500, text="model requires more system memory")
+
+    provider = OllamaProvider("qwen3.5:4b", client=client(handler))
+    provider.retry_pause = 0
+    with pytest.raises(LLMError) as exc:
+        provider.generate_json("s", "u", SCHEMA, on_text=lambda _t: None)
+    assert exc.value.key == "llm.busy"

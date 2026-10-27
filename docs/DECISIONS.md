@@ -178,6 +178,17 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - App messages (including server errors and change-history titles) are keyed
   and rendered in the app language; history stays stored in English.
 
+## Ask shows sentences as they are written
+
+- The answer keeps its shape (sentences, each with its sources) but no longer
+  waits for the whole thing: Ollama streams the JSON, each statement object
+  that closes is parsed and shown at once with its citations checked, and the
+  complete answer replaces the draft. Quality is unchanged because the prompt
+  and the final parse are the same; only the waiting feels shorter.
+- `/api/ask/stream` sends server-sent events (`partial`, `answer`, `error`);
+  `/api/ask` stays for Telegram, Claude (MCP) and the evals. API providers
+  (OpenAI, Anthropic) answer in one piece; they are fast enough.
+
 ## Sample notes
 
 - An empty Brain offers "Look around with sample notes": nine notes about

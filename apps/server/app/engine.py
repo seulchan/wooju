@@ -18,6 +18,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from collections.abc import AsyncIterator
 from typing import Any, Literal
 
 import yaml
@@ -839,6 +840,50 @@ class Engine:
                 retriever=retriever,
                 query_vec=query_vec,
             )
+
+    async def ask_stream(self, question: str) -> AsyncIterator[Answer]:
+        """Like :meth:`ask`, but yields the answer as it grows (``partial`` set),
+        ending with the complete one. Errors are raised after the partials."""
+        self._require_brain()
+        provider = self.provider()
+        retriever = await self.retriever()
+        loop = asyncio.get_running_loop()
+        updates: asyncio.Queue[Answer | BaseException | None] = asyncio.Queue()
+
+        def on_partial(answer: Answer) -> None:
+            loop.call_soon_threadsafe(updates.put_nowait, answer)
+
+        async with self.ai_lane:
+            query_vec = await self.query_vector(question)
+
+            async def run() -> None:
+                try:
+                    final = await asyncio.to_thread(
+                        ask,
+                        self.index,
+                        question,
+                        provider,
+                        language=self.language(),
+                        retriever=retriever,
+                        query_vec=query_vec,
+                        on_partial=on_partial,
+                    )
+                    updates.put_nowait(final)
+                except BaseException as exc:  # noqa: BLE001 — handed to the reader
+                    updates.put_nowait(exc)
+                updates.put_nowait(None)
+
+            task = asyncio.create_task(run(), name="wooju-ask")
+            try:
+                while True:
+                    item = await updates.get()
+                    if item is None:
+                        break
+                    if isinstance(item, BaseException):
+                        raise item
+                    yield item
+            finally:
+                task.cancel()
 
     async def challenge(self, insight_id: str) -> Proposal:
         """Propose a Challenge section for an insight; the user approves it in Review."""
