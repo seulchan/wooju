@@ -1,0 +1,39 @@
+name: Something went wrong
+description: Wooju did something unexpected, showed an error, or would not start.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead. The exact message on screen helps most.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Wooju version
+      description: Shown at the bottom of Settings (e.g. 0.4.0).
+  - type: input
+    id: mac
+    attributes:
+      label: Mac
+      description: Chip and memory, e.g. "M1, 16 GB" (Apple menu → About This Mac).
+  - type: dropdown
+    id: ai
+    attributes:
+      label: AI in use
+      options:
+        - Ollama on this Mac
+        - Claude API key
+        - OpenAI API key
+        - Not set up yet
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: >
+        ~/Library/Logs/Wooju/server.log (in Finder: Go → Go to Folder…). Search
+        words and questions are not logged, but file names and note titles can
+        be: look it over before pasting.
+      render: text
