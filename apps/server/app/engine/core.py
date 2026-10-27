@@ -208,7 +208,9 @@ class Engine(
             raise SetupError("setup.brain_first")
         return self.brain
 
-    async def _apply_own(self, path: str, content: str, title: str) -> Proposal:
+    async def _apply_own(
+        self, path: str, content: str, title: str, *, links_only: bool = False
+    ) -> Proposal:
         """Apply a change the user made by clicking (their click is the approval)."""
         proposal = Proposal(
             agent="you",
@@ -216,6 +218,7 @@ class Engine(
             title=title,
             changes=[FileChange(op="write", path=path, content=content)],
             approval="auto",
+            links_only=links_only,
         )
         self.store.save(proposal)
         return await self.apply(proposal)

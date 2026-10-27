@@ -212,6 +212,12 @@ def head_id(brain: Path) -> str | None:
         repo.close()
 
 
+LINKS_ONLY = "Links-only: yes"
+# Commits that changed only which notes a topic lists. Older ones predate the
+# trailer and are recognised by their agent.
+_LINKS_ONLY_MARKS = (LINKS_ONLY.encode(), b"\nAgent: topics")
+
+
 def last_changes(brain: Path) -> dict[str, int]:
     """For each path, the position (1 = first commit) of the last commit that changed it.
 
@@ -227,6 +233,8 @@ def last_changes(brain: Path) -> dict[str, int]:
         out: dict[str, int] = {}
         for i, commit in enumerate(commits):
             position = total - i
+            if any(mark in commit.message for mark in _LINKS_ONLY_MARKS):
+                continue  # a topic's list of notes changed, not what a note says
             for path, _old, _new in _changed_paths(repo, commit):
                 out.setdefault(path, position)
         return out

@@ -169,3 +169,35 @@ def test_a_dismissed_suggestion_does_not_come_back(client):
     members = [m["id"] for m in c.get("/api/topics/suggestions").json()["items"][0]["members"]]
     assert c.post("/api/topics/dismiss", json={"members": members}).json() == {"ok": True}
     assert c.get("/api/topics/suggestions").json()["items"] == []
+
+
+def test_filing_into_a_topic_does_not_ask_to_recheck_notes_that_rest_on_it(client):
+    from brain_core import history
+
+    c, b = client
+    (b / "wiki/questions").mkdir(parents=True, exist_ok=True)
+    (b / "wiki/questions/why.md").write_text(
+        "---\ntitle: 왜 올렸나\n---\n# 왜 올렸나\n\n## 질문\n\n[기준금리](../overviews/rates.md)를 보면 알 수 있을까?\n",
+        encoding="utf-8",
+    )
+    paths = [str(p.relative_to(b)) for p in b.rglob("*.md") if ".wooju" not in str(p)]
+    history.commit_paths(b, paths, "Add notes")
+    c.app.state.engine.index.scan(b)
+    settle(c)
+    assert "rate-3" in (b / "wiki/overviews/rates.md").read_text(encoding="utf-8")  # it was filed
+    groups = {g["key"] for g in c.get("/api/attention").json()["groups"]}
+    assert "grounds_changed" not in groups
+
+    # A real edit to the topic still counts.
+    text = (b / "wiki/overviews/rates.md").read_text(encoding="utf-8")
+    r = c.post(
+        "/api/notes/edit",
+        json={
+            "id": "wiki/overviews/rates",
+            "body": text.split("---\n", 2)[2] + "\n추가한 문장.\n",
+            "base": text.split("---\n", 2)[2],
+        },
+    )
+    assert r.status_code == 200, r.text
+    groups = {g["key"]: g for g in c.get("/api/attention").json()["groups"]}
+    assert groups["grounds_changed"]["items"][0]["id"] == "wiki/questions/why"

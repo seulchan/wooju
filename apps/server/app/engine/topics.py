@@ -132,6 +132,7 @@ class TopicsMixin:
             title=title,
             changes=[FileChange(op="write", path=topic.path, content=updated)],
             approval="auto",
+            links_only=True,
         )
         self.store.save(proposal)
         result = await self.apply(proposal)
@@ -244,6 +245,7 @@ class TopicsMixin:
             f"주제에서 뺌: {member.title} ← {topic.title}"
             if ko
             else f"Took {member.title} out of {topic.title}",
+            links_only=True,
         )
         if result.status == "applied":
             _count("removed")

@@ -64,6 +64,9 @@ class Proposal(BaseModel):
     commit: str | None = None
     error: str | None = None
     decided_at: str | None = None
+    # Only a list of links changed (a topic's notes): not a change in what the
+    # note says, so notes resting on it are not asked to be checked again.
+    links_only: bool = False
 
 
 # ----------------------------------------------------------------- policy
@@ -201,6 +204,8 @@ def apply_proposal(brain: Path, proposal: Proposal, store: ProposalStore | None 
             message = f"{proposal.title}\n\nProposal: {proposal.id}\nAgent: {proposal.agent}"
             if proposal.origin:
                 message += f"\nOrigin: {proposal.origin}"
+            if proposal.links_only:
+                message += f"\n{history.LINKS_ONLY}"
             proposal.commit = history.commit_paths(brain, [r.as_posix() for r in rels], message)
             proposal.status = "applied"
     except OSError as exc:
