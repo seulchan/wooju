@@ -108,3 +108,11 @@ answer slots: for "한국은행이 기준금리를 올린 이유는?" the sectio
 the reason now makes the top 6. Keyword-only English hit@8 falls 88% → 62%
 (MRR 0.38 → 0.50) because some English questions matched only link titles
 and slugs; to be checked with meaning search and answers on the Mac.
+
+With meaning search on the Mac, link-list down-ranking keeps hybrid hit@8 at
+100% (English MRR 0.60 → 0.58). Answers: cites anything 95% → 100% (the BOK
+rate-hike question is now answered from the section with the reason), cites
+an expected note 85%, all 12 Korean questions cite an expected note. The run
+was slower (median 47 s, later answers 70–90 s) although prompts are the same
+size; timing varies with what else the Mac is doing, so compare speed only
+on runs made under the same conditions.
