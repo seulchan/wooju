@@ -743,6 +743,21 @@ class Engine:
         except LLMError:
             return None
 
+    async def ask_preview(self, question: str) -> list[dict[str, Any]]:
+        """Notes likely to be read for ``question``, shown while the answer is written.
+
+        Keyword search only: no AI, so it never waits behind other AI work.
+        """
+        self._require_brain()
+        retriever = await self.retriever()
+        hits = await asyncio.to_thread(retriever.search, question, 6)
+        seen: dict[str, dict[str, Any]] = {}
+        for _, p in hits:
+            seen.setdefault(
+                p.id, {"id": p.id, "title": p.record.title, "category": p.record.category}
+            )
+        return list(seen.values())
+
     async def ask(self, question: str) -> Answer:
         """Answer from the Brain. Read-only; raises LLMError/AskError."""
         self._require_brain()

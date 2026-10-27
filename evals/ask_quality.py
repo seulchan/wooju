@@ -53,6 +53,7 @@ def main() -> None:
     parser.add_argument("--k", type=int, default=8)
     parser.add_argument("--answer", action="store_true", help="also answer with the AI")
     parser.add_argument("--model", default="qwen3.5:9b")
+    parser.add_argument("--passages", type=int, default=None, help="passages sent to the model")
     args = parser.parse_args()
 
     questions = json.loads(args.questions.read_text(encoding="utf-8"))["questions"]
@@ -124,6 +125,7 @@ def main() -> None:
             language="en",
             retriever=retriever,
             query_vec=row.get("vec"),
+            **({"max_passages": args.passages} if args.passages else {}),
         )
         times.append(time.monotonic() - start)
         ids = {c.id for c in answer.citations} if not answer.related_only else set()

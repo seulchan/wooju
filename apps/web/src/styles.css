@@ -1318,6 +1318,8 @@ code {
 }
 .ask-thinking {
   color: var(--muted);
+}
+.ask-thinking > p:first-child {
   display: flex;
   align-items: center;
   gap: 0.5rem;

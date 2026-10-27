@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
-import { ApiError, askBrain, type AskAnswer, type AskCitation } from '../api'
+import { ApiError, askBrain, askPreview, type AskAnswer, type AskCitation } from '../api'
 import { Badge } from '../components/ui'
 import { titleCase } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -18,12 +18,19 @@ export function AskPage({ initial = '' }: { initial?: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [answers, setAnswers] = useState<AskAnswer[]>(earlier)
+  const [reading, setReading] = useState<{ id: string; title: string }[]>([])
 
   async function submit(q: string) {
     const text = q.trim()
     if (!text || busy) return
     setBusy(true)
     setError(null)
+    setReading([])
+    // Show the notes being read right away; the answer takes longer.
+    askPreview(text).then(
+      (r) => setReading(r.items),
+      () => undefined,
+    )
     try {
       const answer = await askBrain(text)
       earlier = [answer, ...earlier].slice(0, 20)
@@ -33,6 +40,7 @@ export function AskPage({ initial = '' }: { initial?: string }) {
       setError(err instanceof ApiError ? err.message : String(err))
     } finally {
       setBusy(false)
+      setReading([])
     }
   }
 
@@ -74,9 +82,22 @@ export function AskPage({ initial = '' }: { initial?: string }) {
         </button>
       </form>
       {busy ? (
-        <p className="ask-thinking" role="status">
-          <span className="spinner-dot" aria-hidden="true" /> {t('askThinking')}
-        </p>
+        <div className="ask-thinking" role="status">
+          <p>
+            <span className="spinner-dot" aria-hidden="true" /> {t('askThinking')}
+          </p>
+          {reading.length ? (
+            <p className="hint">
+              {t('askReading')}:{' '}
+              {reading.map((r, i) => (
+                <span key={r.id}>
+                  {i ? ' · ' : ''}
+                  <Link to={`/record/${encodeId(r.id)}`}>{r.title}</Link>
+                </span>
+              ))}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {error ? (
         <p className="form-error" role="alert">

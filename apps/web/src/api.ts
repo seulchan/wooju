@@ -284,6 +284,13 @@ export interface AskAnswer {
   seconds: number
 }
 
+/** Notes the answer will likely read (instant, keyword search, no AI). */
+export function askPreview(
+  question: string,
+): Promise<{ items: { id: string; title: string; category: string }[] }> {
+  return postJson('/api/ask/preview', { question })
+}
+
 export function askBrain(question: string): Promise<AskAnswer> {
   return postJson('/api/ask', { question })
 }

@@ -22,7 +22,10 @@ from brain_core.retrieve import Passage, Retriever
 
 from .llm import Provider
 
-MAX_PASSAGES = 8
+# Measured on an M1 with qwen3.5:9b (evals/ask_quality.py): reading time grows
+# with the passages sent, so send fewer, shorter ones. Override per call.
+MAX_PASSAGES = 6
+PASSAGE_CHARS = 700
 # Below this BM25 score, or with fewer hits, the question is retried with
 # model-written search terms (other language, synonyms, names).
 WEAK_SCORE = 6.0
@@ -127,6 +130,7 @@ def gather(
     question: str,
     provider: Provider | None,
     query_vec: Sequence[float] | None = None,
+    limit: int = MAX_PASSAGES,
 ) -> tuple[list[Passage], float]:
     """Passages for ``question``.
 
@@ -135,9 +139,9 @@ def gather(
     widened with model-written search terms when its results are weak.
     """
     if query_vec is not None:
-        hits = retriever.search(question, limit=MAX_PASSAGES, query_vec=query_vec)
+        hits = retriever.search(question, limit=limit, query_vec=query_vec)
         return [p for _, p in hits], 0.0
-    hits = retriever.search(question, limit=MAX_PASSAGES)
+    hits = retriever.search(question, limit=limit)
     seconds = 0.0
     if provider is not None and (len(hits) < WEAK_HITS or hits[0][0] < WEAK_SCORE):
         result = provider.generate_json(_TERMS_SYSTEM, question, SearchTerms.model_json_schema())
@@ -149,7 +153,7 @@ def gather(
         # Merge by best score per passage across the original and extra searches.
         best: dict[tuple[str, str | None, str], tuple[float, Passage]] = {}
         for query in [question, *extra]:
-            for score, p in retriever.search(query, limit=MAX_PASSAGES):
+            for score, p in retriever.search(query, limit=limit):
                 key = (p.id, p.heading, p.text[:50])
                 if key not in best or best[key][0] < score:
                     best[key] = (score, p)
@@ -160,7 +164,7 @@ def gather(
             if per_note.get(p.id, 0) < 2:
                 per_note[p.id] = per_note.get(p.id, 0) + 1
                 kept.append((score, p))
-        hits = kept[:MAX_PASSAGES]
+        hits = kept[:limit]
     return [p for _, p in hits], seconds
 
 
@@ -171,7 +175,10 @@ def _prompt(question: str, found: list[Passage]) -> str:
         kind = p.record.category
         date = p.record.metadata.get("published") or p.record.metadata.get("observed_at")
         meta = f"{kind}" + (f", {date}" if date else "")
-        blocks.append(f"[{n}] {where} ({meta})\n{p.text.strip()}")
+        text = p.text.strip()
+        if len(text) > PASSAGE_CHARS:
+            text = text[:PASSAGE_CHARS].rsplit(" ", 1)[0] + " …"
+        blocks.append(f"[{n}] {where} ({meta})\n{text}")
     return "Passages:\n\n" + "\n\n".join(blocks) + f"\n\nQuestion: {question}"
 
 
@@ -207,6 +214,7 @@ def ask(
     language: str,
     retriever: Retriever | None = None,
     query_vec: Sequence[float] | None = None,
+    max_passages: int = MAX_PASSAGES,
 ) -> Answer:
     question = question.strip()
     if not question:
@@ -214,7 +222,7 @@ def ask(
     if len(question) > 1000:
         raise AskError("Question too long", "ask.too_long")
     retriever = retriever or Retriever(index)
-    found, seconds = gather(retriever, question, provider, query_vec)
+    found, seconds = gather(retriever, question, provider, query_vec, max_passages)
     if not found:
         return Answer(question, "", found=False, seconds=seconds)
 

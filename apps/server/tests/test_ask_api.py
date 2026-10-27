@@ -113,3 +113,14 @@ def test_challenge_rejects_non_insights(client):
     assert r.status_code == 400
     r = client.post("/api/challenge", json={"id": "wiki/nope"})
     assert r.status_code == 404
+
+
+def test_preview_lists_notes_without_the_ai(client):
+    from wooju_agents.llm import LLMError
+
+    client.app.state.engine.provider_override = Scripted(
+        LLMError("off", "llm.ollama_off", retryable=True)
+    )
+    r = client.post("/api/ask/preview", json={"question": "자사주 소각 기한"})
+    assert r.status_code == 200
+    assert r.json()["items"][0]["id"] == "wiki/concepts/treasury"

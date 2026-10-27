@@ -19,7 +19,7 @@ export function mockFetch(routes: ReadonlyArray<MockRoute>) {
     const key = url.pathname + url.search
     for (const route of routes) {
       if (route.match.test(key)) {
-        const body = typeof route.body === 'function' ? route.body(url) : route.body
+        const body = await (typeof route.body === 'function' ? route.body(url) : route.body)
         return new Response(JSON.stringify(body), {
           status: route.status ?? 200,
           headers: { 'content-type': 'application/json' },

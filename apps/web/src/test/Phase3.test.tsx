@@ -295,3 +295,23 @@ describe('Send from your phone', () => {
     expect(await screen.findByText('@my_wooju_bot')).toBeInTheDocument()
   })
 })
+
+describe('Ask preview', () => {
+  it('shows the notes being read while the answer is written', async () => {
+    let release = () => {}
+    const gate = new Promise<void>((r) => {
+      release = r
+    })
+    mockFetch([
+      { match: /^\/api\/ask\/preview$/, body: { items: [{ id: 'sources/value-up', title: '코리아 밸류업 지수 발표', category: 'source' }] } },
+      {
+        match: /^\/api\/ask$/,
+        body: () => gate.then(() => answer),
+      },
+    ])
+    render(<AskPage initial="밸류업 지수 종목 수" />)
+    const reading = (await screen.findByText(/Reading/)).closest('p')!
+    expect(reading).toHaveTextContent('코리아 밸류업 지수 발표')
+    release()
+  })
+})

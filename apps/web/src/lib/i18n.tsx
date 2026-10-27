@@ -117,6 +117,7 @@ const STRINGS = {
     en: 'Not in your notes:',
   },
   askBasedOn: { ko: '근거', en: 'Based on' },
+  askReading: { ko: '읽고 있는 노트', en: 'Reading' },
   askRelated: {
     ko: 'AI가 근거를 콕 집지 못했어요. 답할 때 읽은 노트예요:',
     en: 'The AI didn’t point to specific notes. These are the notes it read:',

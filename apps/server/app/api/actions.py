@@ -662,6 +662,15 @@ async def ask_question(body: AskRequest, engine: EngineDep) -> dict[str, Any]:
     return answer.to_dict()
 
 
+@actions_router.post("/ask/preview", tags=["ask"])
+async def ask_preview(body: AskRequest, engine: EngineDep) -> dict[str, Any]:
+    """Notes the answer will likely read; instant, shown while the AI works."""
+    try:
+        return {"items": await engine.ask_preview(body.question)}
+    except SetupError as exc:
+        raise _fail_from(engine, exc) from exc
+
+
 class ChallengeRequest(BaseModel):
     id: str
 
