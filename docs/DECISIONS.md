@@ -296,6 +296,12 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   original's own sentences and a line saying no note vouches for it. A
   sentence that cites no excerpt is dropped. It costs one more model call, only
   when something is missing; the app says "looking in the originals" meanwhile.
+- The question is the task given to the model; the notes' "missing" sentence
+  follows it, labelled as being about the notes. Given as the task itself
+  ("...is not in the documents"), it made the model say the excerpts lacked
+  it too. Excerpts are ranked by rare words (squared weight), each Korean word
+  counted once. Measured with qwen3.5:9b (`evals/ask_quality.py --only
+  original`): 3 of 3 details found only in originals, about 30 s each.
 
 ## New versions of a saved source
 
