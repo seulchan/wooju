@@ -99,6 +99,8 @@ class SearchMixin:
         """Let the topics agent file new notes, once per index version."""
         if self._swept_at == self.index.indexed_at or self._sweeping:
             return
+        if (await self.retriever()).pending:
+            return  # some notes have no vector yet: filing them now would skip them for good
         self._sweeping = True
         try:
             await self.sweep_topics()
