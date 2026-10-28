@@ -3,7 +3,10 @@
 All notable changes to Wooju. Versions follow [Semantic Versioning](https://semver.org);
 until 1.0, a minor version may change how things work.
 
-## Unreleased
+## 0.5.0 — 2026-10-28
+
+Notes you can check against the original, long files read to the end, and
+answers that look in the originals when your notes fall short.
 
 - Every key point of a new source note shows the original's own sentence that
   states it. The AI picks the sentence; the app copies it from the original,
@@ -12,7 +15,6 @@ until 1.0, a minor version may change how things work.
   local AI), instead of only their first pages. The inbox shows how far a long
   file has got, questions can be asked in between, and a file that had to
   wait continues where it stopped.
-
 - Ask looks in the originals: when your notes don't cover part of a question,
   Wooju reads the original documents behind the notes it found and answers
   that part from them, shown apart and quoted, since no note vouches for it.
@@ -22,7 +24,9 @@ until 1.0, a minor version may change how things work.
 - Settings shows this month's usage of an OpenAI or Claude API key: calls and
   tokens per model, and an estimated cost where the model's price is known.
 - Korean PDFs whose text comes out with a space between every syllable
-  ("주 요  뉴 스") are read as normal text.
+  ("주 요  뉴 스") are read as normal text, and invisible control characters
+  in a file no longer show up as "�".
+- Settings shows the build an installed app was made from, next to the version.
 
 ## 0.4.0 — 2026-10-28
 

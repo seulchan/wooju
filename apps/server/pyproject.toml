@@ -1,6 +1,6 @@
 [project]
 name = "wooju-server"
-version = "0.4.0"
+version = "0.5.0"
 description = "Local-first FastAPI server for Wooju: serves the Brain index and UI API."
 requires-python = ">=3.11"
 license = "Apache-2.0"

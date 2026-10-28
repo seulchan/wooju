@@ -8,7 +8,7 @@ and quick memos; a local AI organizes each one into a note, and Wooju helps you
 think with what you saved: ask questions of your own notes, write your own ideas
 on top of them, and keep them from fading.
 
-**Status:** 0.4.0, the first public version. [Download it](https://github.com/seulchan/wooju/releases/latest)
+**Status:** 0.5.0. [Download it](https://github.com/seulchan/wooju/releases/latest)
 for an Apple Silicon Mac, or see [CONTRIBUTING.md](CONTRIBUTING.md) to build it yourself.
 
 ![Wooju's Home: add material, what needs attention, what you know](assets/readme/screen-home.png)
@@ -46,7 +46,7 @@ for an Apple Silicon Mac, or see [CONTRIBUTING.md](CONTRIBUTING.md) to build it 
 
 ## Getting started
 
-1. Download `Wooju_0.4.0_aarch64.dmg` from the
+1. Download `Wooju_0.5.0_aarch64.dmg` from the
    [latest release](https://github.com/seulchan/wooju/releases/latest), open it and drag
    Wooju into Applications.
 2. Open Wooju. The first time, macOS says it can't check the app, because Wooju is not
