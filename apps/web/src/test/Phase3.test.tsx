@@ -216,6 +216,7 @@ describe('Ask, partial answers', () => {
             event: 'answer',
             data: {
               ...answer,
+              question: 'What were the selection criteria?',
               found: false,
               missing: 'Selection criteria are not in your notes.',
               original_answer: 'Profitability and shareholder returns were used [3].',
@@ -243,10 +244,10 @@ describe('Ask, partial answers', () => {
   })
 
   it('shows no warning for a full answer', async () => {
-    mockFetch([{ match: /^\/api\/ask\/stream$/, sse: [{ event: 'answer', data: { ...answer, missing: '' } }] }])
+    const full = { ...answer, question: 'How many companies are in the index?', missing: '' }
+    mockFetch([{ match: /^\/api\/ask\/stream$/, sse: [{ event: 'answer', data: full }] }])
     render(<AskPage initial="value-up count" />)
-    await screen.findAllByRole('heading', { name: answer.question })
-    const newest = screen.getAllByRole('article')[0]
+    const newest = await screen.findByRole('article', { name: full.question })
     expect(newest.textContent).not.toMatch(/Not in your notes/)
   })
 })
