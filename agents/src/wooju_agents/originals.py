@@ -26,7 +26,8 @@ from pydantic import ValidationError
 from brain_core.records import Record
 
 from . import evidence
-from .llm import Provider
+from .llm import LLMError, Provider
+from .text import detect_language
 
 MAX_DOCUMENTS = 3
 MAX_EXCERPTS = 6
@@ -132,6 +133,23 @@ class FromOriginals:
     seconds: float
 
 
+def _other_language(question: str, documents: Sequence[tuple[Record, str]]) -> bool:
+    asked = detect_language(question)
+    return any(
+        (lang := detect_language(text)) is not None and lang != asked for _, text in documents
+    )
+
+
+def _search_terms(question: str, provider: Provider) -> list[str]:
+    from .ask import _TERMS_SYSTEM, SearchTerms
+
+    try:
+        result = provider.generate_json(_TERMS_SYSTEM, question, SearchTerms.model_json_schema())
+        return SearchTerms.model_validate(result.data).queries
+    except (ValidationError, LLMError):
+        return []
+
+
 def answer_from_originals(
     question: str,
     missing: str,
@@ -160,7 +178,12 @@ def answer_from_originals(
             break
     if not documents:
         return None
-    picked = excerpts(f"{question} {missing}", documents)
+    query = f"{question} {missing}"
+    if _other_language(question, documents):
+        # Words cannot match across languages (a Korean question, an English
+        # original): the model writes search terms in both first.
+        query += " " + " ".join(_search_terms(question, provider))
+    picked = excerpts(query, documents)
     if not picked:
         return None
     blocks = "\n\n".join(

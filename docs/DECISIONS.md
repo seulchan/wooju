@@ -287,7 +287,10 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   a missing part (or cites nothing), Ask reads the originals (`library/`) of
   the source notes it already found, at most three, and answers only that
   part from the best-matching excerpts (word and Korean two-syllable matching,
-  with a passage of context). It never searches the whole library: notes come
+  with a passage of context). When the question and an original are in
+  different languages, the model first writes search terms in both (one short
+  call), since words cannot match across languages; measured miss before this:
+  a Korean question about an English Wikipedia original. It never searches the whole library: notes come
   first, then the originals behind them (verinote's order).
 - That answer is shown apart, under "Found in the originals", with the
   original's own sentences and a line saying no note vouches for it. A

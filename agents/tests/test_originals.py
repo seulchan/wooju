@@ -159,3 +159,34 @@ def test_korean_terms_match_with_particles():
     from wooju_agents.originals import _terms
 
     assert "금리" in _terms("기준금리를") and "금리" in _terms("금리는")
+
+
+def test_a_question_in_another_language_gets_search_terms_first(tmp_path):
+    (tmp_path / "sources").mkdir()
+    (tmp_path / "library").mkdir()
+    (tmp_path / "sources" / "value-up.md").write_text(NOTE, encoding="utf-8")
+    (tmp_path / "library" / "value-up.txt").write_text(ORIGINAL, encoding="utf-8")
+
+    def original_reply(user):
+        n = int(re.search(r"\[(\d+)\] [^\n]*\(original\)\n[^\n]*cut-off", user).group(1))
+        return say(("업종 상위 절반이 기준이었어요.", [n]))
+
+    class Terms(Provider):
+        def generate_json(self, system, user, schema, on_text=None):
+            if "queries" in schema["properties"] and len(self.calls) > 1:
+                self.calls.append((system, user, schema))
+                return LLMResult({"queries": ["return on equity cut-off"]}, "", 0.1, "f", "f")
+            return super().generate_json(system, user, schema, on_text)
+
+    provider = Terms(
+        say(("구성종목은 100개예요.", [1]), missing="ROE 기준은 노트에 없어요."), original_reply
+    )
+    answer = ask(
+        index_of(tmp_path),
+        "밸류업 지수의 자기자본이익률 기준은 뭐였어?",
+        provider,
+        language="ko",
+        read_original=read(tmp_path),
+    )
+    assert answer.original_answer.startswith("업종 상위 절반이 기준이었어요.")
+    assert "top half of each industry" in answer.original_citations[0].excerpt
