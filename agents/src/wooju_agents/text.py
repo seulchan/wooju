@@ -35,6 +35,30 @@ def normalize_korean(text: str) -> str:
     return _DIGIT_UNIT.sub(r"\1\2", text)
 
 
+_SPACED = re.compile(r"[가-힣] (?=[가-힣])")
+_ATTACHED = re.compile(r"[가-힣](?=[가-힣])")
+
+
+def unspace_hangul(line: str) -> str:
+    """Undo PDF text that puts a space between every Korean syllable.
+
+    Some PDFs extract as "주 요  투 자 은 행": one space inside a word, two
+    between words. Such a line has more spaced syllables than attached ones;
+    it gets its single spaces removed and double spaces made single. Normal
+    lines are left alone.
+    """
+    spaced = len(_SPACED.findall(line))
+    if spaced < 3 or spaced <= len(_ATTACHED.findall(line)):
+        return line
+    indent = line[: len(line) - len(line.lstrip())]
+    words = re.split(r" {2,}", line.strip())
+    joined = " ".join(w.replace(" ", "") for w in words)
+    # The space after punctuation or a bullet was lost with the others.
+    joined = re.sub(r"([,.:;)])(?=[^\s\d,.:;)])", r"\1 ", joined)
+    joined = re.sub(r"^([○■□▢※•·◦●▪-])(?=\S)", r"\1 ", joined)
+    return indent + joined
+
+
 def first_url(text: str) -> str | None:
     m = _URL.search(text)
     return m.group(0).rstrip(".,") if m else None
@@ -89,11 +113,12 @@ def extract_text(path: Path, max_chars: int = 20000) -> tuple[str, str | None]:
                 break  # enough text; long books are not read past the cap anyway
             pages.append(page.extract_text() or "")
             size += len(pages[-1])
-        text = "\n".join(pages)
+        text = "\n".join(unspace_hangul(line) for line in "\n".join(pages).splitlines())
         meta_title = (reader.metadata or {}).get("/Title") if reader.metadata else None
         title = str(meta_title) if meta_title else None
     else:
         raise UnsupportedFile(path.suffix)
+    text = text.replace("\x00", " ")  # some PDFs put NUL where a space belongs
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text[:max_chars], title
 

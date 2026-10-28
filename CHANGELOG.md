@@ -21,6 +21,8 @@ until 1.0, a minor version may change how things work.
   earlier version is retired and notes resting on it are flagged on Home.
 - Settings shows this month's usage of an OpenAI or Claude API key: calls and
   tokens per model, and an estimated cost where the model's price is known.
+- Korean PDFs whose text comes out with a space between every syllable
+  ("주 요  뉴 스") are read as normal text.
 
 ## 0.4.0 — 2026-10-28
 
