@@ -156,6 +156,7 @@ _LANGUAGE_NAME = {"ko": "Korean", "en": "English"}
 LOCAL_PART_TOKENS = 5500
 CLOUD_PART_TOKENS = 15000
 MAX_PARTS = 16  # a longer source is read up to here; the note says so
+MIN_COMBINED_POINTS = 6  # a long source keeps at least this many points (when it has them)
 MAX_SOURCE_CHARS = 200_000
 _TRUNCATED = {
     "ko": "원문이 길어서 앞부분만 읽고 정리했어요.",
@@ -190,7 +191,7 @@ _SYSTEM_FIRST = (
 _SYSTEM_COMBINE = (
     "These numbered points were taken from all parts of one source, in order. "
     "Write one_line_summary: one sentence with the source's main claim and its key number "
-    "or date. Choose up to ten points, by number, that together best cover the source; "
+    "or date. Choose six to ten points, by number, that together best cover the source; "
     "leave out repeats. Write limitations: what the source does not show, or reasons to be "
     "careful with it. Use only the points; add nothing. Write in {language}."
 )
@@ -536,7 +537,13 @@ class IngestRun:
         else:
             summary, limitations = combined["one_line_summary"], list(combined["limitations"])
             picks = sorted({n for n in combined["chosen"] if 1 <= n <= len(points)})
-            chosen = [points[n - 1] for n in picks] or points[:8]
+            # Too few picked (a small model may stop at four): add points spread
+            # evenly over the source, so a long source is not summed up in a handful.
+            need = min(MIN_COMBINED_POINTS, len(points)) - len(picks)
+            if need > 0:
+                rest = [n for n in range(1, len(points) + 1) if n not in picks]
+                picks += [rest[(i * len(rest)) // need] for i in range(need)]
+            chosen = [points[n - 1] for n in sorted(picks)]
         if self.truncated:
             limitations.append(_TRUNCATED.get(self.language, _TRUNCATED["en"]))
         return NoteDraft(

@@ -419,3 +419,29 @@ def test_a_source_longer_than_the_limit_says_so(tmp_path, monkeypatch):
     (tmp_path / "inbox" / "long.txt").write_text(LONG, encoding="utf-8")
     note = note_of(ingest.ingest_file(tmp_path, "inbox/long.txt", Parts(), language="en"))
     assert "only its first part was read" in note
+
+
+def test_too_few_combined_points_are_topped_up_across_the_source(tmp_path):
+    from brain_core.history import ensure_repo
+    from wooju_agents.ingest import IngestRun
+
+    class Stingy(Parts):
+        def generate_json(self, system, user, schema):
+            if schema.get("title") == "Combined":
+                self.calls.append((system, user, schema))
+                data = {"one_line_summary": "Banks led.", "chosen": [1], "limitations": []}
+                return LLMResult(data, "", 0.01, self.name, self.model)
+            return super().generate_json(system, user, schema)
+
+    ensure_repo(tmp_path)
+    (tmp_path / "inbox").mkdir()
+    long = "\n\n".join(LONG.split("\n\n") * 3)
+    (tmp_path / "inbox" / "long.txt").write_text(long, encoding="utf-8")
+    run = IngestRun(tmp_path, "inbox/long.txt", Stingy(), language="en")
+    while not run.finished:
+        run.step()
+    kept = [p for part in run._state["parts"] for p in part["points"]]
+    draft = run.draft()
+    assert len(kept) > 6 and len(draft.points) == 6
+    assert draft.points[0].text == kept[0]["text"]  # the model's own pick stays
+    assert draft.points[-1].text != kept[5]["text"]  # the rest is spread, not the first six

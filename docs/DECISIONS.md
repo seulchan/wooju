@@ -265,7 +265,8 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   not prove the point is right, so the note shows both side by side.
 - A source too long for one call is read in parts (each within the ~6K-token
   budget on the Mac, bigger with an API key), up to 16 parts; the points of
-  all parts are then combined into the summary and up to ten points. Before,
+  all parts are then combined into the summary and six to ten points (topped
+  up evenly across the source when the model picks fewer). Before,
   a local model read only the first ~6K tokens. A longer source still says
   that only its first part was read.
 - The app runs one part per step through the AI lane, so a question waits for
@@ -273,6 +274,11 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   got. Each finished step is saved in the app's data folder; a file that has
   to wait (Ollama busy or off) continues from the last finished part. The
   saved steps are removed when the note is saved and expire after 14 days.
+- Measured with qwen3.5:9b on four real files (`evals/ingest_evidence.py`):
+  30 of 30 quotes are the original's words and each says what its point
+  says; 5 points were left out; a 19K-character Korean PDF in 3 parts took
+  about 5 minutes. The 9B model often copies the sentence as the point, so
+  point and quote can read alike; that is accepted, not hidden.
 
 ## Sample notes
 
