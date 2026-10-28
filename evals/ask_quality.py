@@ -50,7 +50,7 @@ def score(ranks: list[int | None], k: int) -> tuple[float, float]:
     return hit, mrr
 
 
-def diagnose_original(item, row, retriever, provider, read_original) -> None:
+def diagnose_original(item, row, retriever, provider, read_original, missing) -> None:
     """Show each step of the look in the originals, to see where it fails."""
     from wooju_agents import originals as o
     from wooju_agents.ask import AnswerDraft, gather
@@ -81,9 +81,12 @@ def diagnose_original(item, row, retriever, provider, read_original) -> None:
     blocks = "\n\n".join(
         f"[{n}] {e.record.title} (original)\n{e.text}" for n, e in enumerate(picked, 1)
     )
-    system = o._SYSTEM.format(missing=item["q"], language="Korean")
+    system = o._SYSTEM.format(language="Korean")
     result = provider.generate_json(
-        system, f"Excerpts:\n\n{blocks}\n\nQuestion: {item['q']}", AnswerDraft.model_json_schema()
+        system,
+        f"Excerpts:\n\n{blocks}\n\nQuestion: {item['q']}"
+        + (f"\nWhat the notes lacked: {missing.strip()}" if missing.strip() else ""),
+        AnswerDraft.model_json_schema(),
     )
     print(f"        model said: {result.data}")
 
@@ -223,7 +226,7 @@ def main() -> None:
             flat = " ".join(answer.original_answer.split())
             print(f"        from originals: {flat[:220]}")
         if kind == "original" and not ok:
-            diagnose_original(item, row, retriever, provider, read_original)
+            diagnose_original(item, row, retriever, provider, read_original, answer.missing)
     n, m = len(questions), len(answerable)
     print(
         f"\n  cites an expected note {cited_expected / m:.0%}   cites anything {cited_any / m:.0%}"

@@ -106,8 +106,9 @@ def test_the_original_answers_what_the_notes_left_out(brain):
     assert c.n == 2 and c.category == "original" and c.id == "sources/value-up"
     assert "top half of each industry" in c.excerpt and c.excerpt in ORIGINAL
     assert partials and partials[-1].checking_originals and partials[-1].partial
-    system = provider.calls[-1][0]
-    assert "ROE cut-off is not in the notes" in system
+    system, user, _ = provider.calls[-1]
+    assert "about the notes, not about these excerpts" in system
+    assert user.endswith("What the notes lacked: The ROE cut-off is not in the notes.")
 
 
 def test_a_complete_answer_does_not_read_the_originals(brain):
