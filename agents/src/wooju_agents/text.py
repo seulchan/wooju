@@ -35,6 +35,7 @@ def normalize_korean(text: str) -> str:
     return _DIGIT_UNIT.sub(r"\1\2", text)
 
 
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\ufffd]")
 _SPACED = re.compile(r"[가-힣] (?=[가-힣])")
 _ATTACHED = re.compile(r"[가-힣](?=[가-힣])")
 
@@ -118,7 +119,9 @@ def extract_text(path: Path, max_chars: int = 20000) -> tuple[str, str | None]:
         title = str(meta_title) if meta_title else None
     else:
         raise UnsupportedFile(path.suffix)
-    text = text.replace("\x00", " ")  # some PDFs put NUL where a space belongs
+    # Some PDFs put NUL or other control characters where a space belongs;
+    # left in, they show as "�" and hide the sentence ends between words.
+    text = _CONTROL.sub(" ", text)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text[:max_chars], title
 

@@ -37,3 +37,11 @@ def test_pdf_text_with_a_space_between_every_korean_syllable_is_rejoined():
     normal = "   ○ AI 투자, 위험관리 필요하나 구체적 조치와 관련해서는 한계가 존재"
     assert unspace_hangul(normal) == normal  # ordinary Korean is left alone
     assert unspace_hangul("한 국") == "한 국"  # too little to tell
+
+
+def test_control_characters_become_spaces(tmp_path):
+    from wooju_agents.text import extract_text
+
+    f = tmp_path / "a.txt"
+    f.write_text("이란,\x00종전\x00조건.\x0b다음�문장.", encoding="utf-8")
+    assert extract_text(f)[0] == "이란, 종전 조건. 다음 문장."
