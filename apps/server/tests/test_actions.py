@@ -9,6 +9,7 @@ from __future__ import annotations
 import time
 
 import pytest
+from fake_ai import cited
 from fastapi.testclient import TestClient
 
 from app import settings as app_settings
@@ -35,7 +36,7 @@ class FakeProvider:
         self.data = data
 
     def generate_json(self, system, user, schema):
-        return LLMResult(self.data, "", 0.0, self.name, self.model)
+        return LLMResult(cited(self.data, user, schema), "", 0.0, self.name, self.model)
 
 
 @pytest.fixture
@@ -113,6 +114,10 @@ def test_drop_a_file_and_it_is_saved_as_a_source(client, tmp_path):
     text = note.read_text()
     # The material is English, so the note is too (headings follow it).
     assert "## One-line Summary" in text and "67" in text
+    assert "\n  > " in text  # the key point is followed by the source's own sentence
+    progress = tmp_path / "app-data" / "ingest-progress"
+    assert not list(progress.glob("*.json"))  # nothing left to continue once saved
+    assert jobs[0]["progress"] is None
     assert not list((brain / "inbox").glob("*.txt"))
     assert (brain / "library/korea-value-up-index-launch.txt").is_file()
 
@@ -395,7 +400,8 @@ def test_pick_folder(client, monkeypatch):
 
 PAGE = (
     "<html><head><title>Value-up</title></head><body><p>"
-    + "Korea Value-up Index to begin publication next week. 100 stocks. " * 5
+    + "Korea Value-up Index to begin publication next week. 100 stocks: 67 on Kospi, 33 on Kosdaq. "
+    * 5
     + "</p></body></html>"
 ).encode()
 

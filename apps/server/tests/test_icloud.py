@@ -6,6 +6,7 @@ import time
 
 import anyio
 import pytest
+from fake_ai import cited
 from fastapi.testclient import TestClient
 
 from app import icloud
@@ -21,14 +22,14 @@ DRAFT = {
     "key_points": ["67 on Kospi"],
     "limitations": [],
 }
-LONG = ("Korea Value-up Index to begin publication next week. 100 stocks. " * 30).encode()
+LONG = ("Korea Value-up Index starts next week. 100 stocks: 67 on Kospi. " * 30).encode()
 
 
 class Fake:
     name, model = "fake", "fake"
 
     def generate_json(self, system, user, schema):
-        return LLMResult(DRAFT, "", 0.0, self.name, self.model)
+        return LLMResult(cited(DRAFT, user, schema), "", 0.0, self.name, self.model)
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from fake_ai import cited
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -33,7 +34,7 @@ class Fake:
     name, model = "fake", "fake"
 
     def generate_json(self, system, user, schema):
-        return LLMResult(DRAFT, "", 0.0, self.name, self.model)
+        return LLMResult(cited(DRAFT, user, schema), "", 0.0, self.name, self.model)
 
 
 @pytest.fixture

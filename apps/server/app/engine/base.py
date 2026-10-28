@@ -44,6 +44,8 @@ class Job:
     # Existing notes that say nearly the same thing ({id, title}); a question, never a merge.
     similar: list[dict[str, str]] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)  # topics it was filed under
+    # A long file is read in parts: {"done": n, "total": m} while it is being read.
+    progress: dict[str, int] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

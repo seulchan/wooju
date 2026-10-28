@@ -82,7 +82,14 @@ def extract_text(path: Path, max_chars: int = 20000) -> tuple[str, str | None]:
         from pypdf import PdfReader
 
         reader = PdfReader(str(path))
-        text = "\n".join((page.extract_text() or "") for page in reader.pages[:40])
+        pages: list[str] = []
+        size = 0
+        for page in reader.pages[:300]:
+            if size > max_chars:
+                break  # enough text; long books are not read past the cap anyway
+            pages.append(page.extract_text() or "")
+            size += len(pages[-1])
+        text = "\n".join(pages)
         meta_title = (reader.metadata or {}).get("/Title") if reader.metadata else None
         title = str(meta_title) if meta_title else None
     else:

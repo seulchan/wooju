@@ -84,7 +84,8 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - Ollama's default context for the embedding model reserved ~3.5 GB and,
   together with the 9B model, ran the Mac's GPU out of memory. Embeddings now
   use a 2K context, meaning-search indexing pauses while a file is organized,
-  and a local model reads at most ~6K tokens of a long file (the note says so).
+  and one local model call reads at most ~6K tokens of a file (a long file
+  is read in parts; see "Key points with their evidence").
 - All AI work goes through one lane, one task at a time: organizing a file,
   each small batch of meaning-search indexing, answering a question, and
   challenging an insight. Files are organized in arrival order; a question
@@ -248,6 +249,30 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - `/api/ask/stream` sends server-sent events (`partial`, `answer`, `error`);
   `/api/ask` stays for Telegram, Claude (MCP) and the evals. API providers
   (OpenAI, Anthropic) answer in one piece; they are fast enough.
+
+## Key points with their evidence
+
+- Every key point of a source note is followed by the source's own sentence
+  that states it, as a quote under the point. The model never writes the
+  quote: the source is shown as numbered passages (about a sentence each) and
+  the model names the passages; code cuts the quote from the original. A
+  quote therefore cannot be invented, and a small local model only has to
+  pick numbers. Idea from verinote (MPL-2.0; reimplemented, no code copied).
+- A point whose passages are missing, too long (over three in a row), or do
+  not contain the numbers the point states gets one more model call that only
+  re-picks passages; otherwise it is left out. Numbers are where a summary
+  most often drifts and the one thing code can check. A matching quote does
+  not prove the point is right, so the note shows both side by side.
+- A source too long for one call is read in parts (each within the ~6K-token
+  budget on the Mac, bigger with an API key), up to 16 parts; the points of
+  all parts are then combined into the summary and up to ten points. Before,
+  a local model read only the first ~6K tokens. A longer source still says
+  that only its first part was read.
+- The app runs one part per step through the AI lane, so a question waits for
+  one part, not the whole file, and the inbox shows how far a long file has
+  got. Each finished step is saved in the app's data folder; a file that has
+  to wait (Ollama busy or off) continues from the last finished part. The
+  saved steps are removed when the note is saved and expire after 14 days.
 
 ## Sample notes
 

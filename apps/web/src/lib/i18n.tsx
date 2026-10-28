@@ -41,6 +41,7 @@ const STRINGS = {
   choose: { ko: '파일 고르기', en: 'Choose files' },
   queued: { ko: '기다리는 중', en: 'Waiting' },
   working: { ko: '정리하는 중', en: 'Working' },
+  readingLong: { ko: '긴 글을 나눠 읽는 중 · {pct}%', en: 'Reading a long file in parts · {pct}%' },
   waiting: { ko: 'AI 준비 기다리는 중', en: 'Waiting for AI' },
   done: { ko: '저장했어요', en: 'Saved' },
   failed: { ko: '실패', en: 'Failed' },

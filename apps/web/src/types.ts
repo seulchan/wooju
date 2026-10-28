@@ -315,6 +315,8 @@ export interface Job {
   similar?: { id: string; title: string }[]
   /** Topics the note was filed under. */
   topics?: string[]
+  /** A long file is read in parts: how many are done, while it is being read. */
+  progress?: { done: number; total: number } | null
 }
 
 export interface ProposalView {

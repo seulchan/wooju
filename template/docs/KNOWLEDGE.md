@@ -60,6 +60,15 @@ Adapt the body to the source type. Do not force paper-specific sections onto cod
 
 A source note should answer: **What does this source actually support?**
 
+Under each key idea, quote the source's own sentence that states it, word for word, as an indented quote line:
+
+```markdown
+- Most forgetting happens within the first days.
+  > Most of what is forgotten is lost within the first few days after learning.
+```
+
+A key idea without a sentence that states it does not belong in the source note.
+
 ## `wiki/` — durable world knowledge
 
 `wiki/` contains source-independent understanding synthesized across one or more sources, implementations, or experiences.

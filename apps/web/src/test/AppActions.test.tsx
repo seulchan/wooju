@@ -203,4 +203,31 @@ describe('Drop zone', () => {
     const [, init] = calls(fetchMock, 'POST', '/api/inbox')[0]
     expect((init as RequestInit).body).toBeInstanceOf(FormData)
   })
+
+  it('shows how far a long file has been read', async () => {
+    mockFetch([
+      {
+        match: /^\/api\/jobs/,
+        body: {
+          items: [
+            {
+              id: 'j1',
+              file: 'inbox/book.pdf',
+              state: 'working',
+              message: null,
+              proposal_id: null,
+              created_at: '',
+              progress: { done: 3, total: 8 },
+            },
+          ],
+        },
+      },
+    ])
+    render(
+      <LangProvider lang="ko">
+        <DropZone />
+      </LangProvider>,
+    )
+    expect(await screen.findByText('긴 글을 나눠 읽는 중 · 38%')).toBeInTheDocument()
+  })
 })

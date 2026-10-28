@@ -6,6 +6,7 @@ import threading
 import time
 
 import pytest
+from fake_ai import cited
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -47,7 +48,7 @@ class SlowProvider:
             data = {"queries": ["value-up"]}
         else:
             data = DRAFT
-        return LLMResult(data, "", 0.3, self.name, self.model)
+        return LLMResult(cited(data, user, schema), "", 0.3, self.name, self.model)
 
 
 @pytest.fixture

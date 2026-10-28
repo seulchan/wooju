@@ -28,3 +28,9 @@ def make_brain(tmp_path: Path):
         return root
 
     return _make
+
+
+@pytest.fixture(autouse=True)
+def _app_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep app data (e.g. ingest progress) out of the real home folder."""
+    monkeypatch.setenv("WOOJU_DATA_DIR", str(tmp_path / "app-data"))

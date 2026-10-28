@@ -162,7 +162,14 @@ export function DropZone() {
           {jobs.slice(0, 8).map((job) => (
             <li key={job.id} className={`job job-${job.state}`}>
               <span className="job-file">{job.file.replace(/^inbox\//, '')}</span>
-              <span className="job-state">{label[job.state]}</span>
+              <span className="job-state">
+                {job.state === 'working' && job.progress
+                  ? t('readingLong').replace(
+                      '{pct}',
+                      String(Math.round((100 * job.progress.done) / Math.max(job.progress.total, 1))),
+                    )
+                  : label[job.state]}
+              </span>
               {job.message ? <span className="job-message">{job.message}</span> : null}
               {job.topics?.length ? (
                 <span className="job-message">

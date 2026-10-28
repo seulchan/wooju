@@ -18,7 +18,7 @@ from wooju_agents.capture import (
     save_link,
 )
 from wooju_agents.conflicts import add_section, find_conflicts, render_section
-from wooju_agents.ingest import IngestError, inbox_files, ingest_file
+from wooju_agents.ingest import IngestError, IngestRun, inbox_files
 from wooju_agents.llm import (
     LLMError,
     OllamaProvider,
@@ -198,17 +198,25 @@ class IngestMixin:
             job.state, job.title = "done", existing.title
             job.message = render("job.duplicate", self.language(), title=existing.title)
             return
+        run: IngestRun | None = None
         try:
             provider = self.provider()
-            async with self.ai_lane:
-                proposal = await asyncio.to_thread(
-                    ingest_file,
-                    brain,
-                    job.file,
-                    provider,
-                    language=self.fixed_content_language(),  # None: the material's own
-                    ui_language=self.language(),
-                )
+            run = await asyncio.to_thread(
+                IngestRun,
+                brain,
+                job.file,
+                provider,
+                language=self.fixed_content_language(),  # None: the material's own
+                ui_language=self.language(),
+            )
+            # One step (one part of the source) at a time: a question can go in
+            # between parts, and a long file shows how far it has got.
+            while not run.finished:
+                job.progress = {"done": run.done, "total": run.steps} if run.steps > 1 else None
+                async with self.ai_lane:
+                    await asyncio.to_thread(run.step)
+            job.progress = None
+            proposal = await asyncio.to_thread(run.proposal)
         except LLMError as exc:
             if exc.retryable:
                 job.attempts += 1
@@ -230,6 +238,8 @@ class IngestMixin:
             job.conflicts = count
             job.note_id = note.path.removesuffix(".md")
         self.store.save(proposal)
+        if run is not None:
+            run.forget()  # saved: the steps are not needed to continue any more
         job.proposal_id = proposal.id
         saved_title = split_frontmatter(note.content or "")[0].get("title") if note else None
         job.title = str(saved_title) if saved_title else proposal.title

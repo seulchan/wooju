@@ -3,6 +3,16 @@
 All notable changes to Wooju. Versions follow [Semantic Versioning](https://semver.org);
 until 1.0, a minor version may change how things work.
 
+## Unreleased
+
+- Every key point of a new source note shows the original's own sentence that
+  states it. The AI picks the sentence; the app copies it from the original,
+  so it cannot be made up. Points the original does not state are left out.
+- Long files are read to the end, in parts (up to about 16 × 6K tokens with the
+  local AI), instead of only their first pages. The inbox shows how far a long
+  file has got, questions can be asked in between, and a file that had to
+  wait continues where it stopped.
+
 ## 0.4.0 — 2026-10-28
 
 The first public version. Everything below is new since the start of the project.

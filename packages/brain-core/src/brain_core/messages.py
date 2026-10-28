@@ -28,6 +28,12 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "AI가 정리한 결과가 형식에 맞지 않아요. 다시 시도해 주세요.",
         "The AI's result didn't have the right shape. Please try again.",
     ),
+    "ingest.no_evidence": (
+        "AI가 정리한 내용의 근거 문장을 원문에서 찾지 못했어요. 다시 시도해 주세요. "
+        "계속 안 되면 설정에서 더 큰 AI 모델을 골라 보세요.",
+        "The sentences backing the AI's summary couldn't be found in the original. "
+        "Please try again; if it keeps happening, choose a larger AI model in Settings.",
+    ),
     # ask
     "ask.empty": ("질문을 입력해 주세요.", "Type a question first."),
     "ask.too_long": (
