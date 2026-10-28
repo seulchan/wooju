@@ -206,4 +206,16 @@ describe('Korean screens', () => {
     await userEvent.click(within(app).getByRole('radio', { name: '한국어' }))
     await waitFor(() => expect(posted(fetchMock, '/api/setup/language')).toEqual([{ app: 'ko' }]))
   })
+
+  it('shows the build the installed app was made from', async () => {
+    mockFetch([
+      { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
+      { match: /^\/api\/setup$/, body: { ...setup, version: '0.4.0', build: '8b6095e' } },
+    ])
+    render(<SettingsPage />)
+    expect(await screen.findByText('Wooju 0.4.0 (8b6095e)')).toBeInTheDocument()
+  })
 })

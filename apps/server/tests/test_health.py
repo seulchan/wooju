@@ -100,3 +100,13 @@ def test_only_requests_addressed_to_this_mac_are_answered(tmp_path, monkeypatch)
         assert client.get("/api/health").status_code == 200
         assert client.get("/api/health", headers={"Host": "127.0.0.1:48731"}).status_code == 200
         assert client.get("/api/health", headers={"Host": "evil.example.com"}).status_code == 400
+
+
+def test_setup_reports_the_build():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as c:
+        body = c.get("/api/setup").json()
+    assert body["version"] and body["build"]  # "dev" when run from source

@@ -28,6 +28,10 @@ npm run build --prefix apps/web
 
 step "2/4 Python 서버를 실행 파일 하나로 묶기"
 uv sync --all-packages
+# The build ID shown in Settings, so it is plain which code an installed app runs.
+BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+git diff --quiet HEAD 2>/dev/null || BUILD_ID="$BUILD_ID+changes"
+printf '# Written by scripts/build-mac.sh; not in git.\nBUILD = "%s"\n' "$BUILD_ID" > apps/server/app/_build.py
 rm -rf build/pyinstaller
 uv run --with "pyinstaller>=6.10" pyinstaller --noconfirm --clean --onefile \
   --name wooju-server \

@@ -401,3 +401,6 @@ dist
 # Local Brains used during development never belong in this repository.
 /brains/
 evals/results/
+
+# Build ID written by scripts/build-mac.sh
+apps/server/app/_build.py

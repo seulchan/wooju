@@ -293,6 +293,8 @@ export interface SetupStatus {
   sample_notes?: number
   /** The app's version, e.g. "0.4.0". */
   version?: string
+  /** The git commit an installed app was built from; "dev" when run from source. */
+  build?: string
   ai: AiStatus
 }
 

@@ -74,7 +74,12 @@ export function SettingsPage() {
       <ClaudeSettings status={claude} />
       <FolderSettings setup={setup} onChange={() => window.location.reload()} />
       <LanguageSettings setup={setup} />
-      {setup.version ? <p className="hint app-version">Wooju {setup.version}</p> : null}
+      {setup.version ? (
+        <p className="hint app-version">
+          Wooju {setup.version}
+          {setup.build && setup.build !== 'dev' ? ` (${setup.build})` : ''}
+        </p>
+      ) : null}
     </div>
   )
 }

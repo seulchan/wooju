@@ -38,7 +38,7 @@ from wooju_agents.llm import (
     recommended_ollama_model,
 )
 
-from .. import __version__, claude_link, usage
+from .. import BUILD, __version__, claude_link, usage
 from .. import settings as app_settings
 from ..engine import Engine, SetupError
 
@@ -81,6 +81,7 @@ class SetupStatus(BaseModel):
     language_setting: str = "auto"  # what the user chose: auto / ko / en
     sample_notes: int = 0  # sample notes still in the Brain (0 = none)
     version: str = __version__
+    build: str = BUILD  # the commit an installed app was built from ("dev" from source)
     ai: AiStatus
 
 
