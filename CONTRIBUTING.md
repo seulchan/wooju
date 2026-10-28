@@ -3,7 +3,8 @@
 Thanks for helping. Read [AGENTS.md](AGENTS.md) first: it holds the rules every
 change follows (the Brain is written only through proposals, user-facing text is
 for non-developers, all checks pass before finishing). Settled decisions and the
-reasons for them are in [docs/DECISIONS.md](docs/DECISIONS.md).
+reasons for them are in [docs/DECISIONS.md](docs/DECISIONS.md); what is planned
+next, and what is deliberately not, is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Repository layout
 

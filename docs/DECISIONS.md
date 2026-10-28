@@ -378,14 +378,6 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 
 ## Roadmap
 
-0. Monorepo, brain-core extraction, license change. Gate: all existing tests pass.
-1. Schemas and validators, 20–30 real investment-research notes, Qwen quality
-   check. Gate: zero validator errors; list of ambiguous classifications.
-2. Easy first run: installer, folder-only setup, Ollama connection, drag and
-   drop, approval cards, Ingest agent. Gate: three non-developers reach their
-   first saved item unaided within three minutes.
-3. Ask and connect: in-app questions, one-click Claude connection (MCP), history
-   and undo, Challenger. Gate: a non-developer gets a sourced answer from their
-   own material.
-4. Expansion: mobile and messenger capture, hybrid search, scheduled Maintainer
-   with review dates, web demo.
+Phases 0–4 (monorepo, schemas, easy first run, Ask and Claude, capture and
+search) shipped as 0.4.0 and 0.5.0. What comes next, and why, is in
+[ROADMAP.md](ROADMAP.md).

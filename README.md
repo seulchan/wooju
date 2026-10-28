@@ -61,6 +61,12 @@ for an Apple Silicon Mac, or see [CONTRIBUTING.md](CONTRIBUTING.md) to build it 
 Wooju needs an Apple Silicon Mac. 16 GB of memory is recommended; 8 GB works with a
 smaller model.
 
+## Where it is going
+
+The next releases make the review step worth having (every proposal shows its
+source), add real ways to take your notes out, and enforce provenance when
+notes are used. The plan and the evidence behind it: [docs/ROADMAP.md](docs/ROADMAP.md).
+
 ## Feedback
 
 Found a problem or have an idea? [Open an issue](https://github.com/seulchan/wooju/issues/new/choose).
