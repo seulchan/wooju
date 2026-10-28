@@ -38,6 +38,7 @@ _WORD = re.compile(r"[0-9A-Za-z][0-9A-Za-z.\-%]*|[가-힣]+")
 _STOP = {
     "the", "and", "for", "what", "when", "how", "was", "were", "are", "is", "did", "does",
     "with", "from", "that", "this", "which", "who", "why", "about", "notes", "note",
+    "of", "in", "on", "to", "at", "by", "an", "or", "as", "it", "its", "be", "has", "had",
 }  # fmt: skip
 
 
@@ -59,7 +60,8 @@ def _terms(text: str) -> set[str]:
     out: set[str] = set()
     for w in _WORD.findall(text.lower()):
         if "가" <= w[0] <= "힣":
-            out.update(w[i : i + 2] for i in range(max(1, len(w) - 1)))
+            if len(w) >= 2:  # one syllable is a particle ("는", "의"), not a word
+                out.update(w[i : i + 2] for i in range(len(w) - 1))
         elif len(w) >= 2 and w not in _STOP:
             out.add(w.rstrip(".-"))
     return out
@@ -71,27 +73,42 @@ class Excerpt:
     text: str
 
 
+def _query_words(query: str) -> list[frozenset[str]]:
+    """Each word of the query as its own search terms (one for an English word,
+    the two-syllable pieces for a Korean one), so a Korean word counts once."""
+    words = {frozenset(_terms(w)) for w in _WORD.findall(query.lower())}
+    return [w for w in words if w]
+
+
+def _matches(word: frozenset[str], terms: set[str]) -> bool:
+    if len(word) == 1:
+        return bool(word & terms)
+    return len(word & terms) * 2 >= len(word)  # most pieces of a Korean word
+
+
 def excerpts(query: str, documents: Sequence[tuple[Record, str]]) -> list[Excerpt]:
     """The passages of the originals that best match ``query``, with a passage
     of context on each side, best first."""
-    wanted = _terms(query)
-    if not wanted:
+    words = _query_words(query)
+    if not words:
         return []
     split = [(record, evidence.passages(text)) for record, text in documents]
-    # Rarer terms count more (a word in every passage says little).
-    df: dict[str, int] = {}
-    total = 0
-    for _, items in split:
-        for p in items:
-            total += 1
-            for t in _terms(p) & wanted:
-                df[t] = df.get(t, 0) + 1
+    terms = [[_terms(p) for p in items] for _, items in split]
+    # Rarer words count more (a word in every passage says little).
+    df = [0] * len(words)
+    total = sum(len(items) for _, items in split)
+    for doc in terms:
+        for t in doc:
+            for k, word in enumerate(words):
+                df[k] += _matches(word, t)
     scored: list[tuple[float, int, int]] = []
-    for d, (_, items) in enumerate(split):
-        for i, p in enumerate(items):
-            hit = _terms(p) & wanted
+    for d, doc in enumerate(terms):
+        for i, t in enumerate(doc):
+            hit = [k for k, word in enumerate(words) if _matches(word, t)]
             if hit:
-                score = sum(math.log(1 + total / df[t]) for t in hit)
+                # Squared: one rare, specific word ("bok-wire") outweighs several
+                # common ones ("bank", "korea") that every menu line has.
+                score = sum(math.log(1 + total / df[k]) ** 2 for k in hit)
                 scored.append((score, d, i))
     scored.sort(key=lambda s: (-s[0], s[1], s[2]))
     out: list[Excerpt] = []
@@ -178,7 +195,9 @@ def answer_from_originals(
             break
     if not documents:
         return None
-    query = f"{question} {missing}"
+    # The question names what is wanted; "missing" is the model's sentence about
+    # it ("...is not in the notes"), whose words would only add noise here.
+    query = question
     if _other_language(question, documents):
         # Words cannot match across languages (a Korean question, an English
         # original): the model writes search terms in both first.

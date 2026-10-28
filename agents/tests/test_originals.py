@@ -190,3 +190,19 @@ def test_a_question_in_another_language_gets_search_terms_first(tmp_path):
     )
     assert answer.original_answer.startswith("업종 상위 절반이 기준이었어요.")
     assert "top half of each industry" in answer.original_citations[0].excerpt
+
+
+def test_a_rare_word_outweighs_common_ones():
+    """A menu line full of "Bank of Korea / 한국은행" must not beat the one passage
+    that names the thing asked about."""
+    from brain_core.records import Record
+
+    record = Record.__new__(Record)
+    text = "\n\n".join(
+        ["Bank of Korea 한국은행 Headquarters Seoul Central bank of Korea website."] * 30
+        + ["BOK-Wire was renamed BOK-Wire+ in April 2009, when a hybrid system was added."]
+    )
+    picked = excerpts(
+        "한국은행 BOK-Wire+는 언제 도입됐어? Bank of Korea BOK-Wire+ launch", [(record, text)]
+    )
+    assert "April 2009" in picked[0].text
