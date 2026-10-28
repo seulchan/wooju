@@ -50,6 +50,44 @@ def score(ranks: list[int | None], k: int) -> tuple[float, float]:
     return hit, mrr
 
 
+def diagnose_original(item, row, retriever, provider, read_original) -> None:
+    """Show each step of the look in the originals, to see where it fails."""
+    from wooju_agents import originals as o
+    from wooju_agents.ask import AnswerDraft, gather
+
+    found, _ = gather(retriever, item["q"], provider, row.get("vec"))
+    records = list({p.record.id: p.record for p in found}.values())
+    print(f"        notes read: {[r.id for r in records]}")
+    docs = []
+    for r in records:
+        path = o.original_path(r)
+        text = read_original(path) if path else None
+        if text:
+            docs.append((r, text))
+    print(f"        originals: {[r.id for r, _ in docs][: o.MAX_DOCUMENTS]}")
+    docs = docs[: o.MAX_DOCUMENTS]
+    if not docs:
+        return
+    query = item["q"]
+    if o._other_language(item["q"], docs):
+        terms = o._search_terms(item["q"], provider)
+        print(f"        search terms: {terms}")
+        query += " " + " ".join(terms)
+    picked = o.excerpts(query, docs)
+    wanted = item.get("answer_any", [])
+    for n, e in enumerate(picked, 1):
+        mark = "*" if any(a in e.text for a in wanted) else " "
+        print(f"        {mark}[{n}] {' '.join(e.text.split())[:120]}")
+    blocks = "\n\n".join(
+        f"[{n}] {e.record.title} (original)\n{e.text}" for n, e in enumerate(picked, 1)
+    )
+    system = o._SYSTEM.format(missing=item["q"], language="Korean")
+    result = provider.generate_json(
+        system, f"Excerpts:\n\n{blocks}\n\nQuestion: {item['q']}", AnswerDraft.model_json_schema()
+    )
+    print(f"        model said: {result.data}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("brain", type=Path)
@@ -58,9 +96,12 @@ def main() -> None:
     parser.add_argument("--answer", action="store_true", help="also answer with the AI")
     parser.add_argument("--model", default="qwen3.5:9b")
     parser.add_argument("--passages", type=int, default=None, help="passages sent to the model")
+    parser.add_argument("--only", default=None, help="only questions of this type (e.g. original)")
     args = parser.parse_args()
 
     questions = json.loads(args.questions.read_text(encoding="utf-8"))["questions"]
+    if args.only:
+        questions = [q for q in questions if q.get("type") == args.only]
     index = BrainIndex()
     index.scan(args.brain.expanduser())
     retriever = Retriever(index)
@@ -181,6 +222,8 @@ def main() -> None:
         if answer.original_answer:
             flat = " ".join(answer.original_answer.split())
             print(f"        from originals: {flat[:220]}")
+        if kind == "original" and not ok:
+            diagnose_original(item, row, retriever, provider, read_original)
     n, m = len(questions), len(answerable)
     print(
         f"\n  cites an expected note {cited_expected / m:.0%}   cites anything {cited_any / m:.0%}"
