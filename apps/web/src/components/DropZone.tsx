@@ -30,7 +30,9 @@ export function DropZone() {
           ? t('memoSaved')
           : result.duplicate
             ? `${t('alreadySaved')} ${result.title ?? ''}`
-            : t('linkSaved'),
+            : result.recheck
+              ? `${t('recheckSaved')} ${result.title ?? ''}`
+              : t('linkSaved'),
       )
       setText('')
       requestRefresh()

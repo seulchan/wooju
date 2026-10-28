@@ -526,9 +526,58 @@ def test_same_link_is_not_saved_twice(client, tmp_path, monkeypatch):
     assert wait_jobs(client)[0]["state"] == "done"
 
     again = client.post("/api/capture", json={"text": "https://news.example.com/value-up"}).json()
-    assert again["duplicate"] and again["title"]
+    assert again["recheck"] and again["title"]
+    jobs = wait_jobs(client)
+    assert (
+        jobs[0]["state"] == "done"
+        and "unchanged" in jobs[0]["message"].lower()
+        or ("바뀐 내용 없음" in jobs[0]["message"])
+    )
     assert len(list((brain / "sources").glob("korea-value-up*.md"))) == 1
     assert not list((brain / "inbox").glob("*.html"))
+
+
+CHANGED = (
+    "<html><head><title>Value-up</title></head><body><p>"
+    + "Korea Value-up Index to begin publication next week. 100 stocks: 67 on Kospi, 33 on Kosdaq. "
+    * 5
+    + "</p><p>Update: the exchange added ten more companies after a review of shareholder "
+    "returns in the second quarter. The rebalancing takes effect in December, and the "
+    "index committee will publish the full list of additions the week before.</p></body></html>"
+).encode()
+
+
+def test_a_saved_link_that_changed_becomes_a_new_version(client, tmp_path, monkeypatch):
+    from wooju_agents import capture
+
+    brain = setup_brain(client, tmp_path)
+    _fake_fetch(monkeypatch)
+    client.post("/api/capture", json={"text": "https://example.com/short"})
+    assert wait_jobs(client)[0]["state"] == "done"
+    [first] = list((brain / "sources").glob("korea-value-up*.md"))
+
+    monkeypatch.setattr(
+        capture,
+        "fetch",
+        lambda url, client=None: (CHANGED, ".html", "https://news.example.com/value-up"),
+    )
+    again = client.post("/api/capture", json={"text": "https://news.example.com/value-up"}).json()
+    assert again["recheck"]
+    jobs = wait_jobs(client)
+    assert jobs[0]["state"] == "done", jobs
+    notes = sorted((brain / "sources").glob("korea-value-up*.md"))
+    assert len(notes) == 2
+    [new] = [n for n in notes if n != first]
+    old_text, new_text = first.read_text(), new.read_text()
+    assert "retired:" in old_text and f"superseded_by: sources/{new.name}" in old_text
+    assert "status: archived" in old_text
+    assert "## What changed since the earlier version" in new_text
+    assert "added ten more companies" in new_text and f"](../sources/{first.name})" in new_text
+    assert "new version" in jobs[0]["message"].lower() or "새 버전" in jobs[0]["message"]
+    # A third send of the same address compares with the new version, not the retired one.
+    assert client.app.state.engine.saved_source_for("https://news.example.com/value-up").path == (
+        f"sources/{new.name}"
+    )
 
 
 def test_a_waiting_link_is_reused_not_fetched_again(client, tmp_path, monkeypatch):

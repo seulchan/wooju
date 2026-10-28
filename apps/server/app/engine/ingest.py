@@ -6,8 +6,10 @@ import asyncio
 import contextlib
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from brain_core import history
+from brain_core.changes import FileChange, Proposal, approval_for
 from brain_core.markdown import add_made_by, split_frontmatter
 from brain_core.messages import render
 from wooju_agents.capture import (
@@ -24,6 +26,11 @@ from wooju_agents.llm import (
     OllamaProvider,
     Provider,
 )
+from wooju_agents.originals import original_path
+from wooju_agents.text import extract_text
+from wooju_agents.versions import Changes, compare, retire_earlier
+from wooju_agents.versions import add_section as add_version_section
+from wooju_agents.versions import section as version_section
 
 from .base import (
     MAX_ATTEMPTS,
@@ -37,7 +44,9 @@ from .base import (
 class IngestMixin:
     """Part of :class:`app.engine.Engine`; uses its state (``self.brain``, ``self.index``...)."""
 
-    async def check_conflicts(self, path: str, content: str, provider: Provider) -> tuple[int, str]:
+    async def check_conflicts(
+        self, path: str, content: str, provider: Provider, exclude: str | None = None
+    ) -> tuple[int, str]:
         """Compare a new source note with related notes.
 
         Returns ``(number of conflicts, note content)`` with a Conflicts section
@@ -49,7 +58,11 @@ class IngestMixin:
             async with self.ai_lane:
                 query_vec = await self.query_vector(body[:1500])
                 hits = await asyncio.to_thread(retriever.search, body[:1500], 8, 1, query_vec)
-                passages = [p for _, p in hits if p.record.category in ("source", "knowledge")][:6]
+                passages = [
+                    p
+                    for _, p in hits
+                    if p.record.category in ("source", "knowledge") and p.id != exclude
+                ][:6]
                 conflicts = await asyncio.to_thread(
                     find_conflicts, body, passages, provider, language=self.content_language(body)
                 )
@@ -67,6 +80,40 @@ class IngestMixin:
             on=date.today().isoformat(),
         )
         return len(conflicts), updated
+
+    def _changes_since(self, earlier: Any, rel: str) -> Changes | None:
+        """What changed between a saved source's original and the same address
+        fetched again; None if nothing real did (or it can't be compared)."""
+        brain = self._require_brain()
+        path = original_path(earlier)
+        old_text = self.read_original(path) if path else None
+        if not old_text:
+            return None
+        try:
+            new_text = extract_text(brain / rel, max_chars=200_000)[0]
+        except Exception:  # noqa: BLE001 — unreadable: treat as the same page
+            return None
+        found = compare(old_text, new_text)
+        return found if found.significant else None
+
+    def _as_new_version(
+        self, proposal: Proposal, note: Any, earlier: Any, changes: Changes
+    ) -> None:
+        """Turn an ingest proposal into a new version of ``earlier``: the new note
+        says what changed, and the earlier note is retired in its favour."""
+        brain = self._require_brain()
+        language = self.content_language(note.content or "")
+        link = "../" + earlier.path
+        note.content = add_version_section(
+            note.content or "",
+            version_section(
+                changes, earlier_title=earlier.title, earlier_link=link, language=language
+            ),
+        )
+        text = (brain / earlier.path).read_text(encoding="utf-8")
+        retired = retire_earlier(text, new_path=note.path, today=date.today(), language=language)
+        proposal.changes.append(FileChange(op="write", path=earlier.path, content=retired))
+        proposal.approval = approval_for(proposal.changes)
 
     async def retry_job(self, job_id: str) -> Job:
         job = self.jobs.get(job_id)
@@ -185,8 +232,11 @@ class IngestMixin:
             return
         url = link_for(brain, job.file)
         existing = self.saved_source_for(url) if url else None
+        changes: Changes | None = None
         if existing is not None:
-            # Already in the Brain from the same address: don't save it twice.
+            changes = await asyncio.to_thread(self._changes_since, existing, job.file)
+        if existing is not None and changes is None:
+            # Already in the Brain from the same address, unchanged: don't save it twice.
             async with self.lock:
                 (brain / job.file).unlink(missing_ok=True)
                 await asyncio.to_thread(
@@ -233,8 +283,19 @@ class IngestMixin:
             job.state, job.message = "failed", exc.localized(self.language())
             return
         note = next((c for c in proposal.changes if c.path.startswith("sources/")), None)
+        if existing is not None and changes is not None and note is not None:
+            self._as_new_version(proposal, note, existing, changes)
+            job.message = render(
+                "job.new_version",
+                self.language(),
+                added=len(changes.added),
+                removed=len(changes.removed),
+            )
         if note is not None and note.content:
-            count, note.content = await self.check_conflicts(note.path, note.content, provider)
+            # A new version is not "in conflict" with the version it replaces.
+            count, note.content = await self.check_conflicts(
+                note.path, note.content, provider, exclude=existing.id if existing else None
+            )
             job.conflicts = count
             job.note_id = note.path.removesuffix(".md")
         self.store.save(proposal)
@@ -244,7 +305,8 @@ class IngestMixin:
         saved_title = split_frontmatter(note.content or "")[0].get("title") if note else None
         job.title = str(saved_title) if saved_title else proposal.title
         if job.conflicts:
-            job.message = render("job.conflicts", self.language(), count=job.conflicts)
+            conflicts = render("job.conflicts", self.language(), count=job.conflicts)
+            job.message = f"{job.message} {conflicts}" if job.message else conflicts
         if proposal.approval == "auto":
             proposal = await self.apply(proposal)
             if proposal.status != "applied":

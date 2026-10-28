@@ -486,7 +486,7 @@ export function fetchSearchStatus(signal?: AbortSignal): Promise<SearchStatus> {
 /** A pasted link (fetched and organized) or a memo (kept as written). */
 export function captureText(
   text: string,
-): Promise<{ kind: 'link' | 'memo'; file?: string; url?: string; job?: Job; duplicate?: boolean; title?: string }> {
+): Promise<{ kind: 'link' | 'memo'; file?: string; url?: string; job?: Job; duplicate?: boolean; recheck?: boolean; title?: string }> {
   return postJson('/api/capture', { text })
 }
 

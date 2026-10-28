@@ -16,6 +16,9 @@ until 1.0, a minor version may change how things work.
 - Ask looks in the originals: when your notes don't cover part of a question,
   Wooju reads the original documents behind the notes it found and answers
   that part from them, shown apart and quoted, since no note vouches for it.
+- A saved link sent again is checked for changes. If the page changed, it is
+  saved as a new version that lists the sentences added and removed; the
+  earlier version is retired and notes resting on it are flagged on Home.
 
 ## 0.4.0 — 2026-10-28
 

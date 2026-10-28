@@ -135,7 +135,10 @@ class TelegramBotMixin:
                 elif result.get("duplicate"):
                     await send("job.duplicate", title=result["title"])
                 else:
-                    await send("telegram.link")
+                    if result.get("recheck"):
+                        await send("job.recheck", title=result["title"])
+                    else:
+                        await send("telegram.link")
                     job = self.jobs.get(result["job"]["id"])
                     if job:
                         asyncio.create_task(self._telegram_follow(bot, chat_id, job))

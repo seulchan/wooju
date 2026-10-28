@@ -274,6 +274,7 @@ const STRINGS = {
   claudeCode: { ko: 'Claude Code에서 쓰려면:', en: 'To use it in Claude Code:' },
   captureLabel: { ko: '링크나 메모', en: 'Link or memo' },
   alreadySaved: { ko: '이미 저장된 자료예요:', en: 'Already saved:' },
+  recheckSaved: { ko: '이미 저장된 자료예요. 바뀐 내용이 있는지 확인할게요:', en: 'Already saved; checking whether it changed:' },
   edit: { ko: '수정', en: 'Edit' },
   newNote: { ko: '+ 새 노트', en: '+ New note' },
   newNoteTitle: { ko: '새 노트 쓰기', en: 'Write a new note' },

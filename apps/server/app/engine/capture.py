@@ -10,6 +10,7 @@ from typing import Any
 from brain_core import history
 from brain_core.messages import UserFacingError, render
 from wooju_agents.capture import (
+    CaptureError,
     classify_text,
     link_for,
     save_link,
@@ -59,11 +60,14 @@ class CaptureMixin:
     def saved_source_for(self, *urls: str | None) -> Any:
         """The source note already saved from one of these addresses, if any."""
         wanted = {u.rstrip("/") for u in urls if u}
+        found = None
         for record in self.index.sources():
             ref = record.metadata.get("canonical_ref")
             if isinstance(ref, str) and ref.rstrip("/") in wanted:
-                return record
-        return None
+                if not record.retired:
+                    return record  # the current version
+                found = found or record
+        return found
 
     def pending_link_file(self, url: str) -> str | None:
         """An inbox file already fetched from ``url`` and not organized yet."""
@@ -85,19 +89,26 @@ class CaptureMixin:
         kind, value = classify_text(text)
         if kind == "link":
             existing = self.saved_source_for(value)
-            if existing is not None:
-                return {"kind": "link", "url": value, "duplicate": True, "title": existing.title}
             pending = self.pending_link_file(value)
             if pending is not None:  # fetched before and not organized yet: try again
                 job = await self.enqueue(pending)
                 return {"kind": "link", "file": pending, "url": value, "job": job.to_dict()}
-            rel = await asyncio.to_thread(save_link, brain, value)
+            try:
+                rel = await asyncio.to_thread(save_link, brain, value)
+            except CaptureError:
+                if existing is None:
+                    raise
+                # Saved before and can't be fetched now: nothing new to compare.
+                return {"kind": "link", "url": value, "duplicate": True, "title": existing.title}
             async with self.lock:
                 await asyncio.to_thread(
                     history.commit_paths, brain, [rel, "inbox/.links.json"], f"Received {value}"
                 )
             job = await self.enqueue(rel)
-            return {"kind": "link", "file": rel, "url": value, "job": job.to_dict()}
+            out = {"kind": "link", "file": rel, "url": value, "job": job.to_dict()}
+            if existing is not None:  # saved before: the job checks whether it changed
+                out |= {"recheck": True, "title": existing.title}
+            return out
         async with self.lock:
             rel = await asyncio.to_thread(save_memo, brain, value, via=via)
             await asyncio.to_thread(history.commit_paths, brain, [rel], f"Memo: {Path(rel).stem}")

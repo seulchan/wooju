@@ -92,8 +92,9 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   waits only for the current step. Saving a memo needs no AI and is instant.
 - An out-of-memory reply from Ollama is retried once, then the file waits and
   is retried automatically (three times) instead of failing; failed files can
-  be retried or removed. A link already saved is never saved twice, and a
-  link already waiting is reused rather than fetched again.
+  be retried or removed. A link already saved is never saved twice unless it
+  changed (see "New versions of a saved source"), and a link already waiting
+  is reused rather than fetched again.
 
 ## Thinking (writing in your own words)
 
@@ -292,6 +293,22 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   original's own sentences and a line saying no note vouches for it. A
   sentence that cites no excerpt is dropped. It costs one more model call, only
   when something is missing; the app says "looking in the originals" meanwhile.
+
+## New versions of a saved source
+
+- A link sent again is fetched again and compared with its saved original,
+  sentence by sentence (code, not the AI). Unchanged — allowing a little page
+  noise (fewer than two changed sentences or 160 changed characters) — it is
+  a duplicate as before. Changed, it becomes a new source note with a "What
+  changed since the earlier version" section (sentences added and removed,
+  up to five each, and a link to the earlier note), and the earlier note is
+  retired with `superseded_by` in the same undoable change.
+- Retiring is what makes the rest work without new machinery: notes that rest
+  on the earlier version are flagged "grounds changed", Ask stops using it,
+  and its own page points to the new one. The conflict check skips the
+  version being replaced. If the page cannot be fetched again, the saved note
+  is reported as already saved. Files dropped again are not compared (a file
+  name says little about whether it is the same document).
 
 ## Sample notes
 

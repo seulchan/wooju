@@ -87,7 +87,20 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "기존 노트와 맞지 않는 내용 {count}건 — 홈에서 확인해 주세요.",
         "{count} disagreement(s) with existing notes; see Home.",
     ),
-    "job.duplicate": ("이미 저장된 자료예요: {title}", "Already saved: {title}"),
+    "job.duplicate": (
+        "이미 저장된 자료예요(바뀐 내용 없음): {title}",
+        "Already saved, unchanged: {title}",
+    ),
+    "job.new_version": (
+        "새 버전으로 저장했어요. 문장 {added}개가 새로 들어가고 {removed}개가 빠졌어요. "
+        "이전 버전에 기댄 노트는 홈에서 알려 드려요.",
+        "Saved as a new version: {added} sentence(s) added, {removed} removed. "
+        "Notes that rest on the earlier version are flagged on Home.",
+    ),
+    "job.recheck": (
+        "이미 저장된 자료예요. 바뀐 내용이 있는지 확인할게요: {title}",
+        "Already saved; checking whether it changed: {title}",
+    ),
     "job.removed": ("받은 편지함에서 지웠어요.", "Removed from the inbox."),
     # telegram
     "telegram.paired": (
