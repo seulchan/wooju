@@ -48,6 +48,16 @@ class LLMResult:
     seconds: float
     provider: str
     model: str
+    # Tokens the provider reports it billed for this call; None when it does not say.
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+
+OnUsage = Callable[[LLMResult], None]
+
+
+def _count(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
 OnText = Callable[[str], None]
@@ -234,6 +244,7 @@ class OpenAIProvider:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=120)
+        self.on_usage: OnUsage | None = None  # told about each paid call (tokens)
 
     def generate_json(
         self,
@@ -264,10 +275,21 @@ class OpenAIProvider:
             raise LLMError(str(exc), "llm.openai_down") from exc
         except httpx.HTTPError as exc:
             raise LLMError(str(exc), "llm.offline") from exc
-        raw = resp.json()["choices"][0]["message"].get("content") or ""
-        return LLMResult(
-            _loads(raw, self.name), raw, time.monotonic() - start, self.name, self.model
+        body = resp.json()
+        raw = body["choices"][0]["message"].get("content") or ""
+        usage = body.get("usage") or {}
+        result = LLMResult(
+            _loads(raw, self.name),
+            raw,
+            time.monotonic() - start,
+            self.name,
+            body.get("model") or self.model,
+            _count(usage.get("prompt_tokens")),
+            _count(usage.get("completion_tokens")),
         )
+        if self.on_usage is not None:
+            self.on_usage(result)
+        return result
 
 
 class AnthropicProvider:
@@ -284,6 +306,7 @@ class AnthropicProvider:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=120)
+        self.on_usage: OnUsage | None = None  # told about each paid call (tokens)
 
     def generate_json(
         self,
@@ -317,14 +340,21 @@ class AnthropicProvider:
             raise LLMError(str(exc), "llm.claude_down") from exc
         except httpx.HTTPError as exc:
             raise LLMError(str(exc), "llm.offline") from exc
-        for block in resp.json().get("content", []):
+        body = resp.json()
+        usage = body.get("usage") or {}
+        for block in body.get("content", []):
             if block.get("type") == "tool_use":
                 data = block.get("input") or {}
-                return LLMResult(
+                result = LLMResult(
                     data,
                     json.dumps(data, ensure_ascii=False),
                     time.monotonic() - start,
                     self.name,
-                    self.model,
+                    body.get("model") or self.model,
+                    _count(usage.get("input_tokens")),
+                    _count(usage.get("output_tokens")),
                 )
+                if self.on_usage is not None:
+                    self.on_usage(result)
+                return result
         raise LLMError("Anthropic returned no tool_use block", "llm.unreadable")

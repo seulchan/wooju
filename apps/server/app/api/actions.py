@@ -38,7 +38,7 @@ from wooju_agents.llm import (
     recommended_ollama_model,
 )
 
-from .. import __version__, claude_link
+from .. import __version__, claude_link, usage
 from .. import settings as app_settings
 from ..engine import Engine, SetupError
 
@@ -517,6 +517,12 @@ async def remove_job(job_id: str, engine: EngineDep) -> dict[str, Any]:
     except SetupError as exc:
         raise _fail_from(engine, exc, 404) from exc
     return {**job.to_dict(), "message": render("job.removed", engine.language())}
+
+
+@actions_router.get("/usage", tags=["setup"])
+def ai_usage() -> dict[str, Any]:
+    """This month's paid AI calls (API key), with an estimate where the price is known."""
+    return usage.month_summary()
 
 
 @actions_router.get("/jobs", tags=["inbox"])

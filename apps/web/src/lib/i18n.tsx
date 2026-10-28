@@ -164,6 +164,20 @@ const STRINGS = {
     en: 'This is the AI’s summary of your notes. Check the notes themselves before relying on it.',
   },
   askEarlier: { ko: '이전 질문', en: 'Earlier questions' },
+  usageTitle: { ko: '이번 달 사용량', en: 'This month’s usage' },
+  usageNone: { ko: '이번 달에는 API 키로 쓴 기록이 없어요.', en: 'No calls through an API key this month.' },
+  usageRow: {
+    ko: '{calls}번 · 입력 {input} · 출력 {output} 토큰',
+    en: '{calls} calls · {input} in · {output} out tokens',
+  },
+  usageCost: { ko: '약 ${cost}', en: 'about ${cost}' },
+  usageNoPrice: { ko: '가격 정보 없음', en: 'price unknown' },
+  usageUnknown: { ko: '토큰을 알려주지 않은 호출 {n}번 포함', en: 'includes {n} call(s) with no token count' },
+  usageNote: {
+    ko: '{date}에 확인한 가격표로 계산한 추정치예요. 실제 청구액은 제공사 사이트에서 확인하세요.',
+    en: 'An estimate from prices checked on {date}. Your provider’s site has the actual bill.',
+  },
+  usageBilling: { ko: '사용량 페이지 열기', en: 'Open the usage page' },
   askCheckingOriginals: {
     ko: '노트에 없는 부분을 원본에서 찾아보는 중이에요…',
     en: 'Looking in the originals for what your notes don’t cover…',

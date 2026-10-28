@@ -24,6 +24,7 @@ import {
   pullModel,
   removeSamples,
   type ModelsResponse,
+  fetchUsage,
 } from '../api'
 import { Badge, ErrorState, Spinner } from '../components/ui'
 import { requestRefresh } from '../lib/freshness'
@@ -199,9 +200,60 @@ function AiSettings({
       {provider === 'ollama' ? (
         <OllamaModels setup={setup} models={models} run={run} />
       ) : (
-        <CloudKey provider={provider} current={setup.ai.provider === provider ? setup.ai : null} run={run} />
+        <>
+          <CloudKey provider={provider} current={setup.ai.provider === provider ? setup.ai : null} run={run} />
+          <ApiUsage provider={provider} />
+        </>
       )}
     </section>
+  )
+}
+
+function tokens(n: number): string {
+  return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n)
+}
+
+/** What an API key has been used for this month, and roughly what it cost. */
+function ApiUsage({ provider }: { provider: 'anthropic' | 'openai' }) {
+  const t = useT()
+  const state = useAsync((signal) => fetchUsage(signal), [])
+  if (state.kind !== 'ready') return null
+  const usage = state.data
+  const rows = usage.rows.filter((r) => r.provider === provider)
+  const billing = usage.billing_pages[provider]
+  return (
+    <div className="settings-block" aria-label={t('usageTitle')}>
+      <h3 className="subsection-title">{t('usageTitle')}</h3>
+      {rows.length ? (
+        <ul className="model-list">
+          {rows.map((r) => (
+            <li key={r.model} className="model-item">
+              <span className="model-name">{r.model}</span>
+              <span className="hint">
+                {t('usageRow')
+                  .replace('{calls}', String(r.calls))
+                  .replace('{input}', tokens(r.input_tokens))
+                  .replace('{output}', tokens(r.output_tokens))}
+                {r.unknown_calls ? ` · ${t('usageUnknown').replace('{n}', String(r.unknown_calls))}` : ''}
+              </span>
+              <span>
+                {r.cost_usd === null
+                  ? t('usageNoPrice')
+                  : t('usageCost').replace('{cost}', r.cost_usd < 0.01 ? '<0.01' : r.cost_usd.toFixed(2))}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="hint">{t('usageNone')}</p>
+      )}
+      <p className="hint">{t('usageNote').replace('{date}', usage.prices_checked)}</p>
+      {billing ? (
+        <button className="btn" onClick={() => void openExternal(billing)}>
+          {t('usageBilling')}
+        </button>
+      ) : null}
+    </div>
   )
 }
 

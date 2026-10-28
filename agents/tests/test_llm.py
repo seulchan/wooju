@@ -136,6 +136,52 @@ def test_anthropic_forces_tool_call():
     assert seen["tools"][0]["input_schema"] == SCHEMA
 
 
+def test_paid_calls_report_their_tokens():
+    seen = []
+    openai = OpenAIProvider(
+        "k",
+        client=client(
+            lambda r: httpx.Response(
+                200,
+                json={
+                    "model": "gpt-5-mini-2025-08-07",
+                    "choices": [{"message": {"content": '{"a": 1}'}}],
+                    "usage": {"prompt_tokens": 1200, "completion_tokens": 80},
+                },
+            )
+        ),
+    )
+    openai.on_usage = seen.append
+    r = openai.generate_json("s", "u", SCHEMA)
+    assert (r.input_tokens, r.output_tokens, r.model) == (1200, 80, "gpt-5-mini-2025-08-07")
+
+    claude = AnthropicProvider(
+        "k",
+        client=client(
+            lambda r: httpx.Response(
+                200,
+                json={
+                    "content": [{"type": "tool_use", "input": {"a": 2}}],
+                    "usage": {"input_tokens": 900, "output_tokens": 60},
+                },
+            )
+        ),
+    )
+    claude.on_usage = seen.append
+    r = claude.generate_json("s", "u", SCHEMA)
+    assert (r.input_tokens, r.output_tokens) == (900, 60)
+    assert [x.provider for x in seen] == ["openai", "anthropic"]
+
+    silent = OpenAIProvider(
+        "k",
+        client=client(
+            lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+        ),
+    )
+    r = silent.generate_json("s", "u", SCHEMA)
+    assert r.input_tokens is None and r.output_tokens is None  # unknown, not zero
+
+
 def test_bad_keys_say_so():
     unauthorized = client(lambda r: httpx.Response(401, json={}))
     with pytest.raises(LLMError) as exc:

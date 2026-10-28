@@ -631,3 +631,32 @@ export interface MemoSummary {
 export function fetchMemos(signal?: AbortSignal): Promise<{ total: number; items: MemoSummary[] }> {
   return apiGet('/api/memos', signal)
 }
+
+// ------------------------------------------------------------ paid AI usage
+
+export interface UsageRow {
+  provider: string
+  model: string
+  calls: number
+  input_tokens: number
+  output_tokens: number
+  /** Calls the provider reported no tokens for: unknown, not zero. */
+  unknown_calls: number
+  /** Estimate in US dollars; null when the model's price is not known. */
+  cost_usd: number | null
+}
+
+export interface UsageSummary {
+  month: string
+  rows: UsageRow[]
+  cost_usd: number
+  /** False when some calls or models could not be priced. */
+  complete: boolean
+  prices_checked: string
+  billing_pages: Record<string, string>
+}
+
+/** This month's calls through an API key, with an estimate where the price is known. */
+export function fetchUsage(signal?: AbortSignal): Promise<UsageSummary> {
+  return apiGet('/api/usage', signal)
+}

@@ -122,6 +122,40 @@ describe('Settings', () => {
       expect(posted(fetchMock, '/api/setup/ai')).toContainEqual({ provider: 'anthropic', api_key: 'sk-ant-test' }),
     )
   })
+
+  it("shows this month's API usage with an estimate, and no guess for an unknown price", async () => {
+    mockFetch([
+      { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
+      {
+        match: /^\/api\/usage/,
+        body: {
+          month: '2026-10',
+          rows: [
+            { provider: 'anthropic', model: 'claude-haiku-5-5', calls: 42, input_tokens: 1_200_000, output_tokens: 18_000, unknown_calls: 0, cost_usd: 0.129 },
+            { provider: 'anthropic', model: 'claude-new', calls: 1, input_tokens: 900, output_tokens: 60, unknown_calls: 1, cost_usd: null },
+            { provider: 'openai', model: 'gpt-5-mini', calls: 3, input_tokens: 10, output_tokens: 1, unknown_calls: 0, cost_usd: 0 },
+          ],
+          cost_usd: 0.129,
+          complete: false,
+          prices_checked: '2026-10-28',
+          billing_pages: { anthropic: 'https://platform.claude.com/usage' },
+        },
+      },
+      { match: /^\/api\/setup$/, body: { ...setup, ai: { provider: 'anthropic', model: 'claude-haiku-5-5', ready: true } } },
+    ])
+    render(<SettingsPage />)
+    const block = await screen.findByLabelText("This month’s usage")
+    expect(block).toHaveTextContent('claude-haiku-5-5')
+    expect(block).toHaveTextContent('42 calls · 1.2M in · 18K out tokens')
+    expect(block).toHaveTextContent('about $0.13')
+    expect(block).toHaveTextContent('price unknown')
+    expect(block).toHaveTextContent('includes 1 call(s) with no token count')
+    expect(block).not.toHaveTextContent('gpt-5-mini')
+    expect(block).toHaveTextContent('prices checked on 2026-10-28')
+  })
 })
 
 describe('Folder chooser', () => {

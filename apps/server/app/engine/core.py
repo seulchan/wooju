@@ -35,7 +35,7 @@ from wooju_agents.llm import (
 )
 from wooju_agents.text import detect_language, resolve_language
 
-from .. import icloud, telegram
+from .. import icloud, telegram, usage
 from .. import settings as app_settings
 from ..config import resolve_brain_path, watch_enabled
 from ..watcher import watch_and_refresh
@@ -176,9 +176,13 @@ class Engine(
         key = app_settings.get_api_key(ai.provider)
         if not key:
             raise LLMError("missing key", "llm.key_first", retryable=True)
+        paid: OpenAIProvider | AnthropicProvider
         if ai.provider == "openai":
-            return OpenAIProvider(key, model=ai.model) if ai.model else OpenAIProvider(key)
-        return AnthropicProvider(key, model=ai.model) if ai.model else AnthropicProvider(key)
+            paid = OpenAIProvider(key, model=ai.model) if ai.model else OpenAIProvider(key)
+        else:
+            paid = AnthropicProvider(key, model=ai.model) if ai.model else AnthropicProvider(key)
+        paid.on_usage = usage.record  # the month's tokens, shown in Settings
+        return paid
 
     async def pull_model(self, model: str | None = None) -> None:
         """Download a local model through Ollama in the background (default: the chosen one)."""

@@ -19,6 +19,8 @@ until 1.0, a minor version may change how things work.
 - A saved link sent again is checked for changes. If the page changed, it is
   saved as a new version that lists the sentences added and removed; the
   earlier version is retired and notes resting on it are flagged on Home.
+- Settings shows this month's usage of an OpenAI or Claude API key: calls and
+  tokens per model, and an estimated cost where the model's price is known.
 
 ## 0.4.0 — 2026-10-28
 

@@ -310,6 +310,17 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   is reported as already saved. Files dropped again are not compared (a file
   name says little about whether it is the same document).
 
+## What an API key costs
+
+- With an OpenAI or Claude key, each call's tokens, as the provider reports
+  them, are appended to `usage.jsonl` in the app's data folder (never the
+  Brain, never the key). Settings shows this month's calls and tokens per
+  model and an estimate in US dollars for models in a small price table,
+  checked against the providers' pricing pages on the date the screen shows.
+- A model not in the table shows "price unknown", and a call without a token
+  count is reported as such: unknown is never shown as zero or guessed. The
+  estimate is not the bill; Settings links the provider's usage page.
+
 ## Sample notes
 
 - An empty Brain offers "Look around with sample notes": nine notes about
