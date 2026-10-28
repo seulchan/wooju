@@ -13,6 +13,10 @@ until 1.0, a minor version may change how things work.
   file has got, questions can be asked in between, and a file that had to
   wait continues where it stopped.
 
+- Ask looks in the originals: when your notes don't cover part of a question,
+  Wooju reads the original documents behind the notes it found and answers
+  that part from them, shown apart and quoted, since no note vouches for it.
+
 ## 0.4.0 — 2026-10-28
 
 The first public version. Everything below is new since the start of the project.

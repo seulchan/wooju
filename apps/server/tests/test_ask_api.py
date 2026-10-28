@@ -190,3 +190,46 @@ def test_ask_stream_reports_errors_as_an_event(client):
     with client.stream("POST", "/api/ask/stream", json={"question": "자사주 소각 기한"}) as r:
         events = events_of(r.read().decode())
     assert events[-1][0] == "error" and "Ollama" in events[-1][1]["detail"]
+
+
+class FromOriginal(Scripted):
+    """The notes leave the deadline's exception open; the original has it."""
+
+    def generate_json(self, system, user, schema):
+        if "queries" in schema["properties"]:
+            return LLMResult({"queries": ["자사주"]}, "", 0.1, self.name, self.model)
+        if "(original)" in user:
+            data = {
+                "statements": [{"text": "주총 승인 시 예외예요.", "sources": [1]}],
+                "missing": "",
+            }
+        else:
+            data = {
+                "statements": [{"text": "1년 안에 소각해야 해요.", "sources": [1]}],
+                "missing": "예외 조건은 노트에 없어요.",
+            }
+        return LLMResult(data, "", 0.2, self.name, self.model)
+
+
+def test_ask_reads_the_original_behind_a_source_for_the_missing_part(client, tmp_path):
+    brain = tmp_path / "B"
+    (brain / "sources/treasury-rule.md").write_text(
+        "---\ntitle: 자사주 소각 규정\nsource_type: article\ncanonical_ref: x\n---\n"
+        "# 자사주 소각 규정\n\n## 핵심 내용\n\n- 자사주는 1년 안에 소각해야 한다.\n"
+        "  > 자사주는 1년 안에 소각해야 한다.\n\n## 원본\n\n- [원본 파일](../library/rule.txt)\n",
+        encoding="utf-8",
+    )
+    (brain / "library").mkdir(exist_ok=True)
+    (brain / "library/rule.txt").write_text(
+        "자사주는 1년 안에 소각해야 한다. 다만 주주총회 승인을 받으면 자사주 보유를 예외로 허용한다.",
+        encoding="utf-8",
+    )
+    client.app.state.engine.index.scan(brain)
+    client.app.state.engine.provider_override = FromOriginal()
+    r = client.post("/api/ask", json={"question": "자사주 소각 예외 조건은?"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["missing"] and body["original_answer"].startswith("주총 승인 시 예외예요.")
+    [c] = body["original_citations"]
+    assert c["category"] == "original" and c["id"] == "sources/treasury-rule"
+    assert "주주총회 승인" in c["excerpt"]

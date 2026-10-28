@@ -348,6 +348,14 @@ export interface AskAnswer {
   missing?: string
   model: string | null
   seconds: number
+  /** The part the notes left open, answered from the originals behind the sources found. */
+  original_answer?: string
+  /** Passages of those originals (category "original"), numbered after the notes' citations. */
+  original_citations?: AskCitation[]
+  /** What the originals did not answer either. */
+  original_missing?: string
+  /** While the originals are being read (the notes' answer is complete). */
+  checking_originals?: boolean
 }
 
 /** Notes the answer will likely read (instant, keyword search, no AI). */

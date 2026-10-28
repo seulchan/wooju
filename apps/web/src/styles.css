@@ -1850,3 +1850,17 @@ code {
 .topic-row .main-areas__area {
   text-decoration: none;
 }
+
+/* Ask: what the originals say about the part the notes left open. */
+.answer-originals {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border);
+}
+.citation-quote {
+  margin: 0.35em 0 0;
+  padding: 0.1em 0.8em;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+  font-size: 0.92em;
+}

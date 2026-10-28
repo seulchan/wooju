@@ -118,10 +118,22 @@ def main() -> None:
 
     from wooju_agents.ask import ask
     from wooju_agents.llm import OllamaProvider
+    from wooju_agents.originals import library_reader
+    from wooju_agents.text import extract_text
+
+    read_original = library_reader(
+        args.brain.expanduser(), lambda p: extract_text(p, max_chars=200_000)[0]
+    )
 
     provider = OllamaProvider(args.model)
     cited_expected = cited_any = right_language = 0
-    behaviour: dict[str, list[bool]] = {"none": [], "partial": [], "date": [], "alias": []}
+    behaviour: dict[str, list[bool]] = {
+        "none": [],
+        "partial": [],
+        "date": [],
+        "alias": [],
+        "original": [],
+    }
     times = []
     print(f"\nanswers with {args.model}:")
     for item, row in zip(questions, rows, strict=True):
@@ -133,6 +145,7 @@ def main() -> None:
             language="en",
             retriever=retriever,
             query_vec=row.get("vec"),
+            read_original=read_original,
             **({"max_passages": args.passages} if args.passages else {}),
         )
         times.append(time.monotonic() - start)
@@ -145,6 +158,9 @@ def main() -> None:
             ok = hit and bool(answer.missing.strip())
         elif kind == "date":
             ok = hit and any(a in answer.answer for a in item.get("answer_any", []))
+        elif kind == "original":
+            both = answer.answer + " " + answer.original_answer
+            ok = any(a in both for a in item.get("answer_any", []))
         else:
             ok = hit
         if kind in behaviour:
@@ -162,6 +178,9 @@ def main() -> None:
             flat = " ".join(answer.answer.split())
             print(f"        answer: {flat[:220]}")
             print(f"        missing: {answer.missing or '-'}   cited: {sorted(ids) or '-'}")
+        if answer.original_answer:
+            flat = " ".join(answer.original_answer.split())
+            print(f"        from originals: {flat[:220]}")
     n, m = len(questions), len(answerable)
     print(
         f"\n  cites an expected note {cited_expected / m:.0%}   cites anything {cited_any / m:.0%}"
@@ -172,6 +191,7 @@ def main() -> None:
         "partial": "names the missing part",
         "date": "gets the date right",
         "alias": "finds it under another name",
+        "original": "finds it in the original",
     }
     for kind, results in behaviour.items():
         if results:

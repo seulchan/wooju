@@ -164,6 +164,17 @@ const STRINGS = {
     en: 'This is the AI’s summary of your notes. Check the notes themselves before relying on it.',
   },
   askEarlier: { ko: '이전 질문', en: 'Earlier questions' },
+  askCheckingOriginals: {
+    ko: '노트에 없는 부분을 원본에서 찾아보는 중이에요…',
+    en: 'Looking in the originals for what your notes don’t cover…',
+  },
+  askFromOriginals: { ko: '원본에서 찾은 내용', en: 'Found in the originals' },
+  askFromOriginalsNote: {
+    ko: '노트로 정리되지 않은 원본 문장에서 찾은 답이에요. 아래 원문을 직접 확인해 주세요.',
+    en: 'This comes from the original documents, not from your notes. Check the passages below.',
+  },
+  askOriginalsStill: { ko: '원본에도 없는 부분:', en: 'Not in the originals either:' },
+  askOriginalBadge: { ko: '원본', en: 'Original' },
   challengeTitle: { ko: '반론 검토', en: 'Challenge' },
   thinkBox: { ko: '생각하기', en: 'Think it through' },
   statusTitle: { ko: '이 생각의 상태', en: 'Where this idea stands' },

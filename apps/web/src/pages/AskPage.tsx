@@ -88,7 +88,8 @@ export function AskPage({ initial = '' }: { initial?: string }) {
       {busy ? (
         <div className="ask-thinking" role="status">
           <p>
-            <span className="spinner-dot" aria-hidden="true" /> {draft ? t('askWriting') : t('askThinking')}
+            <span className="spinner-dot" aria-hidden="true" />{' '}
+            {draft?.checking_originals ? t('askCheckingOriginals') : draft ? t('askWriting') : t('askThinking')}
           </p>
           {reading.length && !draft ? (
             <p className="hint">
@@ -162,7 +163,49 @@ function AnswerCard({ answer, compact = false }: { answer: AskAnswer; compact?: 
           {!compact ? <p className="hint">{t('askCheck')}</p> : null}
         </section>
       ) : null}
+      {answer.original_answer ? <FromOriginals answer={answer} compact={compact} /> : null}
+      {!answer.original_answer && answer.original_missing && !compact ? (
+        <p className="hint">
+          {t('askOriginalsStill')} {answer.original_missing}
+        </p>
+      ) : null}
     </article>
+  )
+}
+
+/** The part the notes left open, answered from the originals: shown apart,
+ *  with the original's own sentences, because no note vouches for it. */
+function FromOriginals({ answer, compact }: { answer: AskAnswer; compact: boolean }) {
+  const t = useT()
+  const cited = answer.original_citations ?? []
+  const byN = new Map(cited.map((c) => [c.n, c]))
+  return (
+    <section className="answer-originals" aria-label={t('askFromOriginals')}>
+      <h3 className="subsection-title">{t('askFromOriginals')}</h3>
+      <p className="answer-warning">{t('askFromOriginalsNote')}</p>
+      <div className="answer-text">{renderAnswer(answer.original_answer ?? '', byN)}</div>
+      {answer.original_missing ? (
+        <p className="hint">
+          {t('askOriginalsStill')} {answer.original_missing}
+        </p>
+      ) : null}
+      {!compact ? (
+        <ol className="citation-list">
+          {cited.map((c) => (
+            <li key={c.n} className="citation">
+              <span className="citation-n">{c.n}</span>
+              <div>
+                <Link to={`/record/${encodeId(c.id)}`} className="citation-title">
+                  {c.title}
+                </Link>{' '}
+                <Badge tone="tone-warn">{t('askOriginalBadge')}</Badge>
+                <blockquote className="citation-quote">{c.excerpt}</blockquote>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </section>
   )
 }
 

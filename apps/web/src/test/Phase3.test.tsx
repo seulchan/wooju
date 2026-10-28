@@ -207,6 +207,41 @@ describe('Ask, partial answers', () => {
     expect(await screen.findByText(/Not in your notes: Selection criteria/)).toBeInTheDocument()
   })
 
+  it('shows what the originals say about the missing part, apart from the notes', async () => {
+    mockFetch([
+      {
+        match: /^\/api\/ask\/stream$/,
+        sse: [
+          {
+            event: 'answer',
+            data: {
+              ...answer,
+              found: false,
+              missing: 'Selection criteria are not in your notes.',
+              original_answer: 'Profitability and shareholder returns were used [3].',
+              original_citations: [
+                {
+                  n: 3,
+                  id: 'sources/value-up',
+                  title: '코리아 밸류업 지수 발표',
+                  heading: null,
+                  category: 'original',
+                  excerpt: 'Companies were picked on profitability and shareholder returns.',
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ])
+    render(<AskPage initial="value-up criteria detail" />)
+    const section = await screen.findByRole('region', { name: 'Found in the originals' })
+    expect(section).toHaveTextContent('Profitability and shareholder returns were used')
+    expect(section).toHaveTextContent('not from your notes')
+    expect(section).toHaveTextContent('Companies were picked on profitability')
+    expect(section.querySelector('a.cite')).toHaveAttribute('href', '#/record/sources/value-up')
+  })
+
   it('shows no warning for a full answer', async () => {
     mockFetch([{ match: /^\/api\/ask\/stream$/, sse: [{ event: 'answer', data: { ...answer, missing: '' } }] }])
     render(<AskPage initial="value-up count" />)

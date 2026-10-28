@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, ValidationError
@@ -24,6 +24,7 @@ from brain_core.retrieve import Passage, Retriever
 
 from .conflicts import first_conflict
 from .llm import Provider
+from .originals import answer_from_originals
 from .text import normalize_korean
 
 # Measured on an M1 with qwen3.5:9b (evals/ask_quality.py): reading time grows
@@ -137,6 +138,14 @@ class Answer:
     seconds: float = 0.0
     # True while the answer is still being written (streamed sentence by sentence).
     partial: bool = False
+    # When the notes leave part of the question open: the answer to that part
+    # from the originals of the source notes found, with its own citations
+    # (category "original", numbered after the notes'), and what is still open.
+    original_answer: str = ""
+    original_citations: list[Citation] = field(default_factory=list)
+    original_missing: str = ""
+    # True while the originals are being read (the notes' answer is complete).
+    checking_originals: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -322,12 +331,68 @@ def ask(
     query_vec: Sequence[float] | None = None,
     max_passages: int = MAX_PASSAGES,
     on_partial: Callable[[Answer], None] | None = None,
+    read_original: Callable[[str], str | None] | None = None,
 ) -> Answer:
     """Answer ``question`` from the Brain.
 
     ``on_partial`` (optional) is called with a provisional Answer each time
     another sentence is finished, when the provider can stream.
+    ``read_original`` (optional) reads a ``library/`` file; with it, a part
+    the notes leave open is looked up in the originals of the sources found.
     """
+    answer, found = _ask_notes(
+        index, question, provider, language, retriever, query_vec, max_passages, on_partial
+    )
+    if read_original is None or not found or not (answer.missing or answer.related_only):
+        return answer
+    if on_partial is not None:
+        on_partial(replace(answer, partial=True, checking_originals=True))
+    records = list({p.record.id: p.record for p in found}.values())
+    language = answer_language(question, language)
+    extra = answer_from_originals(
+        question,
+        answer.missing or question,
+        records,
+        read_original,
+        provider,
+        language_name=_LANGUAGE_NAME.get(language, "English"),
+    )
+    if extra is None:
+        return answer
+    answer.seconds += extra.seconds
+    if not extra.statements:
+        answer.original_missing = extra.missing or answer.missing
+        return answer
+    offset = len(answer.citations)
+    order: dict[int, int] = {}
+    for st in extra.statements:
+        for n in st["sources"]:
+            order.setdefault(n, offset + len(order) + 1)
+    renumbered = [
+        {"text": st["text"], "sources": [order[n] for n in st["sources"]]}
+        for st in extra.statements
+    ]
+    answer.original_answer = _lines(renumbered, 0, language)
+    answer.original_citations = [
+        Citation(m, e.record.id, e.record.title, None, "original", e.text)
+        for n, m in sorted(order.items(), key=lambda kv: kv[1])
+        for e in [extra.excerpts[n - 1]]
+    ]
+    answer.original_missing = extra.missing
+    return answer
+
+
+def _ask_notes(
+    index: BrainIndex,
+    question: str,
+    provider: Provider,
+    language: str,
+    retriever: Retriever | None,
+    query_vec: Sequence[float] | None,
+    max_passages: int,
+    on_partial: Callable[[Answer], None] | None,
+) -> tuple[Answer, list[Passage]]:
+    """The answer from the notes alone, and the passages it read."""
     question = question.strip()
     if not question:
         raise AskError("Empty question", "ask.empty")
@@ -336,7 +401,7 @@ def ask(
     retriever = retriever or Retriever(index)
     found, seconds = gather(retriever, question, provider, query_vec, max_passages)
     if not found:
-        return Answer(question, "", found=False, seconds=seconds)
+        return Answer(question, "", found=False, seconds=seconds), found
 
     language = answer_language(question, language)
     system = _ANSWER_SYSTEM.format(language=_LANGUAGE_NAME.get(language, "English"))
@@ -376,7 +441,7 @@ def ask(
             missing=draft.missing.strip(),
             model=result.model,
             seconds=seconds + result.seconds,
-        )
+        ), found
     return Answer(
         question,
         text,
@@ -385,4 +450,4 @@ def ask(
         missing=draft.missing.strip(),
         model=result.model,
         seconds=seconds + result.seconds,
-    )
+    ), found

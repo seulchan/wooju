@@ -1,6 +1,6 @@
 {
  "brain": "wooju-brain-dev",
- "note": "Each question lists the notes a good answer should rest on (any one counts as found). Questions with a type test how the answer behaves: 'none' — the Brain does not cover it, so the answer should say so; 'partial' — part is covered, so the answer should cite it and name what is missing; 'date' — sources disagree or the date matters, so the answer must contain one of answer_any; 'alias' — the question uses a different name than the notes.",
+ "note": "Each question lists the notes a good answer should rest on (any one counts as found). Questions with a type test how the answer behaves: 'none' — the Brain does not cover it, so the answer should say so; 'partial' — part is covered, so the answer should cite it and name what is missing; 'date' — sources disagree or the date matters, so the answer must contain one of answer_any; 'alias' — the question uses a different name than the notes. 'original' — the note leaves the detail out but its original (in library/) has it, so the answer from the originals must contain one of answer_any.",
  "questions": [
   {
    "q": "밸류업 지수에는 몇 개 종목이 들어가?",
@@ -210,6 +210,39 @@
     "wiki/overviews/bank-of-korea-rate-path-2026",
     "sources/fnnews-bok-hike-2026-08",
     "sources/focus-economics-bok-hike-2026-07"
+   ]
+  },
+  {
+   "q": "2027년에 지급될 특별성과급 규모는 얼마로 예상돼?",
+   "expect": [
+    "sources/2026-10"
+   ],
+   "type": "original",
+   "answer_any": [
+    "60~70",
+    "60조",
+    "70조"
+   ]
+  },
+  {
+   "q": "한국은행 BOK-Wire+는 언제 도입됐어?",
+   "expect": [
+    "sources/bank-of-korea-wikipedia"
+   ],
+   "type": "original",
+   "answer_any": [
+    "2009"
+   ]
+  },
+  {
+   "q": "코스피가 하루 최대 상승률을 기록한 날은 언제야?",
+   "expect": [
+    "sources/kospi-wikipedia"
+   ],
+   "type": "original",
+   "answer_any": [
+    "1998",
+    "8.5"
    ]
   }
  ]

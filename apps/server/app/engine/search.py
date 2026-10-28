@@ -18,6 +18,8 @@ from wooju_agents.embed import EMBED_MODEL, Embedder
 from wooju_agents.llm import (
     LLMError,
 )
+from wooju_agents.originals import library_reader
+from wooju_agents.text import extract_text
 
 from .. import settings as app_settings
 from .base import (
@@ -33,6 +35,22 @@ class SearchMixin:
         if self.embedder_override is not None:
             return self.embedder_override
         return Embedder(EMBED_MODEL, host=app_settings.load().ai.ollama_host)
+
+    def read_original(self, rel: str) -> str | None:
+        """Text of a ``library/`` original, for Ask. The last few are kept in memory:
+        a PDF takes a moment to read and a follow-up question often needs it again."""
+        brain = self._require_brain()
+        cache: dict[tuple[str, float], str] = self.__dict__.setdefault("_originals", {})
+
+        def extract(path: Any) -> str:
+            key = (str(path), path.stat().st_mtime)
+            if key not in cache:
+                if len(cache) >= 8:
+                    cache.pop(next(iter(cache)))
+                cache[key] = extract_text(path, max_chars=200_000)[0]
+            return cache[key]
+
+        return library_reader(brain, extract)(rel)
 
     def vector_cache(self) -> VectorCache:
         return VectorCache(data_dir() / "search" / "vectors.sqlite", EMBED_MODEL)
@@ -254,6 +272,7 @@ class SearchMixin:
                 language=self.language(),
                 retriever=retriever,
                 query_vec=query_vec,
+                read_original=self.read_original,
             )
 
     async def ask_stream(self, question: str) -> AsyncIterator[Answer]:
@@ -282,6 +301,7 @@ class SearchMixin:
                         retriever=retriever,
                         query_vec=query_vec,
                         on_partial=on_partial,
+                        read_original=self.read_original,
                     )
                     updates.put_nowait(final)
                 except BaseException as exc:  # noqa: BLE001 — handed to the reader

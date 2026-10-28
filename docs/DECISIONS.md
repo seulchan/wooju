@@ -280,6 +280,19 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
   about 5 minutes. The 9B model often copies the sentence as the point, so
   point and quote can read alike; that is accepted, not hidden.
 
+## Ask looks in the originals for what the notes leave out
+
+- A source note keeps only the main points. When the answer from notes names
+  a missing part (or cites nothing), Ask reads the originals (`library/`) of
+  the source notes it already found, at most three, and answers only that
+  part from the best-matching excerpts (word and Korean two-syllable matching,
+  with a passage of context). It never searches the whole library: notes come
+  first, then the originals behind them (verinote's order).
+- That answer is shown apart, under "Found in the originals", with the
+  original's own sentences and a line saying no note vouches for it. A
+  sentence that cites no excerpt is dropped. It costs one more model call, only
+  when something is missing; the app says "looking in the originals" meanwhile.
+
 ## Sample notes
 
 - An empty Brain offers "Look around with sample notes": nine notes about
