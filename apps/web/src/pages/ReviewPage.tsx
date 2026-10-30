@@ -5,9 +5,9 @@ import { NoteEditor } from '../components/NoteEditor'
 import { Markdown } from '../components/Markdown'
 import { Badge, EmptyState, ErrorState, Spinner } from '../components/ui'
 import { requestRefresh } from '../lib/freshness'
-import { useT } from '../lib/i18n'
+import { useT, type StringKey } from '../lib/i18n'
 import { useAsync } from '../lib/useAsync'
-import type { ProposalView } from '../types'
+import type { DiffLine, ProposalView, Via } from '../types'
 
 /** Approval cards: what agents propose and the user has not decided yet. */
 export function ReviewPage() {
@@ -75,7 +75,10 @@ function ProposalCard({
   onEdit: (body: string) => Promise<unknown>
 }) {
   const t = useT()
-  const [open, setOpen] = useState(false)
+  const diffs = proposal.changes.filter((c) => c.diff && c.diff.length)
+  // A change to an existing note shows its diff; a new note shows its text.
+  // Either way the reviewer sees the change itself, not only the AI's summary.
+  const [open, setOpen] = useState(!diffs.length)
   const [editing, setEditing] = useState(false)
   const body = (proposal.preview ?? '').replace(FRONTMATTER, '').replace(/^\n+/, '')
   const editable = proposal.changes.some((c) => c.op === 'write' && c.path.endsWith('.md'))
@@ -83,6 +86,19 @@ function ProposalCard({
     <li className="card proposal-card">
       <div className="card-title">{proposal.title}</div>
       {proposal.summary ? <p className="card-excerpt">{proposal.summary}</p> : null}
+      {proposal.via ? (
+        <p className="proposal-from" aria-label={t('proposalFrom')}>
+          {t(VIA_LABEL[proposal.via])}
+          {proposal.source ? <span className="hint"> · {proposal.source}</span> : null}
+        </p>
+      ) : null}
+      {!editing && diffs.length ? (
+        <section className="proposal-diffs" aria-label={t('proposalChanges')}>
+          {diffs.map((c) => (
+            <Diff key={c.path} path={c.path} lines={c.diff ?? []} />
+          ))}
+        </section>
+      ) : null}
       <div className="card-meta">
         <Badge tone={proposal.approval === 'individual' ? 'tone-warn' : 'tone-neutral'}>
           {proposal.approval === 'individual' ? t('needsYou') : t('canBatch')}
@@ -102,7 +118,7 @@ function ProposalCard({
         ) : null}
         {proposal.preview ? (
           <button className="btn-link" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-            {open ? t('hideDetail') : t('showDetail')}
+            {open ? t('hideDetail') : diffs.length ? t('proposalWhole') : t('showDetail')}
           </button>
         ) : null}
       </div>
@@ -131,5 +147,38 @@ function ProposalCard({
         </div>
       ) : null}
     </li>
+  )
+}
+
+const VIA_LABEL: Record<Via, StringKey> = {
+  you: 'viaYou',
+  app: 'viaApp',
+  icloud: 'viaIcloud',
+  telegram: 'viaTelegram',
+  claude: 'viaClaude',
+  wooju: 'viaWooju',
+}
+
+/** What a change does to an existing note: removed lines, then added ones. */
+function Diff({ path, lines }: { path: string; lines: DiffLine[] }) {
+  return (
+    <div className="diff">
+      <div className="diff-path">
+        <code>{path}</code>
+      </div>
+      <pre className="diff-lines">
+        {lines.map((l, i) =>
+          l.kind === 'gap' ? (
+            <span key={i} className="diff-gap">
+              {'⋯\n'}
+            </span>
+          ) : (
+            <span key={i} className={`diff-${l.kind}`}>
+              {(l.kind === 'add' ? '+ ' : l.kind === 'remove' ? '− ' : '  ') + l.text + '\n'}
+            </span>
+          ),
+        )}
+      </pre>
+    </div>
   )
 }

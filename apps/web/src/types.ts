@@ -333,8 +333,21 @@ export interface ProposalView {
   decided_at: string | null
   commit: string | null
   error: string | null
-  changes: { op: string; path: string }[]
+  changes: { op: string; path: string; diff?: DiffLine[] | null }[]
   preview: string | null
+  /** How the material arrived; set by Wooju, never by the AI. */
+  via?: Via | null
+  /** The original: a web address or a file name. */
+  source?: string | null
+  edited?: boolean
+}
+
+export type Via = 'you' | 'app' | 'icloud' | 'telegram' | 'claude' | 'wooju'
+
+/** One line of what a change does to an existing note. */
+export interface DiffLine {
+  kind: 'add' | 'remove' | 'same' | 'gap'
+  text: string
 }
 
 export interface HistoryItem {

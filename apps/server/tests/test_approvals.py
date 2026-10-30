@@ -80,3 +80,31 @@ def test_approving_editing_and_rejecting_are_logged(client):
     s = client.get("/api/approvals").json()
     assert (s["edited"], s["rejected"], s["approved"]) == (1, 1, 0)
     assert s["external"]["total"] == 2  # Claude's writes are outside material
+
+
+def test_a_pending_change_to_an_existing_note_shows_its_diff(client, tmp_path):
+    brain = tmp_path / "B"
+    (brain / "wiki/concepts").mkdir(parents=True, exist_ok=True)
+    old = "---\ntitle: X\n---\n# X\n\n## What it is\n\nA thing.\n"
+    (brain / "wiki/concepts/x.md").write_text(old, encoding="utf-8")
+    client.app.state.engine.store.save(
+        Proposal(
+            agent="claude",
+            title="x",
+            approval="batch",
+            changes=[
+                FileChange(
+                    op="write",
+                    path="wiki/concepts/x.md",
+                    content=old.replace("A thing.", "Two things."),
+                ),
+                FileChange(op="write", path="wiki/concepts/new.md", content=old),
+            ],
+        )
+    )
+    [card] = client.get("/api/proposals?status=pending").json()["items"]
+    edit, new = card["changes"]
+    assert {"kind": "remove", "text": "A thing."} in edit["diff"]
+    assert {"kind": "add", "text": "Two things."} in edit["diff"]
+    assert new["diff"] is None  # a new note has nothing to compare with
+    assert card["via"] == "claude"

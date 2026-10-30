@@ -126,8 +126,8 @@ describe('Review cards', () => {
     expect(await screen.findByText('선호 기록')).toBeInTheDocument()
     expect(screen.getByText('하나씩 확인 필요')).toBeInTheDocument()
 
-    await userEvent.click(screen.getAllByRole('button', { name: '내용 보기' })[0])
-    expect(screen.getByText('PBR 본문')).toBeInTheDocument()
+    // A new note's text is shown without asking: the summary is never all there is.
+    expect(screen.getAllByText('PBR 본문')[0]).toBeInTheDocument()
     expect(screen.queryByText('title: PBR')).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: '모두 반영 (2)' }))
@@ -137,6 +137,48 @@ describe('Review cards', () => {
 
     await userEvent.click(screen.getAllByRole('button', { name: '반영' })[0])
     await waitFor(() => expect(calls(fetchMock, 'POST', '/api/proposals/p1/approve')).toHaveLength(1))
+  })
+})
+
+describe('Review cards show the change itself', () => {
+  it('shows where the material came from and the lines that change', async () => {
+    mockFetch([
+      {
+        match: /^\/api\/proposals\?status=pending/,
+        body: {
+          total: 1,
+          items: [
+            card({
+              agent: 'claude',
+              via: 'claude',
+              source: 'https://example.com/pbr',
+              changes: [
+                {
+                  op: 'write',
+                  path: 'wiki/concepts/pbr.md',
+                  diff: [
+                    { kind: 'same', text: '## 정의' },
+                    { kind: 'remove', text: 'PBR은 1배가 기준이다.' },
+                    { kind: 'add', text: 'PBR은 업종마다 기준이 다르다.' },
+                  ],
+                },
+              ],
+            }),
+          ],
+        },
+      },
+    ])
+    render(
+      <LangProvider lang="ko">
+        <ReviewPage />
+      </LangProvider>,
+    )
+    expect(await screen.findByLabelText('어디서 왔나요')).toHaveTextContent('Claude가 제안 · https://example.com/pbr')
+    const changes = screen.getByRole('region', { name: '바뀌는 부분' })
+    expect(changes).toHaveTextContent('− PBR은 1배가 기준이다.')
+    expect(changes).toHaveTextContent('+ PBR은 업종마다 기준이 다르다.')
+    // With a diff, the whole note is one click away rather than in the way.
+    expect(screen.getByRole('button', { name: '노트 전체 보기' })).toBeInTheDocument()
   })
 })
 

@@ -23,7 +23,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from brain_core import history
-from brain_core.changes import Proposal, ProposalError
+from brain_core.changes import FileChange, Proposal, ProposalError
+from brain_core.diff import body_diff
 from brain_core.markdown import plain_text
 from brain_core.messages import UserFacingError, render
 from wooju_agents.ask import AskError
@@ -538,6 +539,9 @@ def jobs(engine: EngineDep) -> dict[str, Any]:
 class ChangeView(BaseModel):
     op: str
     path: str
+    # For a note that already exists: what changes in its body, line by line
+    # (kind: add/remove/same/gap). None for a new note or a non-note change.
+    diff: list[dict[str, str]] | None = None
 
 
 class ProposalView(BaseModel):
@@ -559,13 +563,28 @@ class ProposalView(BaseModel):
     edited: bool = False
 
 
-def _view(p: Proposal) -> ProposalView:
+def _view(p: Proposal, brain: Path | None = None) -> ProposalView:
+    """A proposal as the app shows it. With ``brain`` (pending cards), a change
+    to an existing note carries its line-by-line diff."""
     first = next((c for c in p.changes if c.op == "write" and c.content), None)
     return ProposalView(
         **p.model_dump(exclude={"changes"}),
-        changes=[ChangeView(op=c.op, path=c.path) for c in p.changes],
+        changes=[ChangeView(op=c.op, path=c.path, diff=_diff(c, brain)) for c in p.changes],
         preview=first.content[:60000] if first else None,
     )
+
+
+def _diff(change: FileChange, brain: Path | None) -> list[dict[str, str]] | None:
+    if brain is None or change.op != "write" or not change.path.endswith(".md"):
+        return None
+    target = brain / change.path
+    if not target.is_file() or change.content is None:
+        return None
+    try:
+        old = target.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return [dict(line) for line in body_diff(old, change.content)]
 
 
 class EditBody(BaseModel):
@@ -799,7 +818,8 @@ async def restore_note(body: NoteId, engine: EngineDep) -> ProposalView:
 def list_proposals(
     engine: EngineDep, status: Literal["pending", "applied", "rejected", "failed"] | None = None
 ) -> dict[str, Any]:
-    items = [_view(p) for p in engine.store.list(status)]
+    brain = engine.brain if status == "pending" else None
+    items = [_view(p, brain) for p in engine.store.list(status)]
     return {"total": len(items), "items": items}
 
 
