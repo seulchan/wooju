@@ -340,6 +340,8 @@ export interface ProposalView {
   /** The original: a web address or a file name. */
   source?: string | null
   edited?: boolean
+  /** Sentences in the material that look like instructions to an AI. */
+  flags?: string[]
 }
 
 export type Via = 'you' | 'app' | 'icloud' | 'telegram' | 'claude' | 'wooju'

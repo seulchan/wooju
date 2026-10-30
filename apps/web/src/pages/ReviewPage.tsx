@@ -92,6 +92,16 @@ function ProposalCard({
           {proposal.source ? <span className="hint"> · {proposal.source}</span> : null}
         </p>
       ) : null}
+      {proposal.flags?.length ? (
+        <div className="answer-warning proposal-flags" role="alert">
+          <p>{t('proposalFlags')}</p>
+          {proposal.flags.map((f) => (
+            <blockquote key={f} className="citation-quote">
+              {f}
+            </blockquote>
+          ))}
+        </div>
+      ) : null}
       {!editing && diffs.length ? (
         <section className="proposal-diffs" aria-label={t('proposalChanges')}>
           {diffs.map((c) => (

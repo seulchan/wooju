@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from brain_core import history
-from brain_core.changes import FileChange, Proposal, approval_for
+from brain_core.changes import FileChange, Proposal, approval_for, hold_if_instructed
 from brain_core.markdown import add_made_by, split_frontmatter
 from brain_core.messages import render
 from wooju_agents.capture import (
@@ -232,6 +232,16 @@ class IngestMixin:
             return
         if Path(job.file).suffix.lower() in LINK_SUFFIXES and not await self._open_link_file(job):
             return
+        waiting = next(
+            (p for p in self.store.list("pending") if p.origin == job.file and p.agent == "ingest"),
+            None,
+        )
+        if waiting is not None:
+            # Already organized and waiting for the user (held in Review):
+            # organizing it again would only make a second card.
+            job.state, job.proposal_id, job.title = "done", waiting.id, waiting.title
+            job.message = render("job.held", self.language())
+            return
         url = link_for(brain, job.file)
         existing = self.saved_source_for(url) if url else None
         changes: Changes | None = None
@@ -295,6 +305,10 @@ class IngestMixin:
                 added=len(changes.added),
                 removed=len(changes.removed),
             )
+        # Outside material that talks to an AI ("remember this", "from now on")
+        # is the memory-poisoning path: hold it for the user, whatever its tier.
+        if run is not None:
+            hold_if_instructed(proposal, run.text, note.content if note else None)
         if note is not None and note.content:
             # A new version is not "in conflict" with the version it replaces.
             count, note.content = await self.check_conflicts(
@@ -312,6 +326,8 @@ class IngestMixin:
         if job.conflicts:
             conflicts = render("job.conflicts", self.language(), count=job.conflicts)
             job.message = f"{job.message} {conflicts}" if job.message else conflicts
+        if proposal.flags:
+            job.message = render("job.held", self.language())
         if proposal.approval == "auto":
             proposal = await self.apply(proposal)
             if proposal.status != "applied":

@@ -559,6 +559,7 @@ class ProposalView(BaseModel):
     changes: list[ChangeView]
     preview: str | None  # the main note, shown only when the card is expanded
     via: str | None = None  # how the material arrived (server-set provenance)
+    flags: list[str] = []  # sentences that look like instructions to an AI
     source: str | None = None  # the original: a web address or a file name
     edited: bool = False
 

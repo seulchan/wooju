@@ -63,6 +63,10 @@ const STRINGS = {
   viaClaude: { ko: 'Claude가 제안', en: 'Proposed by Claude' },
   viaWooju: { ko: 'Wooju가 기존 노트를 보고 제안', en: 'Proposed by Wooju from your notes' },
   proposalFrom: { ko: '어디서 왔나요', en: 'Where it came from' },
+  proposalFlags: {
+    ko: 'AI에게 하는 지시처럼 보이는 문장이 있어요. 노트에 들어가면 나중에 AI가 이 문장을 따를 수 있어서, 자동으로 저장하지 않았어요:',
+    en: 'This contains sentences that look like instructions to an AI. Saved in a note, an AI could follow them later, so it was not saved automatically:',
+  },
   proposalChanges: { ko: '바뀌는 부분', en: 'What changes' },
   proposalNewNote: { ko: '새 노트', en: 'New note' },
   proposalWhole: { ko: '노트 전체 보기', en: 'Show the whole note' },

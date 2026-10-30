@@ -97,6 +97,12 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "Saved as a new version: {added} sentence(s) added, {removed} removed. "
         "Notes that rest on the earlier version are flagged on Home.",
     ),
+    "job.held": (
+        "AI에게 하는 지시처럼 보이는 문장이 있어서 바로 저장하지 않고 '확인'에 올려 뒀어요. "
+        "노트에 들어가도 되는지 봐 주세요.",
+        "It contains sentences that look like instructions to an AI, so it was not saved "
+        "automatically. It is waiting in Review for you to check.",
+    ),
     "job.recheck": (
         "이미 저장된 자료예요. 바뀐 내용이 있는지 확인할게요: {title}",
         "Already saved; checking whether it changed: {title}",

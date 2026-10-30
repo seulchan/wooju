@@ -29,6 +29,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from . import history
+from .instructions import find_instructions
 from .markdown import split_frontmatter
 from .validate import validate_brain
 
@@ -81,6 +82,9 @@ class Proposal(BaseModel):
     source: str | None = None
     # The user changed the proposal before approving it.
     edited: bool = False
+    # Sentences in the material that look like instructions to an AI. A
+    # proposal with any is held for the user, never applied automatically.
+    flags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _default_via(self) -> Proposal:
@@ -128,6 +132,20 @@ def approval_for(changes: list[FileChange]) -> Approval:
         if _RANK[need] > _RANK[level]:
             level = need
     return level
+
+
+def hold_if_instructed(proposal: Proposal, *texts: str | None) -> Proposal:
+    """Hold ``proposal`` for individual review if any of ``texts`` (the outside
+    material and what would be written from it) talks to an AI."""
+    found: list[str] = []
+    for text in texts:
+        for sentence in find_instructions(text or ""):
+            if sentence not in found:
+                found.append(sentence)
+    if found:
+        proposal.flags = found[:3]
+        proposal.approval = "individual"
+    return proposal
 
 
 # ------------------------------------------------------------------ store

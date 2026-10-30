@@ -19,7 +19,13 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from brain_core.changes import FileChange, Proposal, ProposalStore, approval_for
+from brain_core.changes import (
+    FileChange,
+    Proposal,
+    ProposalStore,
+    approval_for,
+    hold_if_instructed,
+)
 from brain_core.index import BrainIndex
 from brain_core.markdown import add_made_by, split_frontmatter
 from brain_core.retrieve import RetrieverCache
@@ -227,16 +233,16 @@ def build_server(  # noqa: ANN201
             approval = "batch"  # anything from outside the app is always reviewed
         frontmatter, _ = split_frontmatter(content)
         title = str(frontmatter.get("title") or PurePosixPath(path).stem)
-        proposal = store.save(
-            Proposal(
-                agent="claude",
-                origin=path,
-                title=f"Claude: {title}",
-                summary=reason.strip(),
-                changes=changes,
-                approval=approval,
-            )
+        proposal = Proposal(
+            agent="claude",
+            origin=path,
+            title=f"Claude: {title}",
+            summary=reason.strip(),
+            changes=changes,
+            approval=approval,
         )
+        # An instruction written into a note would act on every later reader.
+        proposal = store.save(hold_if_instructed(proposal, content, reason))
         return {
             "proposal_id": proposal.id,
             "status": "waiting_for_approval",
