@@ -445,3 +445,9 @@ def test_too_few_combined_points_are_topped_up_across_the_source(tmp_path):
     assert len(kept) > 6 and len(draft.points) == 6
     assert draft.points[0].text == kept[0]["text"]  # the model's own pick stays
     assert draft.points[-1].text != kept[5]["text"]  # the rest is spread, not the first six
+
+
+def test_the_note_and_the_proposal_record_how_the_file_arrived(brain):
+    p = ingest_file(brain, "inbox/clip.txt", FakeProvider(DRAFT), language="en", via="telegram")
+    assert p.via == "telegram" and p.source
+    assert '"via": "telegram"' in note_of(p)

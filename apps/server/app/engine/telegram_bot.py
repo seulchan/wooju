@@ -118,7 +118,7 @@ class TelegramBotMixin:
                 doc = message["document"]
                 name = doc.get("file_name") or "file"
                 data = await asyncio.to_thread(bot.download, doc["file_id"])
-                rel = await self.receive(name, data)
+                rel = await self.receive(name, data, via="telegram")
                 job = await self.enqueue(rel)
                 self._log_capture("telegram", "file", name)
                 await send("telegram.received", name=name)

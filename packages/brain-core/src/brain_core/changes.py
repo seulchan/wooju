@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from . import history
 from .markdown import split_frontmatter
@@ -34,6 +34,13 @@ from .validate import validate_brain
 
 Approval = Literal["auto", "batch", "individual"]
 Status = Literal["pending", "applied", "rejected", "failed"]
+# How the material behind a proposal reached Wooju, set by the server, never by
+# a model: "you" (the user's own click or typing), "app" (dropped or pasted in
+# the app), "icloud", "telegram", "claude" (an outside agent over MCP), or
+# "wooju" (Wooju's own agents working on notes already in the Brain).
+Via = Literal["you", "app", "icloud", "telegram", "claude", "wooju"]
+# Material from outside the Brain: what it says was not written by the user.
+EXTERNAL_VIA: frozenset[str] = frozenset({"app", "icloud", "telegram", "claude"})
 
 _WRITABLE_ROOTS = {"sources", "library", "wiki", "memory", "projects", "areas", "inbox", "logs"}
 _RANK = {"auto": 0, "batch": 1, "individual": 2}
@@ -67,6 +74,27 @@ class Proposal(BaseModel):
     # Only a list of links changed (a topic's notes): not a change in what the
     # note says, so notes resting on it are not asked to be checked again.
     links_only: bool = False
+    # Provenance, set by the server when the proposal is made (a model can
+    # rewrite the content but not these): how the material arrived, and the
+    # original it came from (a web address or a file name), if any.
+    via: Via | None = None
+    source: str | None = None
+    # The user changed the proposal before approving it.
+    edited: bool = False
+
+    @model_validator(mode="after")
+    def _default_via(self) -> Proposal:
+        """Every proposal has a ``via``; code that knows better passes one."""
+        if self.via is None:
+            if self.agent == "you":
+                self.via = "you"
+            elif self.agent == "claude":
+                self.via = "claude"
+            elif self.agent == "ingest":
+                self.via = "app"
+            else:
+                self.via = "wooju"
+        return self
 
 
 # ----------------------------------------------------------------- policy

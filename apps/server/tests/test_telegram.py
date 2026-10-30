@@ -150,6 +150,8 @@ def test_memo_link_and_file(client, monkeypatch):
     push(42, document={"file_id": "f1", "file_name": "report.txt"})
     wait_for(lambda: any(t.startswith("✓") for _, t in FakeBot.sent))
     assert (brain / "sources/korea-value-up-index-launch.md").is_file()
+    # The note itself keeps how its material arrived (in made_by).
+    assert '"via": "telegram"' in (brain / "sources/korea-value-up-index-launch.md").read_text()
 
     push(42, photo=[{"file_id": "p"}])
     wait_for(lambda: any("Photos can't be read" in t for _, t in FakeBot.sent))

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from brain_core import history
+from brain_core.changes import data_dir
 from brain_core.messages import UserFacingError, render
 from wooju_agents.capture import (
     CaptureError,
@@ -26,8 +28,47 @@ from .base import (
 )
 
 
+def _received_file():
+    return data_dir() / "received.json"
+
+
 class CaptureMixin:
     """Part of :class:`app.engine.Engine`; uses its state (``self.brain``, ``self.index``...)."""
+
+    # How each inbox file arrived ("app", "icloud", "telegram"), kept in the
+    # app's data folder until the file is organized; the note then records it
+    # in its own made_by, so the Brain keeps it without the app.
+
+    def remember_via(self, rel: str, via: str) -> None:
+        path = _received_file()
+        try:
+            known = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        except (OSError, ValueError):
+            known = {}
+        known[rel] = via
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(known, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+
+    def via_for(self, rel: str) -> str:
+        """How an inbox file arrived; "app" when unknown (dropped in the folder)."""
+        try:
+            known = json.loads(_received_file().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return "app"
+        value = known.get(rel) if isinstance(known, dict) else None
+        return value if value in ("app", "icloud", "telegram", "claude") else "app"
+
+    def forget_via(self, rel: str) -> None:
+        path = _received_file()
+        try:
+            known = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(known, dict) and known.pop(rel, None) is not None:
+                path.write_text(json.dumps(known, ensure_ascii=False), encoding="utf-8")
+        except (OSError, ValueError):
+            pass
 
     def save_upload(self, name: str, data: bytes) -> str:
         brain = self._require_brain()
@@ -43,7 +84,7 @@ class CaptureMixin:
         target.write_bytes(data)
         return target.relative_to(brain).as_posix()
 
-    async def receive(self, name: str, data: bytes) -> str:
+    async def receive(self, name: str, data: bytes, *, via: str = "app") -> str:
         """Save an upload into ``inbox/`` and record it in history first.
 
         Recording the original before ingest means undoing the saved source
@@ -55,6 +96,7 @@ class CaptureMixin:
             await asyncio.to_thread(
                 history.commit_paths, brain, [rel], f"Received {Path(rel).name}"
             )
+        self.remember_via(rel, via)
         return rel
 
     def saved_source_for(self, *urls: str | None) -> Any:
@@ -104,6 +146,7 @@ class CaptureMixin:
                 await asyncio.to_thread(
                     history.commit_paths, brain, [rel, "inbox/.links.json"], f"Received {value}"
                 )
+            self.remember_via(rel, via)
             job = await self.enqueue(rel)
             out = {"kind": "link", "file": rel, "url": value, "job": job.to_dict()}
             if existing is not None:  # saved before: the job checks whether it changed
@@ -140,7 +183,7 @@ class CaptureMixin:
                     self._log_capture("icloud", result["kind"], path.name)
                 elif path.suffix.lower() in ACCEPTED_SUFFIXES:
                     data = await asyncio.to_thread(path.read_bytes)
-                    rel = await self.receive(path.name, data)
+                    rel = await self.receive(path.name, data, via="icloud")
                     await self.enqueue(rel)
                     self._log_capture("icloud", "file", path.name)
                 else:

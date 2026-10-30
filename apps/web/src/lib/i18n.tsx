@@ -165,6 +165,24 @@ const STRINGS = {
   },
   askEarlier: { ko: '이전 질문', en: 'Earlier questions' },
   usageTitle: { ko: '이번 달 사용량', en: 'This month’s usage' },
+  reviewRecordTitle: { ko: '검토 기록 (최근 30일)', en: 'How you reviewed (last 30 days)' },
+  reviewRecordNone: { ko: '아직 검토한 제안이 없어요.', en: 'No proposals reviewed yet.' },
+  reviewRecordLine: {
+    ko: '{total}건 검토 · 그대로 승인 {approved}% · 고쳐서 승인 {edited}% · 거절 {rejected}%',
+    en: '{total} reviewed · {approved}% approved as is · {edited}% edited · {rejected}% rejected',
+  },
+  reviewRecordExternal: {
+    ko: '바깥에서 온 자료(파일·링크·휴대폰·Claude) {total}건 중 그대로 승인 {approved}%',
+    en: 'Outside material (files, links, phone, Claude): {approved}% of {total} approved as is',
+  },
+  reviewRecordStamp: {
+    ko: '거의 모든 제안을 그대로 승인하고 있어요. 검토가 형식이 되면 AI의 실수가 그대로 노트에 들어가요. 카드의 원문과 바뀐 부분을 한 번 더 봐 주세요.',
+    en: 'Almost every proposal is approved as is. When review becomes a formality, the AI’s mistakes go straight into your notes. Take another look at the original and the changes on each card.',
+  },
+  reviewRecordNote: {
+    ko: '이 기록은 이 Mac에만 있고, 검토가 제 역할을 하는지 보기 위한 거예요.',
+    en: 'This record stays on this Mac. It shows whether review is doing its job.',
+  },
   usageNone: { ko: '이번 달에는 API 키로 쓴 기록이 없어요.', en: 'No calls through an API key this month.' },
   usageRow: {
     ko: '{calls}번 · 입력 {input} · 출력 {output} 토큰',

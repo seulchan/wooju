@@ -25,6 +25,7 @@ import {
   removeSamples,
   type ModelsResponse,
   fetchUsage,
+  fetchApprovals,
 } from '../api'
 import { Badge, ErrorState, Spinner } from '../components/ui'
 import { requestRefresh } from '../lib/freshness'
@@ -72,6 +73,7 @@ export function SettingsPage() {
       <PhoneCapture />
       <SmartSearch ollamaRunning={models.running} />
       <ClaudeSettings status={claude} />
+      <ReviewRecord />
       <FolderSettings setup={setup} onChange={() => window.location.reload()} />
       <LanguageSettings setup={setup} />
       {setup.version ? (
@@ -91,6 +93,49 @@ const LANGUAGE_CHOICES: ReadonlyArray<{ value: LanguageChoice; label: string }> 
 ]
 
 /** Screen language. Notes keep the language of what they are about. */
+function pct(part: number, total: number): string {
+  return total ? String(Math.round((100 * part) / total)) : '0'
+}
+
+/** How proposals were decided lately: whether review is real or a formality. */
+function ReviewRecord() {
+  const t = useT()
+  const state = useAsync((signal) => fetchApprovals(signal), [])
+  if (state.kind !== 'ready') return null
+  const r = state.data
+  return (
+    <section className="section" aria-label={t('reviewRecordTitle')}>
+      <h2 className="section-title">{t('reviewRecordTitle')}</h2>
+      {r.total ? (
+        <>
+          <p>
+            {t('reviewRecordLine')
+              .replace('{total}', String(r.total))
+              .replace('{approved}', pct(r.approved, r.total))
+              .replace('{edited}', pct(r.edited, r.total))
+              .replace('{rejected}', pct(r.rejected, r.total))}
+          </p>
+          {r.external.total ? (
+            <p className="hint">
+              {t('reviewRecordExternal')
+                .replace('{total}', String(r.external.total))
+                .replace('{approved}', pct(r.external.approved, r.external.total))}
+            </p>
+          ) : null}
+          {r.rubber_stamp ? (
+            <p className="answer-warning" role="status">
+              {t('reviewRecordStamp')}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="hint">{t('reviewRecordNone')}</p>
+      )}
+      <p className="hint">{t('reviewRecordNote')}</p>
+    </section>
+  )
+}
+
 function LanguageSettings({ setup }: { setup: SetupStatus }) {
   const t = useT()
   const [error, setError] = useState<string | null>(null)

@@ -219,6 +219,7 @@ def build_server(  # noqa: ANN201
             model=None,
             did="edited" if exists else "created",
             on=date.today().isoformat(),
+            via="claude",
         )
         changes = [FileChange(op="write", path=path, content=content)]
         approval = approval_for(changes)

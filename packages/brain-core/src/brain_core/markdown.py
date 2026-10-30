@@ -324,7 +324,9 @@ MADE_BY_KEY = "made_by"
 _MADE_BY_KEEP = 10
 
 
-def add_made_by(text: str, *, agent: str, model: str | None, did: str, on: str) -> str:
+def add_made_by(
+    text: str, *, agent: str, model: str | None, did: str, on: str, via: str | None = None
+) -> str:
     """Record that an AI agent wrote to this note (who, which model, when, what).
 
     Kept in the frontmatter as one line (``made_by: [{...}]``, JSON is valid
@@ -340,6 +342,8 @@ def add_made_by(text: str, *, agent: str, model: str | None, did: str, on: str) 
     entry = {"agent": agent, "did": did, "on": on}
     if model:
         entry["model"] = model
+    if via:  # how the material reached Wooju (app, icloud, telegram, claude)
+        entry["via"] = via
     entries = [*entries, entry][-_MADE_BY_KEEP:]
     return set_frontmatter_value(text, MADE_BY_KEY, json.dumps(entries, ensure_ascii=False))
 

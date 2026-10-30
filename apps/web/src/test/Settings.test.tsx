@@ -218,4 +218,34 @@ describe('Korean screens', () => {
     render(<SettingsPage />)
     expect(await screen.findByText('Wooju 0.4.0 (8b6095e)')).toBeInTheDocument()
   })
+
+  it('shows how proposals were reviewed and warns when review is a formality', async () => {
+    mockFetch([
+      { match: /^\/api\/setup\/ai\/models/, body: models },
+      { match: /^\/api\/claude$/, body: claude },
+      { match: /^\/api\/search\/status/, body: searchOff },
+      { match: /^\/api\/capture\/status/, body: captureOff },
+      {
+        match: /^\/api\/approvals/,
+        body: {
+          days: 30,
+          total: 40,
+          approved: 38,
+          edited: 1,
+          rejected: 1,
+          batch: 10,
+          approved_rate: 0.95,
+          external: { total: 30, approved: 29, edited: 1, rejected: 0, batch: 5, approved_rate: 0.97 },
+          rubber_stamp: true,
+          threshold: 0.9,
+        },
+      },
+      { match: /^\/api\/setup$/, body: setup },
+    ])
+    render(<SettingsPage />)
+    const block = await screen.findByRole('region', { name: 'How you reviewed (last 30 days)' })
+    expect(block).toHaveTextContent('40 reviewed · 95% approved as is · 3% edited · 3% rejected')
+    expect(block).toHaveTextContent('Outside material (files, links, phone, Claude): 97% of 30 approved as is')
+    expect(block).toHaveTextContent('Almost every proposal is approved as is')
+  })
 })

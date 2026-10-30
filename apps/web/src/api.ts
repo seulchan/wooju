@@ -660,3 +660,29 @@ export interface UsageSummary {
 export function fetchUsage(signal?: AbortSignal): Promise<UsageSummary> {
   return apiGet('/api/usage', signal)
 }
+
+// ------------------------------------------------------------ review record
+
+export interface DecisionCounts {
+  total: number
+  approved: number
+  edited: number
+  rejected: number
+  batch: number
+  /** Share approved without changes; null with no decisions. */
+  approved_rate: number | null
+}
+
+export interface ApprovalSummary extends DecisionCounts {
+  days: number
+  /** Material from outside: files, links, phone, Claude. */
+  external: DecisionCounts
+  /** Almost everything approved as is, over enough decisions to tell. */
+  rubber_stamp: boolean
+  threshold: number
+}
+
+/** How proposals were decided in the last 30 days. */
+export function fetchApprovals(signal?: AbortSignal): Promise<ApprovalSummary> {
+  return apiGet('/api/approvals', signal)
+}

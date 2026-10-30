@@ -203,6 +203,7 @@ class EditingMixin:
             change.content = replace_body(change.content, body)
         except ValueError as exc:
             raise SetupError("review.unreadable") from exc
+        proposal.edited = True
         return self.store.save(proposal)
 
     # ----------------------------------------------------------- maintainer

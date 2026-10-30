@@ -38,7 +38,7 @@ from wooju_agents.llm import (
     recommended_ollama_model,
 )
 
-from .. import BUILD, __version__, claude_link, usage
+from .. import BUILD, __version__, approvals, claude_link, usage
 from .. import settings as app_settings
 from ..engine import Engine, SetupError
 
@@ -554,6 +554,9 @@ class ProposalView(BaseModel):
     error: str | None
     changes: list[ChangeView]
     preview: str | None  # the main note, shown only when the card is expanded
+    via: str | None = None  # how the material arrived (server-set provenance)
+    source: str | None = None  # the original: a web address or a file name
+    edited: bool = False
 
 
 def _view(p: Proposal) -> ProposalView:
@@ -818,6 +821,8 @@ async def approve(proposal_id: str, engine: EngineDep) -> ProposalView:
         raise _fail(engine, "proposal.decided", 409) from exc
     except SetupError as exc:
         raise _fail_from(engine, exc) from exc
+    if result.status == "applied":
+        approvals.record(result, approvals.decision_for(result))
     return _view(result)
 
 
@@ -829,6 +834,7 @@ async def reject(proposal_id: str, engine: EngineDep) -> ProposalView:
         result = await engine.reject(_load(engine, proposal_id))
     except ProposalError as exc:
         raise _fail(engine, "proposal.decided", 409) from exc
+    approvals.record(result, "rejected")
     return _view(result)
 
 
@@ -845,8 +851,17 @@ async def approve_batch(body: BatchApprove, engine: EngineDep) -> dict[str, Any]
             continue
         if proposal.approval == "individual":
             continue  # personal memory and promoted insights are never batch-approved
-        results.append(_view(await engine.apply(proposal)))
+        result = await engine.apply(proposal)
+        if result.status == "applied":
+            approvals.record(result, approvals.decision_for(result), batch=True)
+        results.append(_view(result))
     return {"items": results}
+
+
+@actions_router.get("/approvals", tags=["proposals"])
+def approval_summary() -> dict[str, Any]:
+    """How proposals were decided in the last 30 days: is the review real?"""
+    return approvals.summary()
 
 
 # ------------------------------------------------------------------- history

@@ -362,8 +362,10 @@ class IngestRun:
         today: date | None = None,
         ui_language: str | None = None,
         progress_dir: Path | None = None,
+        via: str | None = None,
     ) -> None:
         rel_path = PurePosixPath(rel)
+        self.via = via  # how the file reached Wooju (server-set, never from a model)
         if rel_path.parts[:1] != ("inbox",) or ".." in rel_path.parts:
             raise IngestError(f"Not an inbox path: {rel}", "ingest.inbox_only")
         self.brain, self.rel, self.provider = brain, rel, provider
@@ -580,7 +582,12 @@ class IngestRun:
             original_link=f"../{library_path}",
         )
         note = add_made_by(
-            note, agent=AGENT, model=self.provider.model, did="created", on=today.isoformat()
+            note,
+            agent=AGENT,
+            model=self.provider.model,
+            did="created",
+            on=today.isoformat(),
+            via=self.via,
         )
         changes = [
             FileChange(op="write", path=note_path, content=note),
@@ -600,6 +607,8 @@ class IngestRun:
             summary=fix(draft.one_line_summary.strip()),
             changes=changes,
             approval=approval_for(changes),
+            via=self.via,  # type: ignore[arg-type]
+            source=link_for(brain, self.rel) or self.path.name,
         )
 
 
@@ -612,6 +621,7 @@ def ingest_file(
     today: date | None = None,
     ui_language: str | None = None,
     progress_dir: Path | None = None,
+    via: str | None = None,
 ) -> Proposal:
     """Read ``rel`` (a path under ``inbox/``) and return a pending proposal.
 
@@ -628,6 +638,7 @@ def ingest_file(
         today=today,
         ui_language=ui_language,
         progress_dir=progress_dir,
+        via=via,
     )
     while not run.finished:
         run.step()

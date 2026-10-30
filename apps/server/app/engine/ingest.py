@@ -154,6 +154,8 @@ class IngestMixin:
                 [job.file, rel, "inbox/.links.json"],
                 f"Received {url}",
             )
+        self.remember_via(rel, self.via_for(job.file))
+        self.forget_via(job.file)
         job.file = rel
         return True
 
@@ -245,6 +247,7 @@ class IngestMixin:
                     [job.file],
                     f"Removed duplicate {Path(job.file).name}",
                 )
+            self.forget_via(job.file)
             job.state, job.title = "done", existing.title
             job.message = render("job.duplicate", self.language(), title=existing.title)
             return
@@ -258,6 +261,7 @@ class IngestMixin:
                 provider,
                 language=self.fixed_content_language(),  # None: the material's own
                 ui_language=self.language(),
+                via=self.via_for(job.file),
             )
             # One step (one part of the source) at a time: a question can go in
             # between parts, and a long file shows how far it has got.
@@ -301,6 +305,7 @@ class IngestMixin:
         self.store.save(proposal)
         if run is not None:
             run.forget()  # saved: the steps are not needed to continue any more
+        self.forget_via(job.file)
         job.proposal_id = proposal.id
         saved_title = split_frontmatter(note.content or "")[0].get("title") if note else None
         job.title = str(saved_title) if saved_title else proposal.title
