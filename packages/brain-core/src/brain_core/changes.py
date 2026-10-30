@@ -8,12 +8,22 @@ outside the Brain). Applying a proposal:
 3. runs the validator and rolls back if the change *introduced* errors,
 4. commits exactly the touched paths to git.
 
-Approval level is decided here from what the change touches, never by the agent:
+Approval level is decided here from what the change touches and where its
+material came from, never by the agent:
 
 * ``auto``       — sources, library, and inbox clean-up. Applied right away; the
-                   user can undo from history.
-* ``batch``      — world-knowledge edits in ``wiki/``, projects, and areas.
-* ``individual`` — anything in ``memory/``, and any insight above ``candidate``.
+                   user can undo from history. (A record of what a source says.)
+* ``batch``      — Wooju's own edits to world knowledge in ``wiki/``, projects,
+                   and areas: reviewed, and may be approved together.
+* ``individual`` — anything in ``memory/``, any insight above ``candidate``, and
+                   anything material from *outside* (a file, link, phone, or an
+                   agent like Claude) would write into knowledge, memory,
+                   projects or areas. Also any proposal whose material talks to
+                   an AI (see :func:`hold_if_instructed`).
+
+Friction goes where the risk is: a gate on everything gets rubber-stamped
+(Claude Code users approve 93% of prompts), so low-risk changes stay
+automatic and undoable, and review is kept for what could mislead later.
 """
 
 from __future__ import annotations
@@ -115,8 +125,12 @@ def _safe_rel(path: str) -> PurePosixPath:
     return rel
 
 
-def approval_for(changes: list[FileChange]) -> Approval:
-    """The strictest approval any single change needs."""
+def approval_for(changes: list[FileChange], via: str | None = None) -> Approval:
+    """The strictest approval any single change needs.
+
+    ``via`` is how the material arrived; outside material written into
+    knowledge, projects or areas is reviewed one by one.
+    """
     level: Approval = "auto"
     for change in changes:
         top = _safe_rel(change.path).parts[0]
@@ -124,7 +138,7 @@ def approval_for(changes: list[FileChange]) -> Approval:
         if top == "memory":
             need = "individual"
         elif top in ("wiki", "projects", "areas"):
-            need = "batch"
+            need = "individual" if via in EXTERNAL_VIA else "batch"
             if change.op == "write" and change.content:
                 fm, _ = split_frontmatter(change.content)
                 if fm.get("origin") == "synthesis" and fm.get("status") not in (None, "candidate"):

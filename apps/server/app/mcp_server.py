@@ -228,9 +228,11 @@ def build_server(  # noqa: ANN201
             via="claude",
         )
         changes = [FileChange(op="write", path=path, content=content)]
-        approval = approval_for(changes)
+        # Claude is outside material: knowledge it writes is reviewed one by
+        # one, and even a source note it proposes is reviewed.
+        approval = approval_for(changes, via="claude")
         if approval == "auto":
-            approval = "batch"  # anything from outside the app is always reviewed
+            approval = "batch"
         frontmatter, _ = split_frontmatter(content)
         title = str(frontmatter.get("title") or PurePosixPath(path).stem)
         proposal = Proposal(

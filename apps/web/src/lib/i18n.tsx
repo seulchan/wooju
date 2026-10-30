@@ -63,6 +63,16 @@ const STRINGS = {
   viaClaude: { ko: 'Claude가 제안', en: 'Proposed by Claude' },
   viaWooju: { ko: 'Wooju가 기존 노트를 보고 제안', en: 'Proposed by Wooju from your notes' },
   proposalFrom: { ko: '어디서 왔나요', en: 'Where it came from' },
+  reviewOneByOne: { ko: '하나씩 확인할 것', en: 'Check one by one' },
+  reviewOneByOneHint: {
+    ko: '바깥에서 온 자료가 지식이나 개인 기록에 들어가려는 것, AI에게 하는 지시가 섞인 것이에요.',
+    en: 'Material from outside going into your knowledge or personal records, or anything containing instructions to an AI.',
+  },
+  reviewTogether: { ko: '한 번에 확인해도 되는 것', en: 'Fine to check together' },
+  reviewTogetherHint: {
+    ko: 'Wooju가 이미 있는 노트를 보고 제안한 정리예요. 반영해도 변경 기록에서 되돌릴 수 있어요.',
+    en: 'Tidy-ups Wooju proposed from notes you already have. Anything applied can be undone in History.',
+  },
   proposalFlags: {
     ko: 'AI에게 하는 지시처럼 보이는 문장이 있어요. 노트에 들어가면 나중에 AI가 이 문장을 따를 수 있어서, 자동으로 저장하지 않았어요:',
     en: 'This contains sentences that look like instructions to an AI. Saved in a note, an AI could follow them later, so it was not saved automatically:',

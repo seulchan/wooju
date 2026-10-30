@@ -69,6 +69,11 @@ Gate: a new user installs without visiting System Settings; every review
 card shows its origin and source excerpt; the approval log exists and is
 shown in Settings.
 
+Status (October 30, 2026): done except signing, which waits for the Apple
+Developer account. Origin on every proposal, source-visible cards with
+diffs, holding material that talks to an AI, risk tiers and the approval
+log are in; details in DECISIONS.md, "Review that is worth having".
+
 ## 0.7 — The way out
 
 "User-owned" is only true if the data can leave. No portability standard

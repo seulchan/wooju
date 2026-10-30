@@ -18,8 +18,10 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - The Brain (Markdown + git) is the single source of truth, kept outside this
   repository in a folder the user owns.
 - Agents only propose changes. Proposals are validated, then approved by risk:
-  sources are applied automatically, knowledge edits are approved in batches,
-  personal memory and insight promotion are always approved one by one.
+  sources are applied automatically, Wooju's own knowledge edits may be
+  approved together, and personal memory, insight promotion, anything outside
+  material would write into knowledge, and anything that talks to an AI are
+  approved one by one (see "Review that is worth having").
 - Python and git are bundled with the app; users never install them.
 
 ## AI
@@ -329,6 +331,41 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - A model not in the table shows "price unknown", and a call without a token
   count is reported as such: unknown is never shown as zero or guessed. The
   estimate is not the bill; Settings links the provider's usage page.
+
+## Review that is worth having (0.6)
+
+- The approval gate is only as good as the attention it gets: Claude Code
+  users approve 93% of permission prompts, and a local model fabricates in
+  roughly a quarter of document-QA cases. A rubber-stamped gate passes model
+  errors on with the user's signature. 0.6 puts friction where the risk is
+  and measures whether review is real. See ROADMAP.md for the evidence.
+- **Provenance is set by the server.** Every proposal has `via` (you, app,
+  icloud, telegram, claude, wooju) and `source` (the original's address or
+  file name). A model can rewrite the content, not these. An ingested note
+  also keeps `via` in its own `made_by`, so the Brain has it without the app.
+  How an inbox file arrived is kept in `received.json` in the app's data
+  folder until the file is organized.
+- **Cards show the change, not the description.** A change to an existing
+  note shows its body diff (added and removed lines, frontmatter ignored); a
+  new note's text is shown without a click. The card names where the
+  material came from.
+- **Outside material that talks to an AI is held.** Sentences like
+  "remember this", "from now on", "ignore previous instructions" (and Korean
+  equivalents) in a file, link or Claude proposal put the proposal in
+  individual review with those sentences shown, whatever its tier. Patterns
+  are broad on purpose: a false alarm costs one review, a miss puts an
+  instruction into memory. None fired on the dev Brain's real originals or
+  the sample notes. A held file is not organized again on restart.
+- **Tiers.** Automatic: sources, library, inbox clean-up, topic links (all
+  undoable). Together: Wooju's own edits to knowledge, projects, areas. One
+  by one: personal memory, promoted insights, outside material (app, iCloud,
+  Telegram, Claude) written into knowledge/projects/areas, and held
+  proposals. The Review page lists one-by-one cards first.
+- **The gate is measured.** Every decision (approved as is, edited then
+  approved, rejected; one by one or batch) goes to `approvals.jsonl` in the
+  app's data folder. Settings shows the last 30 days and warns when 90% or
+  more of at least 20 decisions were approved as is. That number reopens the
+  roadmap if it stays high.
 
 ## Sample notes
 

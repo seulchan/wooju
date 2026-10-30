@@ -30,7 +30,22 @@ export function ReviewPage() {
   if (state.kind === 'loading') return <Spinner />
   if (state.kind === 'error') return <ErrorState message={state.message} onRetry={state.retry} />
   const items = state.data.items
+  // High risk first, one by one; Wooju's own edits can be approved together.
+  const oneByOne = items.filter((p) => p.approval === 'individual')
   const batchable = items.filter((p) => p.approval !== 'individual')
+  const cards = (list: ProposalView[]) => (
+    <ul className="card-list">
+      {list.map((p) => (
+        <ProposalCard
+          key={p.id}
+          proposal={p}
+          onApprove={() => act(() => approveProposal(p.id))}
+          onReject={() => act(() => rejectProposal(p.id))}
+          onEdit={(body) => editProposal(p.id, body).then(() => setNonce((n) => n + 1))}
+        />
+      ))}
+    </ul>
+  )
 
   return (
     <div>
@@ -41,22 +56,25 @@ export function ReviewPage() {
         </p>
       ) : null}
       {!items.length ? <EmptyState title={t('reviewEmpty')} /> : null}
-      {batchable.length > 1 ? (
-        <button className="btn btn-primary" onClick={() => act(() => approveProposals(batchable.map((p) => p.id)))}>
-          {t('approveAll')} ({batchable.length})
-        </button>
+      {oneByOne.length ? (
+        <section className="section" aria-label={t('reviewOneByOne')}>
+          <h2 className="section-title">{t('reviewOneByOne')}</h2>
+          <p className="hint">{t('reviewOneByOneHint')}</p>
+          {cards(oneByOne)}
+        </section>
       ) : null}
-      <ul className="card-list">
-        {items.map((p) => (
-          <ProposalCard
-            key={p.id}
-            proposal={p}
-            onApprove={() => act(() => approveProposal(p.id))}
-            onReject={() => act(() => rejectProposal(p.id))}
-            onEdit={(body) => editProposal(p.id, body).then(() => setNonce((n) => n + 1))}
-          />
-        ))}
-      </ul>
+      {batchable.length ? (
+        <section className="section" aria-label={t('reviewTogether')}>
+          <h2 className="section-title">{t('reviewTogether')}</h2>
+          <p className="hint">{t('reviewTogetherHint')}</p>
+          {batchable.length > 1 ? (
+            <button className="btn btn-primary" onClick={() => act(() => approveProposals(batchable.map((p) => p.id)))}>
+              {t('approveAll')} ({batchable.length})
+            </button>
+          ) : null}
+          {cards(batchable)}
+        </section>
+      ) : null}
     </div>
   )
 }

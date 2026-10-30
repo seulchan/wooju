@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { SetupGate, OLLAMA_DOWNLOAD_URL } from '../components/SetupGate'
@@ -125,6 +125,13 @@ describe('Review cards', () => {
     )
     expect(await screen.findByText('선호 기록')).toBeInTheDocument()
     expect(screen.getByText('하나씩 확인 필요')).toBeInTheDocument()
+    // One-by-one cards come first, in their own section; the rest can go together.
+    const first = screen.getByRole('region', { name: '하나씩 확인할 것' })
+    const together = screen.getByRole('region', { name: '한 번에 확인해도 되는 것' })
+    expect(first).toHaveTextContent('선호 기록')
+    expect(first).not.toHaveTextContent('마진 개요')
+    expect(together).toHaveTextContent('마진 개요')
+    expect(first.compareDocumentPosition(together) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     // A new note's text is shown without asking: the summary is never all there is.
     expect(screen.getAllByText('PBR 본문')[0]).toBeInTheDocument()
@@ -135,7 +142,7 @@ describe('Review cards', () => {
     const [, init] = calls(fetchMock, 'POST', '/api/proposals/approve')[0]
     expect(JSON.parse(String((init as RequestInit).body))).toEqual({ ids: ['p1', 'p2'] })
 
-    await userEvent.click(screen.getAllByRole('button', { name: '반영' })[0])
+    await userEvent.click(within(together).getAllByRole('button', { name: '반영' })[0])
     await waitFor(() => expect(calls(fetchMock, 'POST', '/api/proposals/p1/approve')).toHaveLength(1))
   })
 })

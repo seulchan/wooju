@@ -80,7 +80,8 @@ def test_propose_goes_to_review_not_to_disk(brain, tmp_path):
     assert data["status"] == "waiting_for_approval"
     assert not (brain / "wiki/concepts/korea-discount.md").exists()
     [proposal] = store.list("pending")
-    assert proposal.agent == "claude" and proposal.approval == "batch"
+    # Knowledge from an outside agent is approved one by one, never in a batch.
+    assert proposal.agent == "claude" and proposal.approval == "individual"
     assert proposal.title == "Claude: Korea discount" and proposal.summary == "개념 정리"
 
 

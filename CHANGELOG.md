@@ -3,6 +3,22 @@
 All notable changes to Wooju. Versions follow [Semantic Versioning](https://semver.org);
 until 1.0, a minor version may change how things work.
 
+## Unreleased
+
+- Every proposal shows where its material came from (the app, iCloud,
+  Telegram, Claude, or Wooju itself) and the original's address or name;
+  notes made from a file keep this in their own history.
+- Review cards show what actually changes: removed and added lines for an
+  existing note, the whole text for a new one.
+- A file, link or Claude proposal containing sentences addressed to an AI
+  ("remember this", "from now on", "ignore previous instructions") is not
+  saved automatically; it waits in Review with those sentences shown.
+- Knowledge proposed by Claude, or written from outside material, is now
+  approved one by one. The Review page lists those first, apart from Wooju's
+  own tidy-ups that can be approved together.
+- Settings shows how you reviewed proposals in the last 30 days, and says so
+  when nearly everything is approved without a look.
+
 ## 0.5.0 — 2026-10-28
 
 Notes you can check against the original, long files read to the end, and
