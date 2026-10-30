@@ -388,14 +388,15 @@ Settled decisions for Wooju, newest last. Change them deliberately and note why.
 - One copy of the app at a time: a second launch brings the first window
   forward instead of starting another server on the same Brain.
 
-## Ad-hoc signing until there is a developer account
+## Ad-hoc signing (a developer account is optional)
 
 - Without an Apple Developer ID the app is ad-hoc signed (`signingIdentity:
   "-"` in tauri.conf.json). Apple Silicon needs every downloaded app signed;
   an unsigned download can be reported as "damaged", which only a Terminal
   command fixes. Ad-hoc signed, a tester opens it once through System
-  Settings → Privacy & Security → Open Anyway. Notarization replaces this
-  when there is an account.
+  Settings → Privacy & Security → Open Anyway. A Developer ID and
+  notarization would remove that step; getting one is optional and not
+  planned (ROADMAP.md, "Optional, not scheduled").
 - Hardened runtime stays off with ad-hoc signing (`hardenedRuntime: false`).
   It only matters for notarization, and with it on, library validation stops
   the server: PyInstaller unpacks libpython at launch, signed separately, and

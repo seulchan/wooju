@@ -58,21 +58,17 @@ approved" signature. 0.6 makes the gate worth having.
   once, individually. The app logs approve/reject/edit rates locally, like
   `topics.json`. If the approve rate approaches 93%, the gate is not working
   and this roadmap is reopened.
-- **Signed and notarized app.** An Apple Developer account removes the
-  "Open Anyway" step, the one install step that breaks rule 3 today.
 
 Not in 0.6: a temporal knowledge graph, a graph database, automatic fact
 merging, background "dreaming" consolidation (the research name for
 provenance laundering).
 
-Gate: a new user installs without visiting System Settings; every review
-card shows its origin and source excerpt; the approval log exists and is
-shown in Settings.
+Gate: every review card shows its origin and source excerpt; the approval
+log exists and is shown in Settings.
 
-Status (October 30, 2026): done except signing, which waits for the Apple
-Developer account. Origin on every proposal, source-visible cards with
-diffs, holding material that talks to an AI, risk tiers and the approval
-log are in; details in DECISIONS.md, "Review that is worth having".
+Status (October 30, 2026): done. Origin on every proposal, source-visible
+cards with diffs, holding material that talks to an AI, risk tiers and the
+approval log are in; details in DECISIONS.md, "Review that is worth having".
 
 ## 0.7 — The way out
 
@@ -123,7 +119,7 @@ it by 3–8. 0.8 spends on both.
   This is the largest single lever on answer quality and the one most
   neglected so far.
 - **First-run gate, re-run.** Ten to twenty non-developers, three minutes to
-  a first saved note, with the signed app. One primary language per release.
+  a first saved note. One primary language per release.
 
 Not in 0.8: competing with the labs on recall; immediate approval for every
 write (the gate stays tiered); a second local-model family (a Korean-tuned
@@ -147,6 +143,15 @@ retrieval eval improves over 0.5.0 on the same questions.
 - **A second maintainer, early.** A trust layer that stops being maintained
   is not trusted. The Brain-outlives-the-app rule is the fallback; a second
   maintainer is the plan.
+
+## Optional, not scheduled
+
+- **Signed and notarized app.** An Apple Developer account ($99 a year)
+  would remove the one-time "Open Anyway" step in System Settings on first
+  launch, the one install step that still breaks rule 3. There is no plan to
+  get one now: the app stays ad-hoc signed (DECISIONS.md), and the README and
+  release notes walk a new user through "Open Anyway". If first-run testing
+  shows people giving up at that step, this moves into a release.
 
 ## When to revisit this
 
