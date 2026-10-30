@@ -753,4 +753,3 @@ def test_a_file_that_talks_to_an_ai_is_held_for_review(client, tmp_path):
     client.post("/api/inbox/process")
     wait_jobs(client)
     assert len(client.get("/api/proposals?status=pending").json()["items"]) == 1
-
